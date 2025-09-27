@@ -1,0 +1,25 @@
+{
+    "model_name": "DeepFakeClassifier",
+
+    "backbone": "xception41.tf_in1k.json",
+
+    "img_size": [380,380],
+
+    "dataset": "10% of DFDC Face Cropped Dataset",
+
+    "train_bs": 16,
+
+    "valid_bs": 32,
+
+    "learning_rate": 0.001,
+
+    "epochs": 10,
+
+    "weight_decay": 0.0001,
+
+    "mean": [0.5,0.5,0.5]
+,
+    "std": [0.5,0.5,0.5],
+
+    "loss": "BCELoss"
+}
