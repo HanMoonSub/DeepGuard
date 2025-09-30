@@ -1,0 +1,14 @@
+pandas 
+numpy
+matplotlib
+seaborn
+Pillow
+cv2
+torch
+torchmetrics
+timm
+albumentations
+scikit-learn
+colorama
+facenet_pytorch
+
