@@ -68,7 +68,20 @@ class CAM(nn.Module):
         out = avg_out + max_out
         return x * self.sigmoid(out)
 
-  
+## Convolutional Block Attention Module
+class CBAMBlock(nn.Module):
+    def __init__(self, in_planes):
+        super(CBAMBlock, self).__init__()
+        self.sam = SAM()
+        self.cam = CAM(in_planes)
+
+    def forward(self, x):
+        cam_out = self.cam(x)
+        sam_out = self.sam(cam_out)
+
+        return sam_out
+
+
 ## Efficient Channel Attention Module
 class ECA(nn.Module):
     def __init__(self, in_planes, gamma=2, b=1):
