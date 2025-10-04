@@ -107,3 +107,55 @@ class ECA(nn.Module):
         out = self.sigmoid(out).transpose(-1, -2).unsqueeze(-1)  # (B, C, 1, 1)
 
         return x * out
+    
+    
+## Attention Gate(HxW, CxH, CxW)
+class AttentionGate(nn.Module):
+    def __init__(self):
+        super(AttentionGate, self).__init__()
+   
+        self.conv = nn.Sequential(
+            nn.Conv2d(2,1, kernel_size=3, stride=1, padding="same", bias=False),
+            nn.BatchNorm2d(1, eps=1e-5, momentum=0.01, affine=True),
+            nn.ReLU(inplace=True),
+        )
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+
+        max_out, _ = torch.max(x, dim=1, keepdim=True) # (B,1,H,W)
+        avg_out = torch.mean(x, dim=1, keepdim=True) # (B,1,H,W)
+
+        cat = torch.cat([max_out, avg_out], dim=1)
+
+        x_out = self.conv(cat)
+
+        return x * self.sigmoid(x_out)
+
+## Triplet Attention Module
+class TripletAttention(nn.Module):
+    def __init__(self):
+        super(TripletAttention, self).__init__()
+        
+        self.cw = AttentionGate() # Channel, Width
+        self.hc = AttentionGate() # Height, Channel
+        self.hw = AttentionGate() # Height, Width
+
+    def forward(self, x):
+        # x: (Batch, Channel, Height, Width)
+        
+        # Channel, Width
+        x_perm1 = x.permute(0,2,1,3).contiguous()
+        x_out1 = self.cw(x_perm1)
+        x_out1 = x_out1.permute(0,2,1,3).contiguous()
+
+        # Height, Channel
+        x_perm2 = x.permute(0,3,2,1).contiguous()
+        x_out2 = self.hc(x_perm2)
+        x_out2 = x_out2.permute(0,3,2,1).contiguous()
+
+        # Height, Width
+        x_out = self.hw(x)
+        x_out = (x_out + x_out1 + x_out2) / 3
+
+        return x_out
