@@ -159,3 +159,35 @@ class TripletAttention(nn.Module):
         x_out = (x_out + x_out1 + x_out2) / 3
 
         return x_out
+
+## Frequency Channel Attention Module 
+class FCA(nn.Module):
+
+    def __init__(self, channel, reduction=16, top_k=16):
+        super(FCA, self).__init__()
+        self.channel = channel
+        self.reduction = reduction
+        self.top_k = top_k
+
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction, bias = False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel, bias = False),
+            nn.Sigmoid()
+        )
+
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+
+        # 2D FFT
+        freq_map = torch.fft.fft2(x, norm='ortho')
+        freq_map = torch.abs(freq_map)
+
+        # Select Top-K
+        mag, idx = torch.topk(freq_map.view(B,C,-1), self.top_k, dim=2)
+        descriptor = mag.mean(dim=2)
+
+        weights = self.fc(descriptor).view(B,C,1,1)
+        return x * weights
+        
