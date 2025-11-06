@@ -3,7 +3,7 @@ numpy
 matplotlib
 seaborn
 Pillow
-cv2
+opencv-python
 torch
 torchmetrics
 timm
