@@ -12,11 +12,11 @@ from . import face_detector
 from .face_detector import VideoFaceDetector, VideoDataset
 from .utils import get_original_video_paths
 
-def process_videos(videos, root_dir, device, batch_size, detector_cls: Type[VideoFaceDetector]):
+def process_videos(videos, root_dir, device, batch_size, apply_clahe, detector_cls: Type[VideoFaceDetector]):
 
     detector = face_detector.__dict__[detector_cls](device=device, batch_size=batch_size)
     
-    dataset = VideoDataset(videos) # Get List of PIL.Image(x0.5 Rescaling with Original Frame)
+    dataset = VideoDataset(videos, apply_clahe) # Get List of PIL.Image(x0.5 Rescaling with Original Frame)
     
     loader = DataLoader(dataset, shuffle=False, num_workers=cpu_count(), batch_size=1, collate_fn=lambda x: x)
     
@@ -76,6 +76,7 @@ def main():
     parser.add_argument("--detector_type", help='type of the detector', default="FacenetDetector",
                         choices=["FacenetDetector"])
     parser.add_argument("--batch_size", default=32, type=int, help="Face Detector Batch Size")
+    parser.add_argument("--apply_clahe", default=False, type=bool, help="Apply clahe for find calibrated bbox coordinates")
     args = parser.parse_args()
     
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -83,7 +84,7 @@ def main():
     # originals: real video path(ex: root_dir/video_folder/video.mp4)
     originals = get_original_video_paths(args.root_dir)
     # return: bbox json(ex: root_dir/boxes/video.json)
-    process_videos(originals, args.root_dir, device, args.batch_size, args.detector_type)
+    process_videos(originals, args.root_dir, device, args.batch_size, args.apply_clahe, args.detector_type)
     
 if __name__ == "__main__":
     main()

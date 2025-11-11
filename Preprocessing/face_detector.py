@@ -11,9 +11,12 @@ import cv2
 cv2.ocl.setUseOpenCL(False)
 cv2.setNumThreads(0)
 
+import numpy as np
 from PIL import Image
 from facenet_pytorch import MTCNN
 from torch.utils.data import Dataset
+
+import albumentations as A
 
 class VideoFaceDetector(ABC):
     
@@ -56,9 +59,13 @@ class FacenetDetector(VideoFaceDetector):
     
 class VideoDataset(Dataset):
     
-    def __init__(self, videos) -> None:
+    def __init__(self, videos, apply_clahe) -> None:
         super().__init__()
         self.videos = videos
+        if apply_clahe:
+            self.clahe = A.CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=1.0)
+        else: 
+            self.clahe = None
     
     def __getitem__(self, index):
         video = self.videos[index]
@@ -77,6 +84,12 @@ class VideoDataset(Dataset):
             frame = Image.fromarray(frame)
             new_size = tuple(int(s * 0.5) for s in frame.size)  # (width, height)
             frame = frame.resize(new_size)
+            
+            if self.clahe is not None:
+                frame = np.array(frame)
+                frame = self.clahe(image=frame)['image']
+                frame = Image.fromarray(frame)
+            
             frames[i] = frame
         
         cap.release()
