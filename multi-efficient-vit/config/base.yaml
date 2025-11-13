@@ -1,0 +1,43 @@
+# =========================
+# Image Configuration
+# =========================
+img_size: [384, 384]
+mean: [0.485, 0.456, 0.406]
+std: [0.229, 0.224, 0.225]
+
+# =========================
+# Backbone Configuration
+# =========================
+cnn_backbone: "tf_efficientnet_b5.ns_jft_in1k"
+
+# =========================
+# Feature Branches
+h_branch:
+  block_idx: 4
+  patch_size: 1
+  embed_dim: 512
+  num_heads: 8
+  mlp_ratio: 4
+  num_transformer_layers: 2
+  pos_dropout: 0.1
+  attn_drop: 0.1
+  drop: 0.1
+  qkv_bias: true
+
+m_branch:
+  block_idx: 1
+  patch_size: 8
+  embed_dim: 512
+  num_heads: 8
+  mlp_ratio: 4
+  num_transformer_layers: 2
+  pos_dropout: 0.1
+  attn_drop: 0.1
+  drop: 0.1
+  qkv_bias: true
+
+# =========================
+# Optimization & Scheduler
+optimizer: "AdamW"
+scheduler: "CosineAnnealingLR"
+loss: "BCEWithLogitsLoss"
