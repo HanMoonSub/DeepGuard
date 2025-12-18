@@ -1,10 +1,19 @@
 ## Deepfakes Detection
 
+![GitHub License](https://img.shields.io/github/license/HanMoonSub/DeepGuard?color=blue)
+![Python Version](https://img.shields.io/badge/python-3.8%2B-blue?logo=python)
+![Project Status](https://img.shields.io/badge/status-active-success)
+
+
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white)
+![EfficientNet](https://img.shields.io/badge/Encoder-EfficientNet--B5-orange)
+
 👉 You can also read a translated version of this file  [한국어 버전](README_KR.md)
 
-![MY Image](Images/deepfake.JPG)
 
-(image from internet)
+<img src="Images/deepfake2.png" alt="MY Image" width="1000" height="500">
+
+(image created from Gemini Pro 3)
 
 ## Contents
 
@@ -17,12 +26,13 @@
 - [Authors](#-authors)
 - [Acknowledgments](#-acknowledgments)
 - [Reference](#-reference)
+- [License](#-license)
 
 ## 💡 Install & Requirements
 
 To install requirements: 
 
-```
+```python
 pip install -r requirements.txt
 ```
 
@@ -36,6 +46,25 @@ cd DeepGuard
 ```
 
 ## 📦 BenchMark Dataset
+
+
+```mermaid
+mindmap
+  root((DeepFake<br/>Datasets))
+    2019
+      DFFD
+      Celeb-DF(v2)
+      DFDC
+    2020
+      Deeper Forensics-1.0
+    2021
+      ForgeryNet
+    2024
+      IDForge
+    2025
+      Celeb-DF++
+```
+
 - **DFFD**:  On the Detection of Digital Face Manipulation [paper](http://cvlab.cse.msu.edu/pdfs/dang_liu_stehouwer_liu_jain_cvpr2020.pdf) [download](http://cvlab.cse.msu.edu/dffd-dataset.html)
 
 - **Celeb-DF(v2)**: A Large-scale Challenging Dataset for DeepFake Forensics [paper](https://openaccess.thecvf.com/content_CVPR_2020/papers/Li_Celeb-DF_A_Large-Scale_Challenging_Dataset_for_DeepFake_Forensics_CVPR_2020_paper.pdf) [download](https://github.com/yuezunli/celeb-deepfakeforensics/tree/master/Celeb-DF-v2)
@@ -50,8 +79,6 @@ cd DeepGuard
 - **IDForge**: An Identity-driven Multimedia Forgery Dataset [paper](https://arxiv.org/abs/2401.11764) [download](https://github.com/xyyandxyy/IDForge)
 
 - **Celeb-DF++**: A Large-scale Challenging Video DeepFake Benchmark for Generalizable Forensics [paper](https://arxiv.org/abs/2507.18015) [download](https://github.com/OUC-VAS/Celeb-DF-PP)
-
-
 
 
 | Dataset                  | Real Videos | Fake Videos | Year | Note                                                       |
@@ -91,6 +118,8 @@ python Videos/display_video.py --video_path path/to/video.mp4 --width 640
 
 ## 🧠 Model Architecture
 
+![model_architecture](Images/model_architecture.JPG)
+
 ### Face-Detector
 
 Input size for face detector was calculated for each video depending on video resolution
@@ -114,8 +143,21 @@ We employed EfficientNet-B5 as the encoder, a state-of-the-art architecture pret
 
 이예솔
 
-서윤제
+서윤제 
 
 ## 🔗 Acknowledgments
 
 ## 📝 Reference
+
+1. [`facenet-pytorch`](https://github.com/timesler/facenet-pytorch) - _Pretrained Face Detection(MTCNN) and Recognition(InceptionResNet) Models by Tim Esler_
+2. [`face-cutout`](https://github.com/sowmen/face-cutout) - _Face Cutout Library by Sowmen_
+3. [`Celeb-DF++`](https://github.com/OUC-VAS/Celeb-DF-PP) - _Celeb-DF++ Dataset by OUC-VAS Group_
+4. [`DeeperForensics-1.0`](https://github.com/EndlessSora/DeeperForensics-1.0) - _DeeperForensics-1.0 Dataset by Endless Sora_
+5. [`Deepfake Detection`](https://github.com/abhijithjadhav/Deepfake_detection_using_deep_learning) - _Detection of Video Deepfake using ResNext and LSTM by Abhijith Jadhav_
+6. [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) - _Multiple Deep Learning Models by Ameen Caslam_
+7. [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection
+) - _A curated list of tools, papers and code by Daisy Zhang_
+
+## 📚 License 
+
+This project is licensed under the terms of the MIT license.
