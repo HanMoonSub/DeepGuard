@@ -1,42 +1,44 @@
+import torch
 import torch.nn as nn
+from typing import Optional
 
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self,
-                 dim,
-                 num_heads=8,
-                 qkv_bias=False,
-                 attn_drop=0.,
-                 proj_drop=0.
+class MSA(nn.Module):
+    def __init__(
+                self,
+                dim: int,
+                num_heads: int,
+                qkv_bias: bool = True,
+                qk_scale: Optional[float] = None,
+                attn_drop: float = 0.,
+                proj_drop: float = 0.
                 ):
         super().__init__()
         self.num_heads = num_heads
-        head_dim = dim // num_heads
-        self.scale = head_dim ** -0.5
+        self.head_dim = torch.div(dim, num_heads, rounding_mode='floor')
+        self.scale = qk_scale or self.head_dim ** -0.5
 
-        self.to_q = nn.Linear(dim, dim, bias=qkv_bias)
-        self.to_kv = nn.Linear(dim, dim * 2, bias=qkv_bias)
+        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
 
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
+        
+        self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, x, context=None):
+    def forward(self, x):
 
-        B, Nq, C = x.shape
-        context = x if context is None else context
-        Nk = context.shape[1]
-
-        q = self.to_q(x).reshape(B, Nq, self.num_heads, C // self.num_heads).permute(0,2,1,3)
-        k, v = self.to_kv(context).chunk(2, dim=-1)
-        k = k.reshape(B, Nk, self.num_heads, C // self.num_heads).permute(0,2,1,3)
-        v = v.reshape(B, Nk, self.num_heads, C // self.num_heads).permute(0,2,1,3)
-
-        attn = (q @ k.transpose(-2, -1)) * self.scale
-        attn = attn.softmax(dim=-1)
+        B, N, C = x.shape # (B, num_patches, Embedding dim)
+        
+        # (3, B, num_heads, num_patches, head_dim)
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2,0,3,1,4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+        q = q * self.scale
+        attn = (q @ k.transpose(-2, -1)) # (B, num_heads, N, N)
+        
+        attn = self.softmax(attn)
         attn = self.attn_drop(attn)
 
-        x = (attn @ v).transpose(1, 2).reshape(B, Nq, C)
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
         x = self.proj_drop(x)
         return x
