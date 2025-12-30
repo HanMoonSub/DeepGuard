@@ -1,29 +1,59 @@
+import torch
 import torch.nn as nn
-from .attention import MultiHeadAttention
+from .attention import MSA
+from typing import Optional, Type
+from .mlp import Mlp
+from .drop import DropPath
 
-class TransformerBlock(nn.Module):
-    def __init__(self,
-                 dim,
-                 num_heads,
-                 mlp_ratio=4.,
-                 qkv_bias=False,
-                 attn_drop=0.,
-                 drop=0.,
+class ViTBlock(nn.Module):
+    def __init__(
+                self,
+                dim: int,
+                num_heads: int,
+                mlp_ratio: float = 4.,
+                qkv_bias: bool = True,
+                qk_scale: Optional[float] = None,
+                drop: float = 0.,
+                attn_drop: float = 0.,
+                drop_path: float = 0.,
+                act_layer: Type[nn.Module] = nn.GELU,
+                attention = MSA,
+                norm_layer: Type[nn.Module] = nn.LayerNorm,
+                layer_scale: Optional[float] = None,
                 ):
         super().__init__()
-        self.norm1 = nn.LayerNorm(dim)
-        self.attn = MultiHeadAttention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
-        self.norm2 = nn.LayerNorm(dim)
-        mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = nn.Sequential(
-            nn.Linear(dim, mlp_hidden_dim),
-            nn.GELU(),
-            nn.Dropout(drop),
-            nn.Linear(mlp_hidden_dim, dim),
-            nn.Dropout(drop)
-        )
-
+        # Layer Normalization
+        self.norm1 = norm_layer(dim)
+        self.norm2 = norm_layer(dim)
+        
+        self.attn = attention(
+            dim, 
+            num_heads=num_heads, 
+            qkv_bias=qkv_bias, 
+            qk_scale=qk_scale,
+            attn_drop=attn_drop, 
+            proj_drop=drop)
+    
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.mlp = Mlp(in_dims=dim, hidden_dims=int(dim*mlp_ratio), act_layer=act_layer, drop=drop)
+    
+        self.layer_scale = False
+        if layer_scale is not None:
+            self.layer_scale = True
+            self.gamma1 = nn.Parameter(layer_scale * torch.ones(dim), requires_grad=True)
+            self.gamma2 = nn.Parameter(layer_scale * torch.ones(dim), requires_grad=True)
+        else:
+            self.gamma1 = 1.0
+            self.gamma2 = 1.0
+            
+        
     def forward(self, x):
-        x = x + self.attn(self.norm1(x))
-        x = x + self.mlp(self.norm2(x))
+        
+        shortcut = x # (B, N, C)
+        x = self.norm1(x)
+        attn = self.attn(x)
+        
+        x = shortcut + self.drop_path(self.gamma1 * x)
+        x = x + self.drop_path(self.gamma2 * self.mlp(self.norm2(x)))
+        
         return x
