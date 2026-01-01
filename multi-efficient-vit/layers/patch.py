@@ -4,14 +4,19 @@ from typing import Type, Optional, List
 from .reducesize import ReduceSize
 from .se import SE
 
-class FeatExtract(nn.Module):
+class LocalContextBlock(nn.Module):
     
     """
-        MBConv -> MaxPool 2X2
-        (B,C,H,W) -> (B,C,H//2,W//2)
+        MBConv -> MaxPool 2X2 (Optional)
+        주변 픽셀 간의 상관관계를 학습하고 해상도를 조절하는 블록
     """
-    def __init__(self, dim):
+    def __init__(self, 
+                 dim: int,
+                 keep_dim: bool = False):
         super().__init__()
+        
+        self.keep_dim = keep_dim
+        
         self.mb_conv = nn.Sequential(
             nn.Conv2d(dim, dim, kernel_size=3, stride=1, padding=1,
                       groups=dim, bias=False),
@@ -19,12 +24,14 @@ class FeatExtract(nn.Module):
             SE(dim),
             nn.Conv2d(dim, dim, kernel_size=1, stride=1, padding=0, bias=False)
         )
-        self.pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        if not self.keep_dim:
+            self.pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
     
     def forward(self, x):
         x = x.contiguous()
         x =  x + self.mb_conv(x) # skip connection
-        x = self.pool(x)
+        if not self.keep_dim:
+            x = self.pool(x)
             
         return x
 
@@ -53,6 +60,9 @@ class MidLevelPatchEmbed(nn.Module):
             block_idx: Backbone Block index
             input_resolution: Feature map Height, Width
         """
+        
+        if block_idx not in [0,1,2]:
+            raise ValueError(f"block_idx는 0,1,2만 가능합니다. 입력값: {block_idx}")
         
         H, W = input_resolution
         self.cls_token = nn.Parameter(torch.zeros(1,1,dim))
@@ -94,7 +104,6 @@ class LowLevelPatchEmbed(nn.Module):
     
     """
     
-    
     def __init__(
                 self,
                 in_chs: int,
@@ -112,25 +121,31 @@ class LowLevelPatchEmbed(nn.Module):
             input_resolution: Feature map Height, Width
         """
         
+        if block_idx not in [5,6]:
+            raise ValueError(f"block_idx는 5 또는 6만 가능합니다. 입력값: {block_idx}")
+        
         H, W = input_resolution
         self.cls_token = nn.Parameter(torch.zeros(1,1,dim))
         
         if block_idx == 5:
             self.block = nn.Sequential(
-                FeatExtract(in_chs),
+                LocalContextBlock(in_chs),
                 nn.Conv2d(in_chs, dim, kernel_size=1, stride=1, padding=0)
             )
             n_h, n_w = H // 2, W // 2
         
         elif block_idx == 6:
-            self.block = nn.Conv2d(in_chs, dim, kernel_size=1, stride=1, padding=0)
+            self.block = nn.Sequential(
+                LocalContextBlock(in_chs, keep_dim=True),
+                nn.Conv2d(in_chs, dim, kernel_size=1, stride=1, padding=0)
+            )
             n_h, n_w = H, W
             
         self.pos_embed = nn.Parameter(torch.zeros(1, n_h * n_w + 1, dim))    
             
     def forward(self, x):
         
-        x = self.block(x)
+        x = self.block(x) # (B,in_chs,H,W) -> (B,D,H,W) or (B,D,H//2,W//2)
         x = x.permute(0,2,3,1).contiguous() # (B,C,H,W) -> (B,H,W,C)
         
         B,H,W,C = x.shape
