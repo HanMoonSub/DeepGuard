@@ -3,6 +3,7 @@ import torch.nn as nn
 from typing import Type, Optional, List
 from .reducesize import ReduceSize
 from .se import SE
+from .weight_init import trunc_normal_
 
 class LocalContextBlock(nn.Module):
     
@@ -80,6 +81,9 @@ class MidLevelPatchEmbed(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, n_h * n_w + 1, dim))    
         self.conv_down = ReduceSize(dim=dim, keep_dim=True)
         
+        trunc_normal_(self.cls_token, std=0.02)
+        trunc_normal_(self.pos_embed, std=0.02)
+        
     def forward(self, x):
         x = self.proj(x)
         x = x.permute(0,2,3,1) # (B,C,H,W) -> (B,H,W,C)
@@ -142,7 +146,10 @@ class LowLevelPatchEmbed(nn.Module):
             n_h, n_w = H, W
             
         self.pos_embed = nn.Parameter(torch.zeros(1, n_h * n_w + 1, dim))    
-            
+        
+        trunc_normal_(self.cls_token, std=0.02)
+        trunc_normal_(self.pos_embed, std=0.02)
+        
     def forward(self, x):
         
         x = self.block(x) # (B,in_chs,H,W) -> (B,D,H,W) or (B,D,H//2,W//2)
