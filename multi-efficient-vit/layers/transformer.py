@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 from .attention import MSA
-from typing import Optional, Type
+from typing import Optional, Type, List
 from .mlp import Mlp
 from .drop import DropPath
+from .patch import MidLevelPatchEmbed, LowLevelPatchEmbed
 from .weight_init import trunc_normal_
 
 class ViTBlock(nn.Module):
@@ -62,8 +63,11 @@ class ViTBlock(nn.Module):
 class ViTLayer(nn.Module):
     def __init__(
                 self,
+                in_chs: int,
+                block_idx: int,
+                input_resolution: List[int], 
                 dim: int,
-                depth: int, 
+                depth: int,
                 num_heads: int,
                 mlp_ratio: float,
                 num_classes: int = 1,
@@ -74,6 +78,7 @@ class ViTLayer(nn.Module):
                 drop_path: float = 0.2,
                 act_layer: Type[nn.Module] = nn.GELU,
                 attention = MSA,
+                patch_embed: str = 'low', # or 'mid'
                 norm_layer: Type[nn.Module] = nn.LayerNorm,
                 layer_scale: float = None,
                 pool: str = 'cls', # or 'avg'
@@ -81,6 +86,9 @@ class ViTLayer(nn.Module):
     ):
         """
         Args:
+            in_chs: feature map channels
+            block_idx: backbone block index
+            input_resolution: feature map height, width
             dim: feature size dimension.
             depth: number of transformer blocks
             num_heads: number of heads in each stage.
@@ -88,11 +96,12 @@ class ViTLayer(nn.Module):
             num_classes: number of classes.
             qkv_bias: bool argument for query, key, value learnable bias.
             qk_scale: bool argument to scaling query, key.
-            drop: mlp dropout, proj dropout rate.
+            drop: mlp dropout, proj dropout, pos dropout rate.
             attn_drop: attention dropout rate.
             drop_path: drop path rate.
             act_layer: activation function type
             attention: Multi Head Self-Attention type
+            patch_embed: MidLevelPatchEmbed or LowLevelPatchEmbed
             norm_layer: normalization layer.
             layer_scale: layer scaling coefficient.
         """
@@ -102,6 +111,13 @@ class ViTLayer(nn.Module):
         self.num_classes = num_classes
         self.pool = pool
         
+        if patch_embed == 'mid':
+            self.patch_embed = MidLevelPatchEmbed(in_chs, dim, block_idx, input_resolution)
+        elif patch_embed == 'low':
+            self.patch_embed = LowLevelPatchEmbed(in_chs, dim, block_idx, input_resolution)
+
+        self.pos_drop = nn.Dropout(p=drop)
+
         dpr = [x.item() for x in torch.linspace(0, drop_path, depth)]
         
         self.blocks = nn.ModuleList()
@@ -139,10 +155,13 @@ class ViTLayer(nn.Module):
     
     def forward(self, x):
         
+        x = self.patch_embed(x) # (B,C,H,W) -> (B,N+1,C)
+        x = self.pos_drop(x)
+        
         for block in self.blocks:
-            x = block(x) # (B,N,C)
+            x = block(x) # (B,N+1,C)
             
-        x = self.norm(x) # (B,N,C)
+        x = self.norm(x) # (B,N+1,C)
         
         if self.pool == 'cls':
             x = x[:,0] # (B,C)
