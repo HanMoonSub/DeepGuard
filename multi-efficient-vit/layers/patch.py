@@ -36,7 +36,7 @@ class LocalContextBlock(nn.Module):
             
         return x
 
-class MidLevelPatchEmbed(nn.Module):
+class LowBlockPatchEmbed(nn.Module):
     
     """
     Feature map: block.0 output, (B,C,H,W) -> (B,H//8,W//8,D)
@@ -61,9 +61,6 @@ class MidLevelPatchEmbed(nn.Module):
             block_idx: Backbone Block index
             input_resolution: Feature map Height, Width
         """
-        
-        if block_idx not in [0,1,2]:
-            raise ValueError(f"block_idx는 0,1,2만 가능합니다. 입력값: {block_idx}")
         
         H, W = input_resolution
         self.cls_token = nn.Parameter(torch.zeros(1,1,dim))
@@ -100,10 +97,10 @@ class MidLevelPatchEmbed(nn.Module):
         return x # (B,N+1,C)
     
     
-class LowLevelPatchEmbed(nn.Module):
+class HighBlockPatchEmbed(nn.Module):
     
     """
-    Feature map: block.5 output, (B,C,H,W) -> (B,H//2,W//2,D)
+    Feature map: block.4 output, (B,C,H,W) -> (B,H//4,W//4,D)
     Feature map: block.6 output, (B,C,H,W) -> (B,H,W,D)
     
     """
@@ -125,18 +122,16 @@ class LowLevelPatchEmbed(nn.Module):
             input_resolution: Feature map Height, Width
         """
         
-        if block_idx not in [5,6]:
-            raise ValueError(f"block_idx는 5 또는 6만 가능합니다. 입력값: {block_idx}")
-        
         H, W = input_resolution
         self.cls_token = nn.Parameter(torch.zeros(1,1,dim))
         
-        if block_idx == 5:
+        if block_idx == 4:
             self.block = nn.Sequential(
+                LocalContextBlock(in_chs),
                 LocalContextBlock(in_chs),
                 nn.Conv2d(in_chs, dim, kernel_size=1, stride=1, padding=0)
             )
-            n_h, n_w = H // 2, W // 2
+            n_h, n_w = H // 4, W // 4
         
         elif block_idx == 6:
             self.block = nn.Sequential(
