@@ -4,7 +4,7 @@ from .attention import MSA
 from typing import Optional, Type, List
 from .mlp import Mlp
 from .drop import DropPath
-from .patch import MidLevelPatchEmbed, LowLevelPatchEmbed
+from .patch import LowBlockPatchEmbed, HighBlockPatchEmbed
 from .weight_init import trunc_normal_
 
 class ViTBlock(nn.Module):
@@ -78,7 +78,7 @@ class ViTLayer(nn.Module):
                 drop_path: float = 0.2,
                 act_layer: Type[nn.Module] = nn.GELU,
                 attention = MSA,
-                patch_embed: str = 'low', # or 'mid'
+                patch_embed: str = 'low', # or 'high'
                 norm_layer: Type[nn.Module] = nn.LayerNorm,
                 layer_scale: float = None,
                 pool: str = 'cls', # or 'avg'
@@ -101,7 +101,7 @@ class ViTLayer(nn.Module):
             drop_path: drop path rate.
             act_layer: activation function type
             attention: Multi Head Self-Attention type
-            patch_embed: MidLevelPatchEmbed or LowLevelPatchEmbed
+            patch_embed: LowBlockPatchEmbed or HighBlockPatchEmbed
             norm_layer: normalization layer.
             layer_scale: layer scaling coefficient.
         """
@@ -111,10 +111,10 @@ class ViTLayer(nn.Module):
         self.num_classes = num_classes
         self.pool = pool
         
-        if patch_embed == 'mid':
-            self.patch_embed = MidLevelPatchEmbed(in_chs, dim, block_idx, input_resolution)
-        elif patch_embed == 'low':
-            self.patch_embed = LowLevelPatchEmbed(in_chs, dim, block_idx, input_resolution)
+        if patch_embed == 'low':
+            self.patch_embed = LowBlockPatchEmbed(in_chs, dim, block_idx, input_resolution)
+        elif patch_embed == 'high':
+            self.patch_embed = HighBlockPatchEmbed(in_chs, dim, block_idx, input_resolution)
 
         self.pos_drop = nn.Dropout(p=drop)
 
