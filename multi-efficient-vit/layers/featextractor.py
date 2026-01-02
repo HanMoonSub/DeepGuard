@@ -45,7 +45,7 @@ class FeatExtractor(nn.Module):
         )
         
             
-        if l_block_idx not in (0, 1, 2): self.l_block_idx = l_block_idx
+        if l_block_idx in (0, 1, 2): self.l_block_idx = l_block_idx
         else: raise ValueError("l_block_idx must be 0, 1, or 2.")
         
         if h_block_idx in (4, 6): self.h_block_idx = h_block_idx
