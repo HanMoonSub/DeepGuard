@@ -36,14 +36,13 @@ class MultiScaleEffViT(nn.Module):
                             h_block_idx = h_block_idx
                             )
         
-        with torch.no_grad():
-            dummy_input = torch.zeros(1,3,*img_size)
-            l_result, h_result = self.feat_extractor(dummy_input)
+        self.l_meta = self._build_metadata(img_size, l_block_idx)
+        self.h_meta = self._build_metadata(img_size, h_block_idx)
         
         self.l_vit = ViTLayer(
-                            in_chs = l_result['in_chs'], 
-                            block_idx = l_result['block_idx'], 
-                            input_resolution = l_result['input_resolution'], 
+                            in_chs = self.l_meta['in_chs'], 
+                            block_idx = self.l_meta['block_idx'], 
+                            input_resolution = self.l_meta['input_resolution'], 
                             dim = l_dim, 
                             depth = l_depth, 
                             num_heads = l_heads, 
@@ -54,9 +53,9 @@ class MultiScaleEffViT(nn.Module):
                             patch_embed = 'low')
         
         self.h_vit = ViTLayer(
-                            in_chs = h_result['in_chs'], 
-                            block_idx = h_result['block_idx'], 
-                            input_resolution = h_result['input_resolution'], 
+                            in_chs = self.h_meta['in_chs'], 
+                            block_idx = self.h_meta['block_idx'], 
+                            input_resolution = self.h_meta['input_resolution'], 
                             dim = h_dim, 
                             depth = h_depth, 
                             num_heads = h_heads, 
@@ -66,11 +65,38 @@ class MultiScaleEffViT(nn.Module):
                             drop_path = h_drop_path,
                             patch_embed = 'high')
         
+    def _build_metadata(self, img_size, block_idx):
+        
+        if block_idx == 6:
+            feature_idx = 4
+        elif block_idx == 4:
+            feature_idx = 3
+        else:
+            feature_idx = block_idx
+        
+        info = self.feat_extractor.backbone.feature_info[feature_idx]
+        
+        meta = {
+            "block_idx": block_idx,
+            "feature_idx": feature_idx,
+            "in_chs": info['num_chs'],
+            "input_resolution": [img_size[0] // info['reduction'], img_size[1] // info['reduction']]
+        }
+        
+        return meta
+    
+    @torch.jit.ignore
+    def no_weight_decay_keywords(self):
+        return {'pos_embed','cls_token'}
+    
     def forward(self, x):
         
-        l_result, h_result = self.feat_extractor(x) # (B,C,H,W)
+        feat = self.feat_extractor(x) # (B,C,H,W)
         
-        l_out = self.l_vit(l_result['feature_map']) # (B,num_classes)
-        h_out = self.h_vit(h_result['feature_map']) # (B,num_classes)
+        l_feat = feat[self.l_meta["feature_idx"]]
+        h_feat = feat[self.h_meta["feature_idx"]]
+        
+        l_out = self.l_vit(l_feat) # (B,num_classes)
+        h_out = self.h_vit(h_feat) # (B,num_classes)
     
         return l_out + h_out
