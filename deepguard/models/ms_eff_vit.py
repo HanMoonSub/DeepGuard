@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
-from .layers.featextractor import FeatExtractor
-from .layers.transformer import ViTLayer
+from deepguard.layers.featextractor import FeatExtractor
+from deepguard.layers.transformer import ViTLayer
 from typing import List, Union
-from timm.models._builder import build_model_with_cfg
-from timm.models.registry import register_model
+from timm.models import register_model, build_model_with_cfg
 
 def _cfg(url='', **kwargs):
     return {
