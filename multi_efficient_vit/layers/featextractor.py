@@ -50,39 +50,7 @@ class FeatExtractor(nn.Module):
         
         if h_block_idx in (4, 6): self.h_block_idx = h_block_idx
         else: raise ValueError("h_block_idx must be 4 or 6.")
-                            
-        self.l_meta = self._build_metadata(img_size, self.l_block_idx)
-        self.h_meta = self._build_metadata(img_size, self.h_block_idx)
-        
-    def _build_metadata(self, img_size, block_idx):
-        
-        if block_idx == 6:
-            feature_idx = 4
-        elif block_idx == 4:
-            feature_idx = 3
-        else:
-            feature_idx = block_idx
-        
-        info = self.backbone.feature_info[feature_idx]
-        
-        meta = {
-            "block_idx": block_idx,
-            "feature_idx": feature_idx,
-            "in_chs": info['num_chs'],
-            "input_resolution": [img_size[0] // info['reduction'], img_size[1] // info['reduction']]
-        }
-        
-        return meta
         
     def forward(self, x):
     
-        out = self.backbone(x)
-
-        l_out = out[self.l_meta['feature_idx']]
-        h_out = out[self.h_meta['feature_idx']]
-        
-            
-        l_result = {**self.l_meta, "feature_map": l_out}
-        h_result = {**self.h_meta, "feature_map": h_out} 
-            
-        return l_result, h_result
+        return self.backbone(x)
