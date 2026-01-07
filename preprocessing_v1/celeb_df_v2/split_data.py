@@ -88,13 +88,19 @@ def get_test_vids(root_dir: str) -> List:
         
     return test_vids 
     
-def split_metadata(meta_df: pd.DataFrame, root_dir: str, test_vids: List, save_dir: str):
+def split_metadata(meta_df: pd.DataFrame, root_dir: str, test_vids: List):
         
     train_meta = meta_df[~meta_df['vid'].isin(test_vids)].reset_index(drop=True)
+    
+    # Remove Orphan Fake Video
+    valid_real_ids = set(train_meta[train_meta['label'] == 'REAL']['origin_vid'])
+    condition = (train_meta['label'] == 'REAL') | (train_meta['origin_vid'].isin(valid_real_ids))
+    train_meta = train_meta[condition].copy().reset_index(drop=True)
+    
     test_meta = meta_df[meta_df['vid'].isin(test_vids)].reset_index(drop=True)
         
-    train_meta.to_csv(os.path.join(save_dir, "train_metadata.csv"), index=False)
-    test_meta.to_csv(os.path.join(save_dir, "test_metadata.csv"), index=False)
+    train_meta.to_csv(os.path.join(root_dir, "train_metadata.csv"), index=False)
+    test_meta.to_csv(os.path.join(root_dir, "test_metadata.csv"), index=False)
 
     return train_meta, test_meta
 
@@ -102,11 +108,8 @@ def main():
     parser = argparse.ArgumentParser(description="Generating Train, Test MetaData")
     parser.add_argument("--root-dir", required=True, help="Root Directory with Celeb DF(V2)")
     parser.add_argument("--print-info", default=True, type=bool, help="Display MetaData")
-    parser.add_argument("--save-dir", default=None, help="Directory to save metadata CSVs")
-    args = parser.parse_args()
     
-    if args.save_dir is None:
-        args.save_dir = args.root_dir
+    args = parser.parse_args()
     
     print(f"{c_}{s_}1. Generating Total MetaData... {r_}")
     total_metadata = generate_metadata(args.root_dir)
@@ -115,7 +118,7 @@ def main():
     test_vids = get_test_vids(args.root_dir)
     
     print(f"\n{c_}{s_}3. Splitting and Saving...{r_}")
-    train_meta, test_meta = split_metadata(total_metadata, args.root_dir, test_vids, args.save_dir)
+    train_meta, test_meta = split_metadata(total_metadata, args.root_dir, test_vids)
     
     if args.print_info:
         print(f"\n{c_}{s_}[INFO] Dataset Statistics{r_}")

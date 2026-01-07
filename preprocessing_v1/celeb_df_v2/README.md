@@ -16,6 +16,21 @@ Celeb-DF dataset include 590 original videos collected from YouTube with subject
 | **`celeb-synthesis`** | ![Fake](https://img.shields.io/badge/Fake-red?style=flat-square) |  5639 Videos | Synthesized videos from Celeb-real |
 | **`List_of_testing_videos.txt`** | ![Real](https://img.shields.io/badge/Real-blue?style=flat-square) ![Fake](https://img.shields.io/badge/Fake-red?style=flat-square) |  518 Videos | Real and Fake Vidoes for Test| 
 
+## Split Data 
+
+### Train Video Data
+
+| celeb-real | youtube-real | celeb-synthesis | `Real Ratio` | `Fake Ratio` |
+| ---------- | ------------ | --------------- | ------- | -----------|
+|    482     |     230      |    4284  |  14.3%  | 85.7% | 
+
+### Test Video Data
+
+| celeb-real | youtube-real | celeb-synthesis | `Real Ratio` | `Fake Ratio` |
+| ---------- | ------------ | --------------- | ------- | -----------|
+|    108     |     70      |    340  |  34.4%  | 65.6% | 
+
+
 ## Citation
 
 ```
