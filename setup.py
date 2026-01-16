@@ -8,7 +8,13 @@ setup(
     author_email = "seoyunje2001@gmail.com",
     url = 'https://github.com/HanMoonSub/DeepGuard',
 
-    packages = find_packages(),
-    python_requires = '>=3.8'
+    packages = find_packages(exclude=['Attention', 'preprocess']),
+    python_requires = '>=3.8',
+    
+    # Dependency Library
+    install_requires = [
+        'torchmetrics',
+        'torch >= 1.8.0',
+    ],
 
 )
