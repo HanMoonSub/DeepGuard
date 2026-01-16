@@ -21,17 +21,24 @@ def _cfg(url='', **kwargs):
     
 default_cfgs = {
     'ms_eff_vit_b0': _cfg(
-            url = '', # https://github.com/HanMoonSub/DeepGuard/releases/
             input_size = (3,224,224)
         ),
     'ms_eff_vit_b5': _cfg(
-            url = '', # https://github.com/HanMoonSub/DeepGuard/releases/
             input_size = (3,384,384)
         ),
-    'ms_eff_vit_b7': _cfg(
-            url = '', # https://github.com/HanMoonSub/DeepGuard/releases/
-            input_size = (3,512,512)
-        ),
+}
+
+weight_registry = {
+    'ms_eff_vit_b0': {
+        'asian':    'https://github.com/.../releases/download/v0.2.0/b0_asian.pth',
+        'western1': 'https://github.com/.../releases/download/v0.1.0/b0_western_v1.pth',
+        'western2': 'https://github.com/.../releases/download/v0.3.0/b0_western_v2.pth',
+    },
+    'ms_eff_vit_b5': {
+        'asian':    'https://github.com/.../releases/download/v0.2.0/b5_asian.pth',
+        'western1': 'https://github.com/.../releases/download/v0.1.0/b5_western_v1.pth',
+        'western2': 'https://github.com/.../releases/download/v0.3.0/b5_western_v2.pth',
+    }
 }
 class MultiScaleEffViT(nn.Module):
     def __init__(
@@ -130,19 +137,39 @@ class MultiScaleEffViT(nn.Module):
     
         return l_out + h_out
     
+def _get_config_for_type(variant: str, type_key: str) -> dict:
+   
+    config = default_cfgs[variant].copy()
     
-def _create_ms_eff_vit(variant, pretrained=False, **kwargs):
+    urls = weight_registry.get(variant, {})
+    if type_key not in urls:
+        available_types = list(urls.keys())
+        raise ValueError(f"Type '{type_key}' not found for {variant}. Available: {available_types}")
+    
+    config['url'] = urls[type_key]
+    return config
+
+def _create_ms_eff_vit(variant,  
+                       pretrained_cfg,
+                       pretrained=False,
+                       **kwargs):
     
     return build_model_with_cfg(
         MultiScaleEffViT,
         variant,
         pretrained,
+        pretrained_cfg=pretrained_cfg,
         **kwargs
     )
     
 
 @register_model
-def ms_eff_vit_b0(pretrained=False, **kwargs) -> MultiScaleEffViT:
+def ms_eff_vit_b0(pretrained=False, domain="asian", **kwargs) -> MultiScaleEffViT:
+
+    variant = "ms_eff_vit_b0"
+    
+    kwargs.pop('pretrained_cfg', None)
+    
     model_kwargs = dict(
         model_name = "tf_efficientnet_b0.ns_jft_in1k",
         img_size = [224,224],
@@ -154,10 +181,24 @@ def ms_eff_vit_b0(pretrained=False, **kwargs) -> MultiScaleEffViT:
         h_heads = 6, 
         **kwargs
     )
-    return _create_ms_eff_vit('ms_eff_vit_b0', pretrained=pretrained, **model_kwargs)
+    
+    if pretrained:
+        pretrained_cfg = _get_config_for_type(variant, domain)
+    else:
+        pretrained_cfg = default_cfgs[variant]
+        
+    return _create_ms_eff_vit(variant,
+                              pretrained_cfg=pretrained_cfg,
+                              pretrained=pretrained, 
+                              **model_kwargs)
 
 @register_model
-def ms_eff_vit_b5(pretrained=False, **kwargs) -> MultiScaleEffViT:
+def ms_eff_vit_b5(pretrained=False, domain="asian", **kwargs) -> MultiScaleEffViT:
+    
+    variant = "ms_eff_vit_b5"
+    
+    kwargs.pop('pretrained_cfg', None)
+    
     model_kwargs = dict(
         model_name = "tf_efficientnet_b5.ns_jft_in1k",
         img_size = [384,384],
@@ -177,28 +218,12 @@ def ms_eff_vit_b5(pretrained=False, **kwargs) -> MultiScaleEffViT:
         h_drop_path = 0.1,
         **kwargs
     )
-    return _create_ms_eff_vit('ms_eff_vit_b5', pretrained=pretrained, **model_kwargs)
-
-@register_model
-def ms_eff_vit_b7(pretrained=False, **kwargs) -> MultiScaleEffViT:
-    model_kwargs = dict(
-        model_name = "tf_efficientnet_b7.ns_jft_in1k",
-        img_size = [384,384],
-        l_dim = 384,
-        h_dim = 768, 
-        l_depth = 3,
-        h_depth = 5,
-        l_heads = 6,
-        h_heads = 12, 
-        l_ratio = 4.,
-        h_ratio = 3.,
-        l_drop = 0.1,
-        h_drop = 0.2,
-        l_attn_drop = 0.1,
-        h_attn_drop = 0.1,
-        l_drop_path = 0.1,
-        h_drop_path = 0.2,
-        **kwargs
-    )
-    return _create_ms_eff_vit('ms_eff_vit_b7', pretrained=pretrained, **model_kwargs)
-    
+    if pretrained:
+        pretrained_cfg = _get_config_for_type(variant, domain)
+    else:
+        pretrained_cfg = default_cfgs[variant]
+        
+    return _create_ms_eff_vit(variant,
+                              pretrained_cfg=pretrained_cfg,
+                              pretrained=pretrained, 
+                              **model_kwargs)
