@@ -1,0 +1,4 @@
+label2id = {
+    "REAL": 0,
+    "FAKE": 1,
+}
