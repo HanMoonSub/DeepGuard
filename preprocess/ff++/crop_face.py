@@ -2,6 +2,7 @@ import os
 import argparse
 import time
 import numpy as np
+import pandas as pd
 import cv2
 import shutil
 from tqdm import tqdm
@@ -44,6 +45,8 @@ def process_crops(
     crops_dir.mkdir(parents=True, exist_ok=True)
     landmarks_dir.mkdir(parents=True, exist_ok=True)
     
+    all_frame_meta = []
+    
     stats = {
         "total_videos": len(video_paths),
         "processed_videos": 0,
@@ -52,14 +55,13 @@ def process_crops(
         "total_landmarks_found": 0,
     } 
     
-    start_time = time.time()
-    
     pbar = tqdm(zip(video_paths, ori_video_paths), total=len(video_paths), desc="Crop Face and Extract Landmark")
     
     for (video_path, ori_video_path) in pbar:
         video_id = video_path.stem
         source = video_path.parent.name
         ori_video_id = ori_video_path.stem
+        label = "REAL" if video_id == ori_video_id else "FAKE"
         
         frame_extractor = FrameExtractor()
         json_path = boxes_dir / f"{ori_video_id}.json"
@@ -88,6 +90,7 @@ def process_crops(
         batch_crops = []
         batch_indices = []
         
+        temp_info = {}
         for idx, frame in frames_dict.items():
             ori_box = ori_box_dict[str(idx)]
             xmin, ymin, xmax, ymax = ori_box
@@ -117,6 +120,14 @@ def process_crops(
             cv2.imwrite(str(save_video_path), crop_bgr)
             stats["total_frames_saved"] += 1
             
+            temp_info[idx] = {
+                'vid': str(new_video_id),
+                'ori_vid': str(ori_video_id),
+                'source': str(source),
+                'frame_idx': int(idx),
+                'label': label
+            }
+            
         # Detect 5 facial Landmarks
         results = landmark_detector.detect_batch(batch_crops)
         
@@ -128,30 +139,19 @@ def process_crops(
                 valid_landmark_cnt += 1
                 stats["total_landmarks_found"] += 1
                 
+                frame_meta = temp_info[batch_indices[i]]
+                all_frame_meta.append(frame_meta)
+                
         if valid_landmark_cnt == 0:
             if save_landmark_dir.exists():
                 shutil.rmtree(save_landmark_dir)
                 
         stats["processed_videos"] += 1
         
-    total_time = time.time() - start_time
-    
-    print(f"\n{g_}{s_}{'='*50}{rs_}")
-    print(f"{g_}{s_}Processing Summary Report{rs_}")
-    print(f"{g_}{s_}{'='*50}{rs_}")
-    print(f" - Total Videos Found     : {stats['total_videos']}")
-    print(f" - Successfully Processed : {stats['processed_videos']}")
-    print(f" - Skipped (No Box/Frame) : {r_}{stats['skipped_videos']}{rs_}")
-    print(f" - Total Face Crops Saved : {stats['total_frames_saved']}")
-    print(f" - Total Landmarks Saved  : {stats['total_landmarks_found']}")
-    print(f" - Total Time Taken       : {y_}{total_time:.2f}s{rs_}")
-    
-    if stats['processed_videos'] > 0:
-        avg_time = total_time / stats['processed_videos']
-        print(f" - Average Time per Video : {avg_time:.2f}s")
-    
-    print(f"{g_}{s_}{'='*50}{rs_}\n")
+    return stats, pd.DataFrame(all_frame_meta)
 
+    
+    
         
 def main():
     parser = argparse.ArgumentParser(description="Crop Face and Extract Landmark")
@@ -161,6 +161,8 @@ def main():
     
     args = parser.parse_args()
     
+    start_time = time.time()
+    
     print(f"\n{c_}{s_}>>> Step 1: Scanning video paths...{rs_}")
     video_paths, ori_video_paths = get_video_paths(args.root_dir)
     
@@ -168,8 +170,32 @@ def main():
     landmark_detector = LandmarkDetector()
   
     print(f"{c_}{s_}>>> Step 3: Starting Process...{rs_}\n")
-    summary = process_crops(video_paths, ori_video_paths, args.root_dir, args.margin_ratio, 
+    summary, meta_df = process_crops(video_paths, ori_video_paths, args.root_dir, args.margin_ratio, 
                             args.margin_jitter, landmark_detector)
 
+    total_time = time.time() - start_time
+    
+    print(f"\n{g_}{s_}{'='*50}{rs_}")
+    print(f"{g_}{s_}Processing Summary Report{rs_}")
+    print(f"{g_}{s_}{'='*50}{rs_}")
+    print(f" - Total Videos Found     : {summary['total_videos']}")
+    print(f" - Successfully Processed : {summary['processed_videos']}")
+    print(f" - Skipped (No Box/Frame) : {r_}{summary['skipped_videos']}{rs_}")
+    print(f" - Total Face Crops Saved : {summary['total_frames_saved']}")
+    print(f" - Total Landmarks Saved  : {summary['total_landmarks_found']}")
+    print(f" - Total Time Taken       : {y_}{total_time:.2f}s{rs_}")
+    
+    if summary['processed_videos'] > 0:
+        avg_time = total_time / summary['processed_videos']
+        print(f" - Average Time per Video : {avg_time:.2f}s")
+    
+    if not meta_df.empty:
+        save_path = Path(args.root_dir) / "train_frame_metadata.csv"
+        meta_df.to_csv(save_path, index=False)
+        print(f"\n{y_}📂 Metadata CSV saved to: {save_path}{rs_}")
+        print(f"\n📝 Sample Data (Top 3):\n{meta_df.head(3)}")
+    
+    print(f"{g_}{s_}{'='*50}{rs_}\n")
+    
 if __name__ == "__main__":
     main()
