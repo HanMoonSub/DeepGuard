@@ -54,7 +54,7 @@ def get_video_paths(
         axis=1).tolist()
         
     original_video_list = meta_df.apply(
-        lambda x: root_path / (x['source'] if x['label'] == 'REAL' else 'Celeb-real') / f"{x['origin_vid']}.mp4", 
+        lambda x: root_path / (x['source'] if x['label'] == 'REAL' else 'Celeb-real') / f"{x['ori_vid']}.mp4", 
         axis=1).tolist()
     
     return video_list, original_video_list

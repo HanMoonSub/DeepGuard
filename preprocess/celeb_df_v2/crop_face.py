@@ -112,7 +112,7 @@ def process_crops(video_paths: List[Path],
             
             temp_info[idx] = {
                 'vid': str(video_id),
-                'origin_vid': str(ori_video_id),
+                'ori_vid': str(ori_video_id),
                 'source': str(source),
                 'frame_idx': int(idx),
                 'label': label
