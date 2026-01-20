@@ -3,6 +3,7 @@ import shutil
 import argparse
 import time
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from typing import List, Tuple, Dict
@@ -35,6 +36,8 @@ def process_crops(video_paths: List[Path],
     crops_dir.mkdir(parents=True, exist_ok=True)
     landmarks_dir.mkdir(parents=True, exist_ok=True)    
     
+    all_frame_meta = []
+    
     stats = {
         "total_videos": len(video_paths),
         "processed_videos": 0,
@@ -48,6 +51,8 @@ def process_crops(video_paths: List[Path],
     for (video_path, ori_video_path) in pbar:    
         video_id = video_path.stem
         ori_video_id = ori_video_path.stem
+        source = video_path.parent.name
+        label = "REAL" if video_id == ori_video_id else "FAKE"
         
         frame_extractor = FrameExtractor()
         json_path = boxes_dir / f"{ori_video_id}.json"
@@ -74,6 +79,7 @@ def process_crops(video_paths: List[Path],
         batch_crops = []
         batch_indices = []    
                 
+        temp_info = {}
         ## Cropping Face 
         for idx, frame in frames_dict.items():
             ori_box = ori_box_dict[str(idx)]
@@ -103,6 +109,14 @@ def process_crops(video_paths: List[Path],
             crop_bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
             cv2.imwrite(str(save_video_path), crop_bgr)
             stats["total_frames_saved"] += 1
+            
+            temp_info[idx] = {
+                'vid': str(video_id),
+                'origin_vid': str(ori_video_id),
+                'source': str(source),
+                'frame_idx': int(idx),
+                'label': label
+            }
                 
         ## Detect 5 facial Landmarks
         results = landmark_detector.detect_batch(batch_crops)
@@ -114,14 +128,17 @@ def process_crops(video_paths: List[Path],
                 np.save(save_landmark_path, result)
                 valid_landmark_cnt += 1
                 stats["total_landmarks_found"] += 1
-                        
+                
+                frame_meta = temp_info[batch_indices[i]]
+                all_frame_meta.append(frame_meta)
+                
         if valid_landmark_cnt == 0:
             if save_landmark_dir.exists():
                 shutil.rmtree(save_landmark_dir)
         
         stats["processed_videos"] += 1
 
-    return stats
+    return stats, pd.DataFrame(all_frame_meta)
 
 def main():
     parser = argparse.ArgumentParser(description="Crop Face and Extract Landmark")
@@ -140,7 +157,7 @@ def main():
     landmark_detector = LandmarkDetector()
   
     print(f"{c_}{s_}>>> Step 3: Starting Process...{rs_}\n")
-    summary = process_crops(
+    summary, meta_df = process_crops(
         video_paths, 
         ori_video_paths, 
         args.root_dir, 
@@ -148,6 +165,11 @@ def main():
         args.margin_jitter, 
         landmark_detector
     )
+    
+    if not meta_df.empty:
+        save_path = Path(args.root_dir) / "train_frame_metadata.csv"
+        meta_df.to_csv(save_path, index=False)
+        print(f"\n{y_}📂 Frame Metadata saved to: {save_path}{rs_}")
     
     total_time = time.time() - start_time
     
