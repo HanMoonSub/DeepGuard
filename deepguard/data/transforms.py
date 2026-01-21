@@ -8,7 +8,7 @@ def _get_isotropical_resize(img_size: List[int]):
     return [
         A.LongestMaxSize(max_size=max(h, w)),
         A.PadIfNeeded(min_height=h, min_width=w,
-                      border_mode=cv2.BORDER_CONSTANT, fill_value=0)
+                      border_mode=cv2.BORDER_CONSTANT, fill=0)
     ]
 
 def _get_normalization():
