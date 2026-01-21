@@ -2,29 +2,49 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 def split_data(
-    meta_df: pd.DataFrame,
-    label_key: str,
-    origin_vid: str, 
-    seed: int = 2025,
-    debug: bool = False,
-    test_size: float = 0.2,
-    debug_ratio: float = 0.1,
-    balance_val: bool = False,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+                meta_df: pd.DataFrame,
+                seed: int = 2025,
+                label_col: str = 'label',
+                ori_vid: str = 'ori_vid', 
+                test_size: float = 0.2,
+                balance_val: bool = True,
+                debug: bool = False,
+                debug_ratio: float = 0.1,
+) :
+    """Splits the dataset into training and validation sets based on original video IDs.
 
+    This function ensures that all fake videos derived from the same original video 
+    stay within the same split (Train or Val) to prevent data leakage. It first 
+    splits the real videos and then maps the corresponding fake videos.
+
+    Args:
+        meta_df: The complete metadata DataFrame containing labels and video IDs.
+        seed: Random seed for reproducibility. Defaults to 2025.
+        label_col: Name of the column containing labels (0 for REAL, 1 for FAKE).
+        ori_vid: Name of the column identifying the original video source.
+        test_size: Proportion of the dataset to include in the validation split.
+        balance_val: If True, samples the fake validation set to match the 
+            length of the real validation set.
+        debug: If True, downsamples the final datasets for quick testing.
+        debug_ratio: The ratio of data to keep when debug mode is enabled.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: A tuple containing (train_df, valid_df).
+    """
+    
     # Split real and fake(0: REAL, 1: FAKE)
     
-    assert meta_df[label_key].dtype in [int, float], "Label must be 0 or 1, not string"
+    assert meta_df[label_col].dtype in [int, float], "You need to label encoding {'FAKE': 1, 'REAL': 0}"
     
-    df_real = meta_df[meta_df[label_key] == 0].reset_index(drop=True)
-    df_fake = meta_df[meta_df[label_key] == 1].reset_index(drop=True)
+    df_real = meta_df[meta_df[label_col] == 0].reset_index(drop=True)
+    df_fake = meta_df[meta_df[label_col] == 1].reset_index(drop=True)
 
     # Split real Images
     real_train, real_val = train_test_split(df_real, test_size=test_size, random_state=seed, shuffle=True)
 
     # Match fake images to corresponding real train/val
-    fake_train = df_fake[df_fake[origin_vid].isin(real_train[origin_vid].unique())].reset_index(drop=True)
-    fake_val = df_fake[df_fake[origin_vid].isin(real_val[origin_vid].unique())].reset_index(drop=True)
+    fake_train = df_fake[df_fake[ori_vid].isin(real_train[ori_vid].unique())].reset_index(drop=True)
+    fake_val = df_fake[df_fake[ori_vid].isin(real_val[ori_vid].unique())].reset_index(drop=True)
 
     # Sample fake_val to match real_val length
     if balance_val:
