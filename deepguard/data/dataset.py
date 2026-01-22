@@ -57,3 +57,6 @@ class DeepFakeDataset(Dataset):
         else:
             label = row[self.label_col]
             return img, torch.tensor(label, dtype=torch.float32)
+        
+    def __str__(self):
+        return f"DeepFakeDataset with {len(self.meta_df)} samples"

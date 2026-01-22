@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 import albumentations as A
 
-class DeepFakeDataset(Dataset):
+class CutMixDeepFakeDataset(Dataset):
     """
     Dataset class for Deepfake detection with Landmark-based Cutout.
     
@@ -190,3 +190,6 @@ class DeepFakeDataset(Dataset):
             return img
         else:
             return img, torch.tensor(label, dtype=torch.float32)
+        
+    def __str__(self):
+        return f"CutMix DeepFakeDataset with {len(self.meta_df)} samples"

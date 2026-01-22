@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 import albumentations as A
 
-class DeepFakeDataset(Dataset):
+class MixUpDeepFakeDataset(Dataset):
     """
     Dataset class for Deepfake detection.
     Reads image paths and labels from a pandas DataFrame, loads images, 
@@ -110,3 +110,6 @@ class DeepFakeDataset(Dataset):
             return img
         else:
             return img, torch.tensor(label, dtype=torch.float32)
+        
+    def __str__(self):
+        return f"MixUp DeepFakeDataset with {len(self.meta_df)} samples"
