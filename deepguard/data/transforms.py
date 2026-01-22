@@ -25,7 +25,7 @@ def get_train_transforms(img_size: List[int]):
     transforms = [
         *_get_isotropical_resize(img_size),
         A.HorizontalFlip(p=0.5),
-        A.Affine(translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}, scale=(0.8, 1.2), rotate=(-10, 10), mode=cv2.BORDER_CONSTANT, cval=0, p=0.5),
+        A.Affine(translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}, scale=(0.8, 1.2), rotate=(-10, 10), border_mode=cv2.BORDER_CONSTANT, p=0.5),
         A.RandomBrightnessContrast(brightness_limit=0.15, contrast_limit=0.15, p=0.25),
     ]
     
