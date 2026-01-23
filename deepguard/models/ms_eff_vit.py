@@ -123,7 +123,7 @@ class MultiScaleEffViT(nn.Module):
     
     @torch.jit.ignore
     def no_weight_decay_keywords(self):
-        return {'pos_embed','cls_token'}
+        return {'pos_embed','cls_token','bn','norm'}
     
     def forward(self, x):
         
