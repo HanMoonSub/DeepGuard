@@ -14,12 +14,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
-from deepguard.data import split_data, class_imbalance_handle
-from deepguard.data import CutMixDeepFakeDataset, get_train_transforms, get_valid_transforms
-from deepguard.utils import seed_everything, AverageMeter, build_metrics
-from deepguard.optimizer import build_ms_eff_vit_optimizer, add_to_optim_groups
-from deepguard.scheduler import fetch_scheduler
-from deepguard.models import MultiScaleEffViT, ms_eff_vit_b0, ms_eff_vit_b5
+from .data import split_data, class_imbalance_handle
+from .data import CutMixDeepFakeDataset, get_train_transforms, get_valid_transforms
+from .utils import seed_everything, AverageMeter, build_metrics, EarlyStopping
+from .optimizer import build_ms_eff_vit_optimizer, add_to_optim_groups
+from .scheduler import fetch_scheduler
+from .models import MultiScaleEffViT, ms_eff_vit_b0, ms_eff_vit_b5
 
 from colorama import Fore, Style
 
@@ -41,6 +41,12 @@ class Trainer:
         self.criterion = getattr(nn, cfg.train.loss)()
         self.train_epoch_loss = AverageMeter()
         self.valid_epoch_loss = AverageMeter()
+        
+        # ======= Early Stopping ======
+        self.early_stopping = EarlyStopping(
+            patience = cfg.train.patience,
+            min_delta = cfg.train.min_delta,
+        )
         
         # ======= Metrics =======
         base_metrics = build_metrics(cfg.device, task="binary")
@@ -142,8 +148,13 @@ class Trainer:
                 print(f"🎊{s_} Best Score Updated! ({self.best_loss:.5f} -> {valid_loss:.5f}){r_}")
                 self.best_loss = valid_loss
                 self._save_checkpoint(ckpt_path, valid_loss, epoch, valid_metrics)
-                
+            
             print(f"{c_}{s_}📉 Train Loss: {train_loss:.4f} | Valid Loss: {valid_loss:.4f}{r_}")
+
+            # ====== Early Stopping ======
+            if self.early_stopping(valid_loss):
+                print(f"{c_}{s_}🛑 Early stopping triggered! Training stopped.{r_}")
+                break
 
         self.model.load_state_dict(torch.load(ckpt_path, map_location=self.cfg.device))
         return self.model
@@ -310,7 +321,7 @@ def main():
     cfg.wandb_artifact_name = f"{args.model_ver}_L{cfg.model.l_block_idx}_H{cfg.model.h_block_idx}"
         
     run = wandb.init(
-        project = args.model_ver,
+        project = f"{args.model_ver}_{args.dataset}",
         name= cfg.wandb_artifact_name,
         config = OmegaConf.to_container(cfg, resolve=True),
     )
@@ -320,10 +331,6 @@ def main():
     trainer.fit(train_df, valid_df)
     
     run.finish()
-    
-    if args.result_info:
-        print(f"Opening WandB dashboard: {run.url}")
-        webbrowser.open(run.url)
   
 if __name__ == "__main__":
     main()
