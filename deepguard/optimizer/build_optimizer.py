@@ -70,5 +70,22 @@ def build_ms_eff_vit_optimizer(model, cfg):
     all_optim_groups.extend(
         add_to_optim_groups(skip_keywords, h_vit_params, cfg.train.h_block_lr, cfg.train.h_block_wd)
     )
+    print(f"\n{'='*20} 📦 Parameter Groups Summary {'='*20}")
+    names = ["Backbone (Decay)", "Backbone (No-Decay)", 
+             "L-ViT (Decay)", "L-ViT (No-Decay)", 
+             "H-ViT (Decay)", "H-ViT (No-Decay)"]
+    
+    for i, group in enumerate(all_optim_groups):
+        group_name = names[i] if i < len(names) else f"Group {i}"
+        params = group['params']
+        num_tensors = len(params)
+        total_params = sum(p.numel() for p in params)
+        lr = group['lr']
+        wd = group.get('weight_decay', 0)
+        
+        print(f" • {group_name:<20} | Tensors: {num_tensors:<4} | Size: {total_params/1e6:>6.2f}M | LR: {lr:.1e} | WD: {wd}")
+    
+    print(f"{'='*65}\n")
+    
     opt_class = getattr(torch.optim, cfg.train.optimizer)
     return opt_class(all_optim_groups)
