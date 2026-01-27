@@ -49,11 +49,13 @@ train:
       backbone_lr: 5e-4
       h_block_lr: 1e-5
       l_block_lr: 1e-5
+      head_lr: 1e-5
 
       # Weight Decay
       backbone_wd: 1e-3
       h_block_wd: 1e-3
       l_block_wd: 1e-3
+      head_wd: 1e-3
 
       # Early Stopping
       patience: 3

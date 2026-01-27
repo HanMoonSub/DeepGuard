@@ -70,7 +70,6 @@ class ViTLayer(nn.Module):
                 depth: int,
                 num_heads: int,
                 mlp_ratio: float,
-                num_classes: int = 1,
                 qkv_bias: bool = True,
                 qk_scale: Optional[float] = None,
                 drop: float = 0.,
@@ -81,7 +80,6 @@ class ViTLayer(nn.Module):
                 patch_embed: str = 'low', # or 'high'
                 norm_layer: Type[nn.Module] = nn.LayerNorm,
                 layer_scale: float = None,
-                pool: str = 'cls', # or 'avg'
                 **kwargs
     ):
         """
@@ -93,7 +91,6 @@ class ViTLayer(nn.Module):
             depth: number of transformer blocks
             num_heads: number of heads in each stage.
             mlp_ratio: MLP ratio.
-            num_classes: number of classes.
             qkv_bias: bool argument for query, key, value learnable bias.
             qk_scale: bool argument to scaling query, key.
             drop: mlp dropout, proj dropout, pos dropout rate.
@@ -107,9 +104,6 @@ class ViTLayer(nn.Module):
         """
         
         super().__init__()
-        
-        self.num_classes = num_classes
-        self.pool = pool
         
         if patch_embed == 'low':
             self.patch_embed = LowBlockPatchEmbed(in_chs, dim, block_idx, input_resolution)
@@ -139,7 +133,6 @@ class ViTLayer(nn.Module):
             self.blocks.append(block)
             
         self.norm = norm_layer(dim)
-        self.head = nn.Linear(dim, num_classes) if self.num_classes > 0 else nn.Identity()
         self.apply(self._init_weights)
         
     def _init_weights(self, m):
@@ -162,13 +155,5 @@ class ViTLayer(nn.Module):
             x = block(x) # (B,N+1,C)
             
         x = self.norm(x) # (B,N+1,C)
-        
-        if self.pool == 'cls':
-            x = x[:,0] # (B,C)
-        elif self.pool == 'avg':
-            x = x[:,1:].mean(dim=1)
-        
-        # cls_token, global pooling
-        x = self.head(x) # (B,C) -> (B,num_classes)
         
         return x

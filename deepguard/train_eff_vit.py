@@ -55,6 +55,7 @@ class Trainer:
         
         # ======= Optimizer =======
         self.optimizer = build_ms_eff_vit_optimizer(self.model, cfg)
+        self.scaler = torch.amp.GradScaler("cuda", enabled=self.cfg.train.use_amp)
         
         # ======= Scheduler ========
         self.scheduler = fetch_scheduler(self.optimizer, cfg)
@@ -166,8 +167,6 @@ class Trainer:
         self.train_epoch_loss.reset()
         self.train_metrics.reset()
         
-        scaler = torch.amp.GradScaler("cuda", enabled=self.cfg.train.use_amp)
-        
         pbar = tqdm(enumerate(loader), total=len(loader), desc=f"Training for {self.cfg.dataset}")
         for step, (imgs, labels) in pbar:
             imgs = imgs.to(self.cfg.device) # (B,C,H,W)
@@ -181,15 +180,15 @@ class Trainer:
                 loss = loss / self.cfg.train.n_accumulate
             
             if self.cfg.train.use_amp:
-                scaler.scale(loss).backward()
+                self.scaler.scale(loss).backward()
             else:
                 loss.backward()
             
             # ====== Gradient Accumulation ======
-            if (step + 1) % self.cfg.train.n_accumulate == 0:
+            if (step + 1) % self.cfg.train.n_accumulate == 0 or (step + 1) == len(loader):
                 if self.cfg.train.use_amp:
-                    scaler.step(self.optimizer)
-                    scaler.update()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
                 else:
                     self.optimizer.step()
             
@@ -206,6 +205,7 @@ class Trainer:
             backbone_lr = self.optimizer.param_groups[0]['lr']
             l_vit_lr = self.optimizer.param_groups[2]['lr']
             h_vit_lr = self.optimizer.param_groups[4]['lr']
+            head_lr = self.optimizer.param_groups[6]['lr']
             
             # ====== Calculate GPU Memory Usage =======
             mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0
@@ -221,6 +221,7 @@ class Trainer:
                 backbone_lr = f'{backbone_lr:.1e}',
                 l_vit_lr = f'{l_vit_lr:.1e}',
                 h_vit_lr = f'{h_vit_lr:.1e}',
+                head_lr = f'{head_lr:.1e}',
                 gpu_mem = f'{mem:.1f} GB'
             )
             

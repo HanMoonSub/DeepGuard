@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from deepguard.layers.featextractor import FeatExtractor
 from deepguard.layers.transformer import ViTLayer
+from deepguard.layers.weight_init import trunc_normal_
 from typing import List, Union
 from timm.models import register_model, build_model_with_cfg
 
@@ -61,10 +62,13 @@ class MultiScaleEffViT(nn.Module):
             h_attn_drop: float = 0.,
             l_drop_path: float = 0.,
             h_drop_path: float = 0.,
+            num_classes: int = 1,
+            pool: str = 'avg', # or 'str'
             **kwargs
             ):
         super().__init__()
         
+        self.pool = pool
         self.feat_extractor = FeatExtractor(
                             model_name = model_name, 
                             img_size = img_size, 
@@ -101,6 +105,25 @@ class MultiScaleEffViT(nn.Module):
                             drop_path = h_drop_path,
                             patch_embed = 'high')
         
+        fusion_dim = h_dim + l_dim
+        self.head = nn.Sequential(
+                nn.LayerNorm(fusion_dim),
+                nn.Dropout(0.1),
+                nn.Linear(fusion_dim, num_classes)
+            ) if num_classes > 0 else nn.Identity()
+        
+        self._init_head_weights()
+        
+    def _init_head_weights(self):
+        for m in self.head.modules():
+            if isinstance(m, nn.Linear):
+                trunc_normal_(m.weight, std=.02)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0.)
+            elif isinstance(m, nn.LayerNorm):
+                nn.init.constant_(m.bias, 0.)
+                nn.init.constant_(m.weight, 1.0)
+        
     def _build_metadata(self, img_size, block_idx):
         
         if block_idx == 6:
@@ -132,10 +155,19 @@ class MultiScaleEffViT(nn.Module):
         l_feat = feat[self.l_meta["feature_idx"]]
         h_feat = feat[self.h_meta["feature_idx"]]
         
-        l_out = self.l_vit(l_feat) # (B,num_classes)
-        h_out = self.h_vit(h_feat) # (B,num_classes)
-    
-        return l_out + h_out
+        l_out = self.l_vit(l_feat) # (B,N_l+1,l_dim)
+        h_out = self.h_vit(h_feat) # (B,N_h+1,h_dim)
+        
+        if self.pool == 'cls':
+            l_pool = l_out[:,0]
+            h_pool = h_out[:,0]
+        elif self.pool == "avg":
+            l_pool = l_out[:,1:].mean(dim=1)
+            h_pool = h_out[:,1:].mean(dim=1)
+        
+        fusion_out = torch.concat([l_pool, h_pool], dim=-1)
+            
+        return self.head(fusion_out)
     
 def _get_config_for_type(variant: str, type_key: str) -> dict:
    

@@ -50,6 +50,7 @@ def build_ms_eff_vit_optimizer(model, cfg):
     feat_params = []
     l_vit_params = []
     h_vit_params = []
+    head_params = []
     
     for name, param in model.named_parameters():
         if "feat_extractor" in name:
@@ -58,6 +59,8 @@ def build_ms_eff_vit_optimizer(model, cfg):
             l_vit_params.append((name, param))
         elif "h_vit" in name:
             h_vit_params.append((name, param))
+        elif "head" in name:
+            head_params.append((name, param))
             
     all_optim_groups = []
     
@@ -70,10 +73,14 @@ def build_ms_eff_vit_optimizer(model, cfg):
     all_optim_groups.extend(
         add_to_optim_groups(skip_keywords, h_vit_params, cfg.train.h_block_lr, cfg.train.h_block_wd)
     )
+    all_optim_groups.extend(
+        add_to_optim_groups(skip_keywords, head_params, cfg.train.head_lr, cfg.train.head_wd)
+    )
     print(f"\n{'='*20} 📦 Parameter Groups Summary {'='*20}")
     names = ["Backbone (Decay)", "Backbone (No-Decay)", 
              "L-ViT (Decay)", "L-ViT (No-Decay)", 
-             "H-ViT (Decay)", "H-ViT (No-Decay)"]
+             "H-ViT (Decay)", "H-ViT (No-Decay)",
+             "Head (Decay)", "Head (No-Decay)"]
     
     for i, group in enumerate(all_optim_groups):
         group_name = names[i] if i < len(names) else f"Group {i}"
