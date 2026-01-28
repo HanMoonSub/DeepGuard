@@ -5,6 +5,7 @@ from .mlp import Mlp
 from .patch import (
     MBConvBlock,
     PatchEmbed,
+    GCViTPatchEmbed
 )
 from .reducesize import ReduceSize
 from .se import SE
