@@ -3,9 +3,8 @@ from .drop import DropPath
 from .featextractor import FeatExtractor
 from .mlp import Mlp
 from .patch import (
-    LocalContextBlock,
-    LowBlockPatchEmbed,
-    HighBlockPatchEmbed,
+    MBConvBlock,
+    PatchEmbed,
 )
 from .reducesize import ReduceSize
 from .se import SE

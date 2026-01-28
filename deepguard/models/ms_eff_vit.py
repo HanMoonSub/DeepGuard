@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from typing import Type
 from deepguard.layers.featextractor import FeatExtractor
 from deepguard.layers.transformer import ViTLayer
 from deepguard.layers.weight_init import trunc_normal_
@@ -63,7 +64,7 @@ class MultiScaleEffViT(nn.Module):
             l_drop_path: float = 0.,
             h_drop_path: float = 0.,
             num_classes: int = 1,
-            pool: str = 'avg', # or 'str'
+            pool: str = 'avg', # or 'cls'
             **kwargs
             ):
         super().__init__()
@@ -90,7 +91,7 @@ class MultiScaleEffViT(nn.Module):
                             drop = l_drop,
                             attn_drop = l_attn_drop,
                             drop_path = l_drop_path,
-                            patch_embed = 'low')
+                            )
         
         self.h_vit = ViTLayer(
                             in_chs = self.h_meta['in_chs'], 
@@ -103,13 +104,15 @@ class MultiScaleEffViT(nn.Module):
                             drop = h_drop,
                             attn_drop = h_attn_drop,
                             drop_path = h_drop_path,
-                            patch_embed = 'high')
+                            )
         
         fusion_dim = h_dim + l_dim
         self.head = nn.Sequential(
                 nn.LayerNorm(fusion_dim),
+                nn.Linear(fusion_dim, fusion_dim // 2),
+                nn.GELU(),
                 nn.Dropout(0.1),
-                nn.Linear(fusion_dim, num_classes)
+                nn.Linear(fusion_dim // 2, num_classes)
             ) if num_classes > 0 else nn.Identity()
         
         self._init_head_weights()
