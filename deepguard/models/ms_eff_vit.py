@@ -32,14 +32,12 @@ default_cfgs = {
 
 weight_registry = {
     'ms_eff_vit_b0': {
-        'asian':    'https://github.com/.../releases/download/v0.2.0/b0_asian.pth',
-        'western1': 'https://github.com/.../releases/download/v0.1.0/b0_western_v1.pth',
-        'western2': 'https://github.com/.../releases/download/v0.3.0/b0_western_v2.pth',
+        'celeb_df_v2':  'https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_vit_b0_celeb_df_v2.bin',
+        'ff++': 'https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_vit_b0_ff++.bin',
     },
     'ms_eff_vit_b5': {
-        'asian':    'https://github.com/.../releases/download/v0.2.0/b5_asian.pth',
-        'western1': 'https://github.com/.../releases/download/v0.1.0/b5_western_v1.pth',
-        'western2': 'https://github.com/.../releases/download/v0.3.0/b5_western_v2.pth',
+        'celeb_df_V2':   'https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_vit_b5_celeb_df_v2.bin',
+        'ff++': 'https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_vit_b5_ff++.bin'
     }
 }
 class MultiScaleEffViT(nn.Module):
@@ -199,7 +197,7 @@ def _create_ms_eff_vit(variant,
     
 
 @register_model
-def ms_eff_vit_b0(pretrained=False, domain="asian", **kwargs) -> MultiScaleEffViT:
+def ms_eff_vit_b0(pretrained=False, dataset="celeb_df_v2", **kwargs) -> MultiScaleEffViT:
 
     variant = "ms_eff_vit_b0"
     
@@ -211,18 +209,19 @@ def ms_eff_vit_b0(pretrained=False, domain="asian", **kwargs) -> MultiScaleEffVi
         l_dim = 120,
         h_dim = 160, 
         l_depth = 2,
-        h_depth = 6,
+        h_depth = 4,
         l_heads = 4,
         h_heads = 4,
         l_ratio = 4,
         h_ratio = 6,
-        h_drop = 0.1,
-        h_drop_path = 0.1,
+        h_drop = 0.05,
+        l_attn_drop = 0.05,
+        h_drop_path = 0.05,
         **kwargs
     )
     
     if pretrained:
-        pretrained_cfg = _get_config_for_type(variant, domain)
+        pretrained_cfg = _get_config_for_type(variant, dataset)
     else:
         pretrained_cfg = default_cfgs[variant]
         
@@ -232,7 +231,7 @@ def ms_eff_vit_b0(pretrained=False, domain="asian", **kwargs) -> MultiScaleEffVi
                               **model_kwargs)
 
 @register_model
-def ms_eff_vit_b5(pretrained=False, domain="asian", **kwargs) -> MultiScaleEffViT:
+def ms_eff_vit_b5(pretrained=False, dataset="celeb_df_v2", **kwargs) -> MultiScaleEffViT:
     
     variant = "ms_eff_vit_b5"
     
@@ -249,16 +248,13 @@ def ms_eff_vit_b5(pretrained=False, domain="asian", **kwargs) -> MultiScaleEffVi
         h_heads = 8, 
         l_ratio = 4,
         h_ratio = 4,
-        l_drop = 0.0,
         h_drop = 0.1,
-        l_attn_drop = 0.05,
-        h_attn_drop = 0.05,
-        l_drop_path = 0.05,
+        l_attn_drop = 0.1,
         h_drop_path = 0.1,
         **kwargs
     )
     if pretrained:
-        pretrained_cfg = _get_config_for_type(variant, domain)
+        pretrained_cfg = _get_config_for_type(variant, dataset)
     else:
         pretrained_cfg = default_cfgs[variant]
         

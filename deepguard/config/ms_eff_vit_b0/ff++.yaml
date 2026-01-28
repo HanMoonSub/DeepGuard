@@ -12,7 +12,7 @@ model:
       l_dim: 120 # Dimension for low-block transformer
       h_dim: 160 # Dimension for high-block transformer
       l_depth: 2 # Number of transformer layers (Low)
-      h_depth: 6 # Number of transformer layers (High)
+      h_depth: 4 # Number of transformer layers (High)
       
       # ===== Attention Settings =====
       l_heads: 4 # Multi Head Attention (Low)
@@ -22,11 +22,11 @@ model:
       
       # ===== Reqularization (Dropout) =====
       l_drop: 0  # Pos dropout, Mlp dropout, Proj dropout (Low)
-      h_drop: 0.1 # Pos dropout, Mlp dropout, Proj dropout (High)
-      l_attn_drop: 0 # Attention Dropout (Low)
+      h_drop: 0.05 # Pos dropout, Mlp dropout, Proj dropout (High)
+      l_attn_drop: 0.05 # Attention Dropout (Low)
       h_attn_drop: 0 # Attention Dropout (High)
       l_drop_path: 0 # Stochastic depth rate (Low)
-      h_drop_path: 0.1 # Stochastic depth rate (High)
+      h_drop_path: 0.05 # Stochastic depth rate (High)
 
 train:
       epochs: 10
@@ -46,16 +46,16 @@ train:
       valid_bs: 32
       
       # Learning Rate
-      backbone_lr: 5e-4
-      h_block_lr: 1e-5
-      l_block_lr: 1e-5
-      head_lr: 1e-5
+      backbone_lr: 5e-5
+      h_block_lr: 2e-4
+      l_block_lr: 8e-5
+      head_lr: 1e-3
 
       # Weight Decay
       backbone_wd: 1e-3
-      h_block_wd: 1e-3
-      l_block_wd: 1e-3
-      head_wd: 1e-3
+      h_block_wd: 5e-4
+      l_block_wd: 1e-4
+      head_wd: 1e-5
 
       # Early Stopping
       patience: 3
