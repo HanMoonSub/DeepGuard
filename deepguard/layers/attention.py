@@ -115,3 +115,80 @@ class LocalWindowAttention(nn.Module):
         x = self.proj(x)
         x = self.proj_drop(x)
         return x
+    
+class GlobalWindowAttention(nn.Module):
+    """
+        inp: (B*num_windows, window_size**2, dim)
+        
+        q_query : (B,1,num_heads, window_size**2, head_dim)
+        => Repeat X (num_windows)
+        (B*num_windows, num_heads, window_size**2, head_dim)
+            
+        out: (B*num_windows, window_size**2, dim)
+    """
+    
+    def __init__(self,
+                 dim: int,
+                 num_heads: int,
+                 window_size: int,
+                 qkv_bias: bool = True,
+                 qk_scale: Optional[float] = None,
+                 attn_drop: float = 0.,
+                 proj_drop: float = 0.
+                 ):
+        super().__init__()
+        self.window_size = window_size
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
+        self.scale = qk_scale or self.head_dim ** -0.5
+        
+        # ========= Learnable Bias Table ============
+        self.relative_position_bias_table = nn.Parameter(
+            torch.zeros((2*window_size-1)*(2*window_size-1),num_heads)
+        )
+        coords_h = torch.arange(window_size)
+        coords_w = torch.arange(window_size)
+        coords = torch.stack(torch.meshgrid([coords_h, coords_w], indexing='ij'))
+        coords_flatten = torch.flatten(coords, 1)
+        relative_coords = coords_flatten[:,:,None] - coords_flatten[:,None,:]
+        relative_coords = relative_coords.permute(1,2,0).contiguous()
+        relative_coords[:,:,0] += window_size - 1
+        relative_coords[:,:,1] += window_size - 1
+        relative_coords[:, :, 0] *= 2 * window_size - 1 # h_idx = h_dix * width
+        relative_position_index = relative_coords.sum(-1) 
+        
+        self.register_buffer("relative_position_index", relative_position_index)
+        self.qkv = nn.Linear(dim, dim * 2, bias=qkv_bias)
+        self.proj = nn.Linear(dim, dim)
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj_drop = nn.Dropout(proj_drop)
+        self.softmax = nn.Softmax(dim=-1)
+        
+        trunc_normal_(self.relative_position_bias_table, std=.02)
+        
+    def forward(self, x, q_global):
+        B_, N, C = x.shape # (B*num_windows, window_size**2, dim)
+        B = q_global.shape[0] # B
+        B_dim = B_ // B # num_windows
+        # (B_,N,2,num_heads,head_dim) -> (2,B_,num_heads,N,head_dim)
+        kv = self.qkv(x).reshape(B_, N, 2, self.num_heads, self.head_dim).permute(2,0,3,1,4)
+        # k: key, v: value
+        k, v = kv[0], kv[1]
+        # (B,1,num_heads,window_size**2,head_dim) -> (B,num_windows,num_heads,window_size**2,head_dim)
+        q_global = q_global.repeat(1, B_dim, 1, 1, 1) # Compute Coefficient
+        q = q_global.reshape(B_, self.num_heads, N, self.head_dim)
+        q = q * self.scale
+        attn = (q @ k.transpose(-2,-1)) # (B_, num_heads, N, N)
+        relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
+            self.window_size**2, self.window_size**2, -1
+        )
+        relative_position_bias = relative_position_bias.permute(2,0,1).contiguous()
+        
+        attn = attn + relative_position_bias.unsqueeze(0)
+        attn = self.softmax(attn)
+        attn = self.attn_drop(attn)
+        
+        x = (attn @ v).transpose(1,2).reshape(B_,N,C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
