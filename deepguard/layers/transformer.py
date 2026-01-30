@@ -5,6 +5,8 @@ from .attention import MSA, GlobalWindowAttention, LocalWindowAttention
 from .mlp import Mlp
 from .drop import DropPath
 from .patch import PatchEmbed
+from .global_query import GlobalQueryGen
+from .reducesize import ReduceSize
 from .window import window_partition, window_reverse
 from .weight_init import trunc_normal_
 
@@ -235,3 +237,80 @@ class GCViTBlock(nn.Module):
         x = x + self.drop_path(self.gamma2 * self.mlp(self.norm2(x)))
         
         return x
+    
+class GCViTLayer(nn.Module):
+    """
+        inp: (B,H,W,C)
+        out: 
+            if downsample:
+                (B,H//2,W//2,2C)
+            else:
+                (B,H,W,C)
+    """
+    def __init__(self,
+                 dim: int,
+                 depth: int,
+                 input_resolution: int | float,
+                 num_heads: int,
+                 window_size: int,
+                 downsample: bool = True,
+                 mlp_ratio: float = 4.,
+                 qkv_bias: bool = True,
+                 qk_scale: int | float | None = None,
+                 drop: float = 0.,
+                 attn_drop: float = 0.,
+                 drop_path: List[float] | float = 0.,
+                 norm_layer: Type[nn.Module] = nn.LayerNorm,
+                 layer_scale: int | float | None = None,
+                 ):
+        """
+        Args:
+            dim: feature size dimension
+            depth: number of block in each stage
+            input_resolution: input image resolution
+            num_heads: number of heads in each stage
+            window_size: window size in each stage
+            downsample: bool argument for down-sampling
+            mlp_ratio: MLP ratio
+            qkv_bias: bool argument for query, key, value learnable bias
+            qk_scale: bool argument for scaling query, key
+            drop: proj, mlp dropout rate
+            attn_drop: attention dropout rate
+            drop_path: drop path rate
+            norm_layer: normalization layer
+            layer_scale: layer scaling coefficient
+        """
+        
+        
+        super().__init__()
+        self.blocks = nn.ModuleList([
+            GCViTBlock(
+                dim = dim,
+                num_heads = num_heads,
+                window_size = window_size,
+                mlp_ratio = mlp_ratio,
+                qkv_bias = qkv_bias,
+                qk_scale = qk_scale,
+                drop = drop,
+                attn_drop = attn_drop,
+                drop_path = drop_path[i] if isinstance(drop_path, list) else drop_path,
+                attention = LocalWindowAttention if (i % 2 == 0) else GlobalWindowAttention,
+                norm_layer = norm_layer,
+                layer_scale = layer_scale,
+            )
+            for i in range(depth)
+        ])
+        
+        self.downsample = None if not downsample else ReduceSize(dim=dim, norm_layer=norm_layer)
+        self.q_global_gen = GlobalQueryGen(dim, input_resolution, window_size, num_heads)
+    def forward(self, x):
+        # (B,H,W,C) -> (B,C,H,W)
+        q_global = self.q_global_gen(x.permute(0,3,1,2))
+        
+        for block in self.blocks:
+            x = block(x, q_global)
+        
+        if self.downsample is None:
+            return x
+        # (B,H,W,C) -> (B,H//2,W//2,2C)
+        return self.downsample(x)
