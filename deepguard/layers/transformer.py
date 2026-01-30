@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
-from .attention import MSA
 from typing import Optional, Type, List
+from .attention import MSA, GlobalWindowAttention, LocalWindowAttention
 from .mlp import Mlp
 from .drop import DropPath
 from .patch import PatchEmbed
+from .window import window_partition, window_reverse
 from .weight_init import trunc_normal_
 
 class ViTBlock(nn.Module):
@@ -149,5 +150,88 @@ class ViTLayer(nn.Module):
             x = block(x) # (B, n_w * n_h, dim)
             
         x = self.norm(x) # (B, n_w * n_h, dim)
+        
+        return x
+    
+class GCViTBlock(nn.Module):
+    """
+        inp: (B,H,W,C)
+        out: (B,H,W,C)
+        
+        if attention: 'local'
+            LocalWindowAttention
+        if attention: 'global'
+            GlobalWindowAttention
+    """
+    def __init__(self,
+                 dim: int,
+                 num_heads: int,
+                 window_size: int,
+                 mlp_ratio: float = 4.,
+                 qkv_bias: bool = True,
+                 qk_scale: float | None = None,
+                 drop: float = 0.,
+                 attn_drop: float = 0.,
+                 drop_path: float = 0.,
+                 act_layer: Type[nn.Module] = nn.GELU,
+                 attention: Type[nn.Module] = LocalWindowAttention,
+                 norm_layer: Type[nn.Module] = nn.LayerNorm,
+                 layer_scale: int | float | None = None                 
+                 ):
+        """Args
+            dim: feature size dimension
+            num_heads: number of attention head
+            window_size: window_size
+            mlp_ratio: MLP ratio
+            qkv_bias: bool argument for query, key, value learnable bias
+            qk_scale: bool argument to scaling query, key
+            drop: proj, mlp dropout ratio
+            attn_drop: attention dropout ratio
+            drop_path: drop path rate
+            act_layer: activation function
+            attention: attention block type
+            norm_layer: normalization layer
+            layer_scale: layer scaling coefficient
+        """
+        super().__init__()
+        self.window_size = window_size
+        self.norm1 = norm_layer(dim)
+        self.norm2 = norm_layer(dim)
+        
+        self.attn = attention(
+            dim,
+            num_heads = num_heads,
+            window_size = window_size,
+            qkv_bias = qkv_bias,
+            qk_scale = qk_scale,
+            attn_drop = attn_drop,
+            proj_drop = drop
+        )
+        
+        self.drop_path = DropPath(drop_path) if drop_path > 0 else nn.Identity()
+        self.mlp = Mlp(in_dims=dim, hidden_dims=int(dim*mlp_ratio), act_layer=act_layer, drop=drop)
+        
+        self.layer_scale = False
+        if layer_scale is not None:
+            self.layer_scale = True
+            self.gamma1 = nn.Parameter(layer_scale * torch.ones(dim), requires_grad=True)
+            self.gamma2 = nn.Parameter(layer_scale * torch.ones(dim), requires_grad=True)
+        else:
+            self.gamma1 = 1.0
+            self.gamma2 = 1.0
+    
+    def forward(self, x, q_global):
+        B,H,W,C = x.shape
+        shortcut = x
+        x = self.norm1(x)
+        # (B, H, W, C) -> (B*num_windows, window_size, window_size, C)
+        x_windows = window_partition(x, self.window_size)
+        # (B*num_windows, window_size, window_size, C) -> (B*num_windows, window_size**2, C)
+        x_windows = x_windows.view(-1, self.window_size**2, C)
+        attn_windows = self.attn(x_windows, q_global)
+        # (B*num_windows, window_size ** 2, C) -> (B, H, W, C)
+        x = window_reverse(attn_windows, self.window_size, H, W)
+        x = shortcut + self.drop_path(self.gamma1 * x)
+        x = x + self.drop_path(self.gamma2 * self.mlp(self.norm2(x)))
         
         return x
