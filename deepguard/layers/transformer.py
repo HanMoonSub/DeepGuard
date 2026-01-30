@@ -4,7 +4,7 @@ from typing import Optional, Type, List
 from .attention import MSA, GlobalWindowAttention, LocalWindowAttention
 from .mlp import Mlp
 from .drop import DropPath
-from .patch import PatchEmbed
+from .patch import PatchEmbed, GCViTPatchEmbed
 from .global_query import GlobalQueryGen
 from .reducesize import ReduceSize
 from .window import window_partition, window_reverse
@@ -314,3 +314,96 @@ class GCViTLayer(nn.Module):
             return x
         # (B,H,W,C) -> (B,H//2,W//2,2C)
         return self.downsample(x)
+    
+class GCViT(nn.Module):
+    """
+        inp: (B,in_chs,H,W)
+        out: (B,C)
+    """
+    def __init__(self,
+                in_chs: int, 
+                input_resolution: int | float,
+                dim: int, 
+                depths: List[int],
+                window_size: List[int],
+                mlp_ratio: List[float],
+                num_heads: List[int], 
+                qkv_bias: bool = True,
+                qk_scale: int | float | None = None,
+                drop: float = 0.,
+                attn_drop: float = 0.,
+                drop_path: float = 0.,
+                norm_layer: Type[nn.Module] = nn.LayerNorm,
+                layer_scale: int | float | None = None,
+                **kwargs):
+        """
+        Args:
+            in_chs: backbone feature map channels
+            input_resolution: backbone feature map size
+            dim: feature size dimension.
+            depths: number of layers in each stage.
+            window_size: window size in each stage.
+            mlp_ratio: MLP ratio in each stage
+            num_heads: number of heads in each stage.
+            qkv_bias: bool argument for query, key, value learnable bias.
+            qk_scale: bool argument to scaling query, key.
+            drop: dropout rate.
+            attn_drop: attention dropout rate.
+            drop_path: drop path rate.
+            norm_layer: normalization layer.
+            layer_scale: layer scaling coefficient.
+        """
+        
+        super().__init__()
+        num_feats = int(dim * 2 ** (len(depths)-1))
+        self.patch_embed = GCViTPatchEmbed(in_chs = in_chs, dim = dim)
+        self.pos_drop = nn.Dropout(drop)
+        dpr = [x.item() for x in torch.linspace(0, drop_path, sum(depths))]
+        
+        self.stages = nn.ModuleList([
+            GCViTLayer(
+                dim = int(dim * 2 ** i),
+                depth = depths[i],
+                input_resolution = int(input_resolution * 2 ** (-i)),
+                num_heads = num_heads[i],
+                window_size = window_size[i],
+                downsample = (i < len(depths) - 1),
+                mlp_ratio = mlp_ratio[i],
+                qkv_bias = qkv_bias,
+                qk_scale = qk_scale,
+                drop = drop, 
+                attn_drop = attn_drop,
+                drop_path = dpr[sum(depths[:i]):sum(depths[:i+1])],
+                norm_layer = norm_layer,
+                layer_scale = layer_scale,
+            )
+            for i in range(len(depths))
+        ])
+        
+        self.norm = norm_layer(num_feats)
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        self.apply(self._init_weights)
+        
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+    
+    
+    def forward(self, x):
+        x = self.patch_embed(x) #(B,in_chs,H,W) -> (B,H,W,D)
+        x = self.pos_drop(x)
+        
+        for stage in self.stages:
+            x = stage(x) # (B,H,W,D) -> (B,H//2,W//2,2D)
+            
+        x = self.norm(x)
+        x = x.permute(0,3,1,2) # (B,h,w,C) -> (B,C,h,w)
+        x = self.avgpool(x) # (B,C,1,1)
+        x = x.reshape(x.shape[0],-1) #(B,C,1,1) -> (B,C)
+        
+        return x
