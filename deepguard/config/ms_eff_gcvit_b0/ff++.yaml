@@ -1,4 +1,4 @@
-dataset: "Celeb_DF(V2)"
+dataset: "FaceForensics++"
 
 model:
       model_name: "tf_efficientnet_b0.ns_jft_in1k"
@@ -9,17 +9,17 @@ model:
       h_block_idx: 6 # High-level feature stage index
       
       # ===== Transformer Dimensions =====
-      l_dim: 40 # Dimension for low-block transformer
-      h_dim: 320 # Dimension for high-block transformer
+      l_dim: 24 # Dimension for low-block transformer
+      h_dim: 256 # Dimension for high-block transformer
       l_depths: [2,2,4,2] # Number of transformer layers (Low)
       h_depths: [4] # Number of transformer layers (High)
       
       # ===== Attention Settings =====
       l_windows: [7,7,14,7] # Window Size for Attention (Low)
       h_windows: [7] # Window Size for Attention (High)
-      l_heads: [2,2,4,8] # Multi Head Attention (Low)
-      h_heads: [8] # Multi Head Attention (High)
-      l_ratio: [3,3,3,3] # MLP expansion ratio (Low)
+      l_heads: [1,2,4,8] # Multi Head Attention (Low)
+      h_heads: [4] # Multi Head Attention (High)
+      l_ratio: [4,4,4,4] # MLP expansion ratio (Low)
       h_ratio: [4] # MLP expansion ratio (High)
       
       # ===== Reqularization (Dropout) =====
@@ -48,15 +48,15 @@ train:
       valid_bs: 32
       
       # Learning Rate
-      backbone_lr: 5e-5
+      backbone_lr: 5e-4
       h_block_lr: 2e-4
-      l_block_lr: 8e-5
+      l_block_lr: 1e-4
       head_lr: 1e-3
 
       # Weight Decay
       backbone_wd: 1e-3
       h_block_wd: 5e-4
-      l_block_wd: 1e-4
+      l_block_wd: 1e-3
       head_wd: 1e-5
 
       # Early Stopping
