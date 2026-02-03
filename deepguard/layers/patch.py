@@ -33,6 +33,9 @@ class PatchEmbed(nn.Module):
     Feature map: block.1 output, (B,C,H,W) -> (B,H//2,W//2,D)
     Feature map: block.2 output, (B,C,H,W) -> (B,H,W,D)
     
+    Feature map: block.4 output, (B,C,H,W) -> (B,H//2,W//2,D)
+    Feature map: block.6 output, (B,C,H,W) -> (B,H,W,D)
+    
     """
     
     def __init__(
@@ -98,5 +101,38 @@ class PatchEmbed(nn.Module):
         
         x += self.pos_embed
         
-        return self.norm(x)
+        return self.norm(x.contiguous()) 
+
+class GCViTPatchEmbed(nn.Module):
     
+    """"
+        out: (B,C,H,W)
+        inp: (B,H,W,D)
+    """
+    
+    def __init__(
+                self,
+                in_chs: int,
+                dim: int,
+                norm_layer: Type[nn.Module] = nn.LayerNorm,
+                ):
+        super().__init__()
+        
+        """
+        Args:
+            in_chs: Feature Map Channels
+            dim: Embedding Dimension
+        """
+        
+        self.proj = nn.Sequential(
+            nn.Conv2d(in_chs, dim, kernel_size=1, stride=1, padding=0),
+            MBConvBlock(dim)
+        )
+
+        self.norm = norm_layer(dim)    
+          
+    def forward(self, x):
+        x = self.proj(x) # (B, in_chs, H, W) -> (B, dim, H, W)
+        x = x.permute(0,2,3,1) # (B, H, W, dim)
+            
+        return self.norm(x)
