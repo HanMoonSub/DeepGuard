@@ -1,0 +1,64 @@
+dataset: "Celeb_DF(V2)"
+
+model:
+      model_name: "tf_efficientnet_b0.ns_jft_in1k"
+      img_size: [224,224]
+
+      # ===== Feature Extraction Blocks =====
+      l_block_idx: 1 # Low-level feature stage index
+      h_block_idx: 6 # High-level feature stage index
+      
+      # ===== Transformer Dimensions =====
+      l_dim: 24 # Dimension for low-block transformer
+      h_dim: 256 # Dimension for high-block transformer
+      l_depths: [2,2,4,2] # Number of transformer layers (Low)
+      h_depths: [4] # Number of transformer layers (High)
+      
+      # ===== Attention Settings =====
+      l_windows: [7,7,14,7] # Window Size for Attention (Low)
+      h_windows: [7] # Window Size for Attention (High)
+      l_heads: [1,2,4,8] # Multi Head Attention (Low)
+      h_heads: [4] # Multi Head Attention (High)
+      l_ratio: [4,4,4,4] # MLP expansion ratio (Low)
+      h_ratio: [4] # MLP expansion ratio (High)
+      
+      # ===== Reqularization (Dropout) =====
+      l_drop: 0  # Pos dropout, Mlp dropout, Proj dropout (Low)
+      h_drop: 0.05 # Pos dropout, Mlp dropout, Proj dropout (High)
+      l_attn_drop: 0.05 # Attention Dropout (Low)
+      h_attn_drop: 0 # Attention Dropout (High)
+      l_drop_path: 0.1 # Stochastic depth rate (Low)
+      h_drop_path: 0.05 # Stochastic depth rate (High)
+
+train:
+      epochs: 10
+      use_amp: True # Mixed Precision Training
+      n_accumulate: 1 # Gradient Accumulation steps
+      optimizer: "AdamW"
+      loss: "BCEWithLogitsLoss"
+      scheduler: "CosineAnnealingLR"
+      
+      # Albumentation
+      mixup_alpha: 0.4
+      mixup_prob: 0.25
+      cutout_prob: 0.5
+
+      # DataLoader
+      train_bs: 16
+      valid_bs: 32
+      
+      # Learning Rate
+      backbone_lr: 5e-4
+      h_block_lr: 2e-4
+      l_block_lr: 1e-4
+      head_lr: 1e-3
+
+      # Weight Decay
+      backbone_wd: 1e-3
+      h_block_wd: 5e-4
+      l_block_wd: 1e-3
+      head_wd: 1e-5
+
+      # Early Stopping
+      patience: 3
+      min_delta: 0.001

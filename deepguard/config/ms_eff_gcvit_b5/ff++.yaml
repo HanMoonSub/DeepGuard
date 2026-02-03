@@ -1,0 +1,64 @@
+dataset: "FaceForensics++"
+
+model:
+      model_name: "tf_efficientnet_b5.ns_jft_in1k"
+      img_size: [384,384]
+
+      # ===== Feature Extraction Blocks =====
+      l_block_idx: 1 # Low-level feature stage index
+      h_block_idx: 6 # High-level feature stage index
+      
+      # ===== Transformer Dimensions =====
+      l_dim: 48 # Dimension for low-block transformer
+      h_dim: 512 # Dimension for high-block transformer
+      l_depths: [2,2,6,2] # Number of transformer layers (Low)
+      h_depths: [6]  # Number of transformer layers (High)
+      
+      # ===== Attention Settings =====
+      l_windows: [12,12,24,12] # Window Size for Attention (Low)
+      h_windows: [12] # Window Size for Attention (High)
+      l_heads: [2,4,8,16] # Multi Head Attention (Low)
+      h_heads: [16] # Multi Head Attention (High)
+      l_ratio: [3,3,3,3] # MLP expansion ratio (Low)
+      h_ratio: [3] # MLP expansion ratio (High)
+      
+      # ===== Reqularization (Dropout) =====
+      l_drop: 0.0  # Pos dropout, Mlp dropout, Proj dropout (Low)
+      h_drop: 0.1 # Pos dropout, Mlp dropout, Proj dropout (High)
+      l_attn_drop: 0.1 # Attention Dropout (Low)
+      h_attn_drop: 0.0 # Attention Dropout (High)
+      l_drop_path: 0.15 # Stochastic depth rate (Low)
+      h_drop_path: 0.1 # Stochastic depth rate (High)
+
+train:
+      epochs: 10
+      use_amp: True # Mixed Precision Training
+      n_accumulate: 1 # Gradient Accumulation steps
+      optimizer: "AdamW"
+      loss: "BCEWithLogitsLoss"
+      scheduler: "CosineAnnealingLR"
+      
+      # Albumentation
+      mixup_alpha: 0.4
+      mixup_prob: 0.25
+      cutout_prob: 0.5
+      
+      # DataLoader
+      train_bs: 16
+      valid_bs: 32
+      
+      # Learning Rate
+      backbone_lr: 5e-4
+      h_block_lr: 2e-4
+      l_block_lr: 1e-4
+      head_lr: 1e-3
+
+      # Weight Decay
+      backbone_wd: 1e-3
+      h_block_wd: 5e-4
+      l_block_wd: 1e-3
+      head_wd: 1e-5
+
+      # Early Stopping
+      patience: 3
+      min_delta: 0.001
