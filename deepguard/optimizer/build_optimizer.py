@@ -96,3 +96,65 @@ def build_ms_eff_vit_optimizer(model, cfg):
     
     opt_class = getattr(torch.optim, cfg.train.optimizer)
     return opt_class(all_optim_groups)
+
+def build_ms_eff_gcvit_optimizer(model, cfg):
+    """
+    Constructs an optimizer with differential learning rates and weight decay exclusion.
+    
+    This builder segments the Multi-Scale EffGCViT parameters into three main components:
+    1. Feature Extractor (Backbone)
+    2. Low-resolution GCViT blocks (L-GCViT)
+    3. High-resolution GCViT blocks (H-GCViT)
+    """
+    
+    skip_keywords = model.no_weight_decay_keywords()
+    
+    feat_params = []
+    l_gcvit_params = []
+    h_gcvit_params = []
+    head_params = []
+    
+    for name, param in model.named_parameters():
+        if "feat_extractor" in name:
+            feat_params.append((name, param))
+        elif "l_gcvit" in name:
+            l_gcvit_params.append((name, param))
+        elif "h_gcvit" in name:
+            h_gcvit_params.append((name, param))
+        elif "head" in name:
+            head_params.append((name, param))
+            
+    all_optim_groups = []
+    
+    all_optim_groups.extend(
+        add_to_optim_groups(skip_keywords, feat_params, cfg.train.backbone_lr, cfg.train.backbone_wd)
+    )
+    all_optim_groups.extend(
+        add_to_optim_groups(skip_keywords, l_gcvit_params, cfg.train.l_block_lr, cfg.train.l_block_wd)
+    )
+    all_optim_groups.extend(
+        add_to_optim_groups(skip_keywords, h_gcvit_params, cfg.train.h_block_lr, cfg.train.h_block_wd)
+    )
+    all_optim_groups.extend(
+        add_to_optim_groups(skip_keywords, head_params, cfg.train.head_lr, cfg.train.head_wd)
+    )
+    print(f"\n{'='*20} 📦 Parameter Groups Summary {'='*20}")
+    names = ["Backbone (Decay)", "Backbone (No-Decay)", 
+             "L-GCViT (Decay)", "L-GCViT (No-Decay)", 
+             "H-GCViT (Decay)", "H-GCViT (No-Decay)",
+             "Head (Decay)", "Head (No-Decay)"]
+    
+    for i, group in enumerate(all_optim_groups):
+        group_name = names[i] if i < len(names) else f"Group {i}"
+        params = group['params']
+        num_tensors = len(params)
+        total_params = sum(p.numel() for p in params)
+        lr = group['lr']
+        wd = group.get('weight_decay', 0)
+        
+        print(f" • {group_name:<20} | Tensors: {num_tensors:<4} | Size: {total_params/1e6:>6.2f}M | LR: {lr:.1e} | WD: {wd}")
+    
+    print(f"{'='*65}\n")
+    
+    opt_class = getattr(torch.optim, cfg.train.optimizer)
+    return opt_class(all_optim_groups)
