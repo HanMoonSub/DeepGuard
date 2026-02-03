@@ -1,0 +1,22 @@
+name: Close stale issues
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 14
+          days-before-close: 7
+          stale-issue-label: "stale"
+          stale-issue-message: >
+            ⏳ 14일 동안 활동이 없어 자동으로 stale 처리되었습니다.
+            추가 정보가 있다면 댓글로 다시 활성화해주세요!
+
+          close-issue-message: >
+            🔒 7일 동안 활동이 없어 Issue가 자동으로 닫혔습니다.
+            필요하면 언제든 재오픈해주세요 🙂
