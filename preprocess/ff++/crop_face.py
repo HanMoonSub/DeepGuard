@@ -157,7 +157,7 @@ def main():
     parser = argparse.ArgumentParser(description="Crop Face and Extract Landmark")
     parser.add_argument("--root-dir", required=True, help="Root Directory with FaceForenscis++")
     parser.add_argument("--margin-ratio", default=0.2, type=float, help="Margin Ratio for Detected Face")
-    parser.add_argument("--margin-jitter", default=0.2, type=float, help="noise for margin ratio")
+    parser.add_argument("--margin-jitter", default=0.0, type=float, help="noise for margin ratio")
     
     args = parser.parse_args()
     
