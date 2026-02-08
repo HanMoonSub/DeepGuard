@@ -203,8 +203,8 @@ class Trainer:
         
             # ====== Learning Rate ======
             backbone_lr = self.optimizer.param_groups[0]['lr']
-            l_vit_lr = self.optimizer.param_groups[2]['lr']
-            h_vit_lr = self.optimizer.param_groups[4]['lr']
+            l_gcvit_lr = self.optimizer.param_groups[2]['lr']
+            h_gcvit_lr = self.optimizer.param_groups[4]['lr']
             head_lr = self.optimizer.param_groups[6]['lr']
             
             # ====== Calculate GPU Memory Usage =======
@@ -219,8 +219,8 @@ class Trainer:
                 train_recall = f'{avg_metrics["train_recall"]:.4f}',
                 train_f1 = f'{avg_metrics["train_f1"]:.4f}',
                 backbone_lr = f'{backbone_lr:.1e}',
-                l_vit_lr = f'{l_vit_lr:.1e}',
-                h_vit_lr = f'{h_vit_lr:.1e}',
+                l_gcvit_lr = f'{l_gcvit_lr:.1e}',
+                h_gcvit_lr = f'{h_gcvit_lr:.1e}',
                 head_lr = f'{head_lr:.1e}',
                 gpu_mem = f'{mem:.1f} GB'
             )
