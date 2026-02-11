@@ -136,4 +136,61 @@ class FrameExtractor:
         
         cap.release()
         return frames
+    
+class FrameExtractor_KODF:
+    def __init__(self):
+        pass
+    
+    def _get_frame_index(self,
+                         frame_cnt: int,
+                         target_index: int = None,
+                        ):
+    
+        if target_index is None:
+            # 5s ~ 15s
+            frame_index = np.random.randint(low=150, high=451) - 1    
+            return frame_index
+        else:
+            return target_index
+        
+    def extract_frame(self, video_path: str, target_index: int = None):
+        """
+            For Faster Detecting Faces, Apply Rescaling
+        """
+        
+        cap = cv2.VideoCapture(video_path)
+        
+        if not cap.isOpened():
+            return {}
+        
+        frame_cnt = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if frame_cnt <= 0:
+            cap.release()
+            return {}
+        
+        frame_index = self._get_frame_index(frame_cnt, target_index)
+        return self._extract_frame_rescale(cap, frame_index)
+        
+    def _extract_frame_rescale(self,
+                                cap: cv2.VideoCapture,
+                                frame_index: int):
+        
+        frame_dict = {}
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        
+        ret = cap.grab()
+        if  ret:
+            ret, frame = cap.retrieve()
+            
+            if ret and frame is not None: 
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    
+                h, w = frame_rgb.shape[:2]
+                size = max(h, w)
+                        
+                resized_frame = cv2.resize(frame_rgb, (0,0), fx=0.5, fy=0.5)
+                frame_dict[frame_index] = resized_frame
+
+        cap.release()
+        return frame_dict
         
