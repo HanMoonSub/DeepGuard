@@ -44,3 +44,29 @@ def get_original_video_paths(
     video_list = real_videos['vid'].map(real_paths_dict).dropna().tolist()
         
     return sorted(set(video_list))
+
+def get_video_paths(
+                    root_dir: str,
+                    work_dir: str, 
+                    csv_filename: str = "train_metadata.csv"):
+    
+    root_path = Path(root_dir)
+    work_dir = work_dir or root_dir
+    work_path = Path(work_dir)
+    csv_path = root_path / csv_filename
+    
+    if not csv_path.exists():
+        raise FileExistsError(f"Metadata file not found at: {csv_path}")
+
+    meta_df = pd.read_csv(csv_path).copy()
+     
+    video_paths = work_path.rglob("*.mp4")
+    video_paths_dict = {p.stem: p for p in video_paths}
+    
+    mask = meta_df['vid'].isin(video_paths_dict.keys())
+    filtered_df = meta_df[mask].copy()
+    
+    video_list = filtered_df['vid'].map(video_paths_dict).tolist()
+    original_video_list = filtered_df['ori_vid'].tolist()
+    
+    return video_list, original_video_list
