@@ -1,3 +1,3 @@
-from .face_detector import FaceDetector
-from .frame_extractor import FrameExtractor
-from .landmark_detector import LandmarkDetector
+from .face_detector import FaceDetector, FaceDetector_KODF
+from .frame_extractor import FrameExtractor, FrameExtractor_KODF
+from .landmark_detector import LandmarkDetector, LandmarkDetector_KODF
