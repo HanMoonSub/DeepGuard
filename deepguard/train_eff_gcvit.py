@@ -291,6 +291,7 @@ def main():
     parser.add_argument("--img-col", default='img_path', type=str)
     parser.add_argument("--landmark-col", default='landmark_path', type=str)
     parser.add_argument("--ori-vid-col", default='ori_vid', type=str)
+    parser.add_argument("--group-col", default='pid', type=str)
     parser.add_argument("--crop-dir", default='crops', type=str)
     parser.add_argument("--landmark-dir", default="landmarks", type=str)
         
@@ -312,7 +313,8 @@ def main():
     
     # ==================== Build Dataset ==================================
     train_df, valid_df = split_data(meta_df=meta_df, seed=args.seed, label_col=args.label_col, 
-                                    ori_vid=args.ori_vid_col, debug=args.debug)
+                                    ori_vid=args.ori_vid_col, dataset=args.dataset, 
+                                    group_col=args.group_col, debug=args.debug)
     
     # ==================== Build Model ===============================
     model = MultiScaleEffGCViT(**cfg.model)
