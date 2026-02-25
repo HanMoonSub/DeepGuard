@@ -141,3 +141,121 @@ The dataset employs **six state-of-the-art (SOTA)** models categorized into two 
 |  `fo`  | 49,586 |  5,853 |
 |  `audio-driven` | 14,927 | 1,884 |
 |  `total` | 139,951 | 16,894 | 
+
+## How to Use Python Script
+
+### 1. Split Data
+This script generates train & test kodf metadata 
+
+```python
+
+python -m preprocess.kodf.split_data --root-dir DATA_ROOT --print-info True
+```
+
+> **Output**: train_metadata.csv, test_metadata.csv
+
+| Column | Description |
+| ------ | ----------- |
+| `label` |  Ground truth label ('FAKE' or 'TRUE')          |
+| `source` |  `original`, `fo`, `fsgan`, `dfl`, `dffs`, `audio-driven`   |
+| `ori_vid` |  Video name used for manipulation        |
+| `vid` |   Unique Video name       |
+
+### 2. Detect Original Face
+
+To maximize preprocessing efficiency, face detection is performed only on original (real) videos. Since manipulated videos in kodf share the same spatial coordinates as their sources, these bounding boxes are reused for the corresponding deepfake versions.
+
+🚀 Efficiency Optimizations
+- **Lightweight Model**: Uses yolov8n-face for high-speed inference without sacrificing accuracy.
+
+- **Targeted Processing**: By detecting faces only in original videos, the total detection workload is reduced by approximately 80%.
+
+- **Rescaling**: To Speed up for Training and inference, We  did x0.5 rescaling for all video frame:
+
+```python
+python -m preprocess.kodf.detect_original_face \
+	--root-dir DATA_ROOT \
+	--work-dir \
+	--conf-thres 0.5 \
+	--min-face-ratio 0.01 \
+```
+
+| Argument | Default | Description |
+| -------- | ------- | ----------- |
+| `--root-dir` | (Required)  | Root directory of the kodf dataset |
+| `--work-dir` | (Required) | "Directory containing the video files to process" |
+| `--conf-thres` | 0.5 | Confidence of threshold for the Face Detector |
+| `--min-face-ratio` | 0.01 | Minimum area ratio a face must occupy to be saved |
+| `--jitter` | 0 | Random offset range applied to frame indices for diversity
+
+📂 **Output Structure**
+
+The detected bounding boxes are saved as individual JSON files named after the original video ID.
+
+```Plaintext
+
+DATA_ROOT/
+└── boxes/
+    ├── 000.json
+    ├── 001.json
+    └── ...
+```
+
+### 3. Face Cropping & Landmark Extraction
+This module extracts face crops from both original and deepfake videos using the bounding boxes generated in the previous step. It also performs landmark detection to facilitate advanced augmentations like Landmark-based Cutout.
+
+🛠 Key Features
+- **Dynamic Margin with Jitter**: Adds a configurable margin around the face. The margin_jitter parameter introduces random variance to the crop size, making the model more robust to different face scales.
+
+- **Landmark Localization**: `Detects 5 primary facial landmarks` (eyes, nose, mouth corners) and saves them as .npy files.
+
+- **Frame-level Metadata**: Generates a comprehensive train_frame_metadata.csv mapping every saved crop to its label, source, and original video ID.
+
+```bash
+python -m preprocess.kodf.crop_face \
+    --root-dir DATA_ROOT \
+    --work-dir \
+    --margin-ratio 0.2 \
+    --margin-jitter 0.0 \
+    --num-workers 1 
+```
+| Argument | Default | Description | 
+| -------- | ------- | ----------- |
+| `--work-dir` | Required | "Directory containing the video files to process" |
+| `--margin-ratio` | 0.2 | Base padding ratio around the detected bounding box |
+| `--margin-jitter` | 0.0 | Intenstiy of random noise added to the margin for each crop | 
+| `--num-workers` | 1 | Number of Workers | 
+
+
+```Plaintext
+DATA_ROOT/
+├── crops/
+│   └── {video_id}/
+│       ├── 12.png
+│       └── ...
+├── landmarks/
+│   └── {video_id}/
+│       ├── 12.npy
+│       └── ...
+└── train_frame_metadata.csv
+```
+
+## Result of Data Processing
+
+_**`Frame Selection`**_: <ins/> Random 1 frame index per video (Range: 5s ~ 15s) </ins>
+
+_**`Consistency`**_: <ins/> Same frame index applied to both Real and corresppnding Fake videos</ins>
+
+_**`Face Quality`**_: <ins/>`min_face_ratio: 0.01` (to exclude tiny/low-quality faces)</ins>
+
+_**`Crop Settings`**_: <ins/>`margin_ratio: 0.2` with `margin_jitter: 0`</ins>
+
+| Category | source | Video Count | Extracted Frames | Detection Rate |
+| :--- | :--- | :---: | :---: | :---: |
+| **Real** | Original  | 49,419 | **49,404** | 99.97% |
+| **Fake** | FO | 49,586 | 49,321 | 99.47% |
+| | DFFS | 28,962 | 28,659 | 98.95% |
+| | DFL | 27,680 | 27,393 | 98.96% |
+| | FSGAN | 18,796 | 18,742 | 99.71% |
+| | Audio-driven | 14,927 | 10,571 | 70.82% |
+| **Total Fake** | **All Methods Combined** | **139,951** | **134,686** | **96.24%** |
