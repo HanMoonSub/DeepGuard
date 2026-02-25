@@ -280,7 +280,7 @@ def main():
    
     parser.add_argument("--root-dir", required=True)
     parser.add_argument("--model-ver", default="ms_eff_gcvit_b0", choices=['ms_eff_gcvit_b0','ms_eff_gcvit_b5'])
-    parser.add_argument("--dataset", default="celeb_df_v2", choices=["celeb_df_v2","ff++"])
+    parser.add_argument("--dataset", default="celeb_df_v2", choices=["celeb_df_v2","ff++","kodf"])
     
     parser.add_argument("--seed", default=2025, type=int)
     parser.add_argument("--debug", action="store_true")
