@@ -1,11 +1,13 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupKFold
 
 def split_data(
                 meta_df: pd.DataFrame,
                 seed: int = 2025,
                 label_col: str = 'label',
                 ori_vid: str = 'ori_vid', 
+                dataset: str = 'kodf',
+                group_col: str = "pid",
                 test_size: float = 0.2,
                 balance_val: bool = True,
                 debug: bool = False,
@@ -40,8 +42,20 @@ def split_data(
     df_fake = meta_df[meta_df[label_col] == 1].reset_index(drop=True)
 
     # Split real Images
-    real_train, real_val = train_test_split(df_real, test_size=test_size, random_state=seed, shuffle=True)
-
+    if dataset.lower() != "kodf":
+        real_train, real_val = train_test_split(df_real, test_size=test_size, random_state=seed, shuffle=True)
+    else: 
+        df_real_shuffled = df_real.sample(frac=1, random_state=seed).reset_index(drop=True)
+        
+        n_splits = int(1 / test_size)
+        gkf = GroupKFold(n_splits=n_splits)
+        
+        splits = list(gkf.split(df_real_shuffled, groups=df_real_shuffled[group_col]))
+        train_idx, val_idx = splits[0]
+        
+        real_train = df_real_shuffled.iloc[train_idx]
+        real_val = df_real_shuffled.iloc[val_idx]
+    
     # Match fake images to corresponding real train/val
     fake_train = df_fake[df_fake[ori_vid].isin(real_train[ori_vid].unique())].reset_index(drop=True)
     fake_val = df_fake[df_fake[ori_vid].isin(real_val[ori_vid].unique())].reset_index(drop=True)

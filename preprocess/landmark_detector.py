@@ -51,3 +51,46 @@ class LandmarkDetector:
             batch_landmarks.append(keypoints)
                 
         return batch_landmarks
+    
+class LandmarkDetector_KODF:
+    """
+    YOLO-based Face Landmark Detector.
+    
+    This class performs inference to detect 5 facial landmarks.
+    """
+    
+    def __init__(self):
+        
+        weights_path = Path(__file__).resolve().parent / "yolov8n-face.pt"
+        
+        self.model = YOLO(str(weights_path), task='pose')
+        
+    def detect_single_landmark(
+                    self, 
+                    frame: np.ndarray,
+                    ):
+        """
+        Detects 5 facial landmarks for a single croppe face image
+
+        Args:
+            frame: Cropped Face Images (Numpy arrays, RGB format)
+                
+        Returns:
+            - Shape: (5, 2) if detected.
+            - Each landmark: [x, y] coordinates.
+            Keypoint Order: [Left Eye, Right Eye, Nose, Left Mouth, Right Mouth]
+        """
+        
+        results = self.model(frame, verbose=False)
+        
+        if not results or len(results) == 0:
+            return []
+        
+        result = results[0]
+        
+        if result.keypoints is None or len(result.keypoints) == 0:
+            return []
+            
+        keypoints = result.keypoints.xy[0].cpu().numpy()
+            
+        return keypoints

@@ -20,10 +20,11 @@ def generate_metadata(root_dir: str) -> pd.DataFrame:
     Columns:
         label(str): Ground truth label ('FAKE' or 'TRUE')
         frame_cnt(int): Total number of frames in the video
-        vid(str): Video name
+        d_vid(str): Duplicated Video name for each deepfake model
         source(str): Deepfake model name(e.g., FaceSwap, Face2Face)
         ori_vid: Video name used for manipulation
         ori_frame_cnt: Total number of frames in the original video
+        vid(str): Unique Video name
     """
 
     df = pd.read_csv(os.path.join(root_dir, "csv/FF++_Metadata.csv"))
@@ -73,7 +74,7 @@ def split_metadata(meta_df: pd.DataFrame, root_dir: str):
     """
     
     train_json_path = base_dir / "train.json"
-    test_json_path = base_dir /"test.json"
+    test_json_path = base_dir / "test.json"
     
     with open(train_json_path, "r") as f:
         train_json = json.load(f)
@@ -91,7 +92,7 @@ def split_metadata(meta_df: pd.DataFrame, root_dir: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Generating Train, Test MetaData")
-    parser.add_argument("--root-dir", required=True, help="Root Directory with Celeb DF(V2)")
+    parser.add_argument("--root-dir", required=True, help="Root Directory with FF++")
     parser.add_argument("--print-info", default=True, type=bool, help="Display MetaData")
     
     args = parser.parse_args()
