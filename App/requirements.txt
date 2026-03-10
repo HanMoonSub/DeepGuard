@@ -1,0 +1,19 @@
+# [Web Framework & Server]
+fastapi==0.135.1
+uvicorn[standard]==0.41.0
+python-multipart==0.0.22  # 이미지/영상 파일 업로드 필수
+
+# [Database & ORM]
+SQLAlchemy==2.0.48        # 최신 2.0 스타일 (Type Hint 지원)
+aiomysql==0.3.2           # 비동기 DB 엔진
+PyMySQL==1.1.2            # aiomysql의 의존성 및 동기 작업용
+mysql-connector-python==9.6.0
+
+# [Security & Authentication]
+itsdangerous==2.2.0       # 토큰 서명 및 세션 관리
+bcrypt==4.0.1             # 비밀번호 해싱 엔진
+passlib[bcrypt]==1.7.4    # bcrypt와 연동되는 인증 라이브러리
+
+# [Utilities]
+aiofiles==25.1.0          # 비동기 파일 IO (딥페이크 영상 저장용)
+dotenv==0.9.9
