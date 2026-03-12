@@ -27,7 +27,7 @@ class ImagePredictor:
         self.model.to(self.device)
         self.model.eval()
                 
-    def _get_face_bbox(self, img: np.ndarray):
+    def _get_face_bbox(self, img: np.ndarray) -> List[float]:
         """
             return [xmin, ymin, xmax, ymax] or None
         """
@@ -38,48 +38,60 @@ class ImagePredictor:
         
         return face_bbox[0]
     
-    def _crop_face(self, img: np.ndarray, bbox: List[float]):
-        xmin, ymin, xmax, ymax = bbox
-        
-        w = xmax - xmin
-        h = ymax - ymin
-        pad_w = int(w * self.margin_ratio)
-        pad_h = int(h * self.margin_ratio)
-        
-        y1 = max(int(ymin - pad_h), 0)
-        y2 = min(int(ymax + pad_h), img.shape[0]) 
-        x1 = max(int(xmin - pad_w), 0)
-        x2 = min(int(xmax + pad_w), img.shape[1])
-        
-        cropped_img = img[y1:y2,x1:x2]
-        if cropped_img.size == 0:
-            raise ValueError("Crop Size is Zero")
-        
-        return cropped_img
+    def _crop_face(self, img: np.ndarray, bbox: List[float]) -> np.ndarray:
+        """
+        Crops the face. Returns None instead of raising an error if the crop is invalid.
+        """
+        try:
+            xmin, ymin, xmax, ymax = bbox
+            
+            w = xmax - xmin
+            h = ymax - ymin
+            pad_w = int(w * self.margin_ratio)
+            pad_h = int(h * self.margin_ratio)
+            
+            y1 = max(int(ymin - pad_h), 0)
+            y2 = min(int(ymax + pad_h), img.shape[0]) 
+            x1 = max(int(xmin - pad_w), 0)
+            x2 = min(int(xmax + pad_w), img.shape[1])
+            
+            cropped_img = img[y1:y2, x1:x2]
+            
+            if cropped_img.size == 0:
+                print(f"[CropError] Resulting crop size is zero.")
+                return None
+            
+            return cropped_img
+        except Exception as e:
+            print(f"[CropError] Cropping failed: {e}")
+            return None
     
-    def _preprocess_img(self, img_path: str):
+    def _preprocess_img(self, img_path: str) -> np.ndarray:
         try:
             img = cv2.imread(img_path)
             if img is None:
-                raise FileNotFoundError(f"Image not found or invalid format: {img_path}")
+                print(f"[ImageError] Image not found or invalid: {img_path}")
+                return None
             
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             
             bbox = self._get_face_bbox(img)
             if bbox is None:
-                raise ValueError(f"No Face Detect: {img_path}")
+                return None
             
             return self._crop_face(img, bbox)
                   
         except Exception as e:
             print(f"[Error] Preprocess Failed for {img_path}: {e}")
-            raise e
+            return None
         
-    def predict_img(self, img_path: str, tta_hflip: float = 0):
+    def predict_img(self, img_path: str, tta_hflip: float = 0) -> float:
         
         try:
             img = self._preprocess_img(img_path)
-        
+            if img is None:
+                return 0.5
+            
             transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
             img = transforms(image=img)['image']
         
@@ -90,6 +102,7 @@ class ImagePredictor:
                 pred = torch.sigmoid(out).item()
             
             return pred
+        
         except Exception as e:
-            print(f"Unexpected Error during Inference: {img_path}")
-            raise e
+           print(f"[Critical Skip] Inference failed for {img_path}: {e}")
+           return 0.5
