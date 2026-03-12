@@ -34,24 +34,29 @@ class VideoPredictor:
                     endpoint=True, dtype=np.int32)
         return sorted(list(set(frame_indices)))
         
-    def _extract_frames(self, video_path: str, num_frames: int):
+    def _extract_frames(self, video_path: str, num_frames: int) -> Dict[int, np.ndarray]:
+        """
+        Extracts frames from the video and returns a dictionary in the format {frame_index: frame_data}.
+        Returns an empty dictionary {} if the extraction fails.
+        """
         cap = None
         try:
             if not os.path.exists(video_path):
-                raise FileNotFoundError(f"The video file does not exist at path: {video_path}")
+                print(f"[VideoError] File not found: {video_path}")
+                return {}
             
             cap = cv2.VideoCapture(filename=video_path)
-    
             if not cap.isOpened():
-               raise ConnectionError(f"Failed to open video stream for: {video_path}")
+                print(f"[VideoError] Open failed: {video_path}")
+                return {}
             
             frame_cnt = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             
             if frame_cnt <= 0:
-                raise ValueError(f"Invalid frame count ({frame_cnt}). The video file might be corrupted: {video_path}")
+                print(f"[VideoError] Invalid frame count: {video_path}")
+                return {}
             
-            frame_indices = self._get_frame_indices(frame_cnt, num_frames)
-            
+            frame_indices = self._get_frame_indices(frame_cnt, num_frames)     
             frames = {}
             target_idx = 0
             max_target = frame_indices[-1]
@@ -73,17 +78,11 @@ class VideoPredictor:
                     if target_idx >= len(frame_indices):
                         break
             
-            if not frames:
-                raise RuntimeError(f"No frames were successfully extracted from the video: {video_path}")
-            
             return frames
             
-        except (FileNotFoundError, ConnectionError, ValueError, RuntimeError) as e:
-            print(f"[VideoError] {str(e)}")
-            raise e
         except Exception as e:
-            print(f"[UnexpectedError] An unidentified error occurred: {str(e)}")
-            raise e
+            print(f"[UnexpectedError] {video_path}: {e}")
+            return {}
         finally:
             if cap is not None and cap.isOpened():
                 cap.release()
@@ -110,25 +109,32 @@ class VideoPredictor:
         
         return cropped_frame
     
-    def _preprocess_frames(self, video_path: str, num_frames: int):
+    def _preprocess_frames(self, video_path: str, num_frames: int) -> List[np.ndarray]:
+        """
+        Detects and crops faces from extracted frames, returning them as a list.
+        Returns an empty list [] if no faces are detected or an error occurs.
+        """
         try:
             frames_dict = self._extract_frames(video_path, num_frames)
-            bboxes, frames = self._get_face_bboxes(frames_dict)
+            if not frames_dict:
+                return []
             
+            bboxes, frames = self._get_face_bboxes(frames_dict)
             cropped_frames = []
             
             for i, bbox in enumerate(bboxes):
-                if len(bbox) == 0:
-                    continue
+                if len(bbox) == 0: continue
                 cropped_frames.append(self._crop_face(frames[i], bbox))
                 
             if len(cropped_frames) == 0:
-                raise RuntimeError(f"No faces were detected: {video_path}")
+                print(f"[Info] No faces detected in: {video_path}")
+                return []
+            
             return cropped_frames
             
         except Exception as e:
             print(f"[Error] Preprocess Failed for {video_path}: {e}")
-            raise e
+            return []
         
     def _frame_aggregate(self, preds: np.ndarray, agg_mode: str) -> np.ndarray:
         
@@ -156,8 +162,10 @@ class VideoPredictor:
         
     def _get_predict(self, video_path: str, num_frames: int, tta_hflip: float) -> np.ndarray:
         frames = self._preprocess_frames(video_path, num_frames)
+        if not frames:
+            return np.array([])
+        
         transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
-            
         frames_list = [transforms(image=f)['image'] for f in frames]
         batch_frames = torch.stack(frames_list).to(self.device) # (B,3,H,W)
                             
@@ -170,38 +178,11 @@ class VideoPredictor:
     def predict_video(self, video_path: str, num_frames: int = 20, agg_mode: str = 'conf', tta_hflip: float = 0) -> np.ndarray:
         try:
             preds = self._get_predict(video_path, num_frames, tta_hflip)
+            if preds is None or len(preds) == 0:
+                return 0.5
             
             return self._frame_aggregate(preds, agg_mode)
         
         except Exception as e:
             print(f"Error in predict_video: {e}")
-            raise e
-        
-    def predict_detail(self, video_path: str, num_frames_per_sec: int = 3, agg_mode: str = 'conf', tta_hflip: float = 0) -> dict[str, float]:
-        try:
-            cap = cv2.VideoCapture(video_path)
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            duration = total_frames / fps
-            cap.release()
-            
-            total_sample_frames = int(duration * num_frames_per_sec)
-            
-            preds = self._get_predict(video_path, total_sample_frames, tta_hflip)
-
-            timestamps = np.linspace(0, duration, len(preds))
-            secondly_data = {}
-            
-            for i, t in enumerate(timestamps):
-                second_key = f"{int(t)}s"
-                if second_key not in secondly_data:
-                    secondly_data[second_key] = []
-                secondly_data[second_key].append(preds[i])
-                
-            report = {sec: float(self._frame_aggregate(np.array(scores), agg_mode))
-                      for sec, scores in secondly_data.items()}
-            
-            return report 
-        except Exception as e:
-            print(f"Error in predict_second: {e}")
-            raise e
+            return 0.5
