@@ -137,4 +137,34 @@ To evaluate the generalization and robustness of our deepfake detection model, w
 | **ms_eff_gcvit_b5** | 20 | conf | 0 | 0.4525 | **0.5902** | **1.5321** |
 </details>
 
-## Kodf Video Evaluation 
+## 🎬 Kodf Video Evaluation 
+
+<details>
+<summary><span style="font-size: 1.25em; font-weight: bold;">✅ Test Data Evaluation</span></summary>
+ 
+| 🤖 Model | 🖼️ Frames | ⚙️ Agg Mode | 🔄 TTA (H-Flip) | 🎯 Accuracy | 📈 AUC | 📉 Log Loss |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **ms_eff_gcvit_b0** | 20 | conf | 0 | 0.9655 | 0.9792 | 0.1237 |
+| **ms_eff_gcvit_b5** | 20 | conf | 0 | **0.9792** | **0.9831** | **0.0692** |
+
+</details>
+
+<details>
+<summary><span style="font-size: 1.25em; font-weight: bold;">🔗 Cross Evaluation</span></summary>
+
+#### 📌 Dataset: `kodf` | 🧠 Model: `celeb_df_v2`
+
+| 🤖 Model | 🖼️ Frames | ⚙️ Agg Mode | 🔄 TTA (H-Flip) | 🎯 Accuracy | 📈 AUC | 📉 Log Loss |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **ms_eff_gcvit_b0** | 20 | conf | 0 | **0.4935** | **0.7258** | **1.3459** |
+| **ms_eff_gcvit_b5** | 20 | conf | 0 | 0.4832 | 0.7160 | 1.4897 |
+
+
+#### 📌 Dataset: `kodf` | 🧠 Model: `ff++`
+
+| 🤖 Model | 🖼️ Frames | ⚙️ Agg Mode | 🔄 TTA (H-Flip) | 🎯 Accuracy | 📈 AUC | 📉 Log Loss |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **ms_eff_gcvit_b0** | 20 | conf | 0 | 0.7544 | 0.862 | 0.8829 |
+| **ms_eff_gcvit_b5** | 20 | conf | 0 | **0.7695** | **0.8821** | **0.7635** |
+
+</details>
