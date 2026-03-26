@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from routes import auth
+from routes import auth, home
 from utils.common import lifespan
 from utils import exc_handler
 from dotenv import load_dotenv
@@ -26,6 +26,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
 
 app.include_router(auth.router)
+app.include_router(home.router)
+
 
 # Custom HTTPException Handler
 app.add_exception_handler(StarletteHTTPException, exc_handler.custom_http_exception_handler)

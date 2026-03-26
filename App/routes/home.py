@@ -11,3 +11,4 @@ async def home_ui(request: Request,
     return {
         "session_user": session_user
     }
+
