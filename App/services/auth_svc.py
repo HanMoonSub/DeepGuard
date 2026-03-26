@@ -62,8 +62,8 @@ async def register_user(conn: Connection, name: str, email:str, hashed_password:
                             detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
     
 # 비즈니스 로직 (로그인 시 인증 맞는지 확인)
-async def authenticate_user(conn: Connection, email: str, password: str):
-    """로그인 시 이메일과 비밀번호를 검증하여 일치하면 유저 정보를 반환합니다."""
+async def authenticate_user(conn: Connection, email: str):
+    """로그인 시 이메일을 검증하여 일치하면 유저 정보를 반환합니다."""
     try:
         query = """
         SELECT id, name, email, hashed_password FROM user
@@ -77,15 +77,11 @@ async def authenticate_user(conn: Connection, email: str, password: str):
             return False 
         
         row = result.fetchone()
-        db_hashed_password = row[3]
         
-        
-        if not verify_password(password, db_hashed_password):
-            return False 
-            
-        
-        return UserData(id=row[0], name=row[1], email=row[2])
+        user = UserDataPASS(id=row[0], name=row[1], email=row[2], hashed_password=row[3])
 
+        result.close()
+        return user
     except SQLAlchemyError as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
