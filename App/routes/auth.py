@@ -70,7 +70,7 @@ async def login_user(request: Request,
     }
 
 @router.get("/logout")
-def logout_user(request: Request):
+async def logout_user(request: Request):
     request.session.clear()
     return {
         "message": "로그아웃 되었습니다.",
