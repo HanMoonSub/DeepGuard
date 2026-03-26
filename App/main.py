@@ -1,21 +1,29 @@
+import os
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from routes import auth
 from utils.common import lifespan
 from utils import exc_handler
+from dotenv import load_dotenv
 
 # 가상 인스턴스 생성
 app = FastAPI(lifespan=lifespan)
 
-# CORSMiddleware
+# Cross Origin Resource Sharing
 app.add_middleware(CORSMiddleware,
                    allow_origins=["*"],
                    allow_methods=["*"],
                    allow_headers=["*"],
+                   allow_credentials=True,
                    max_age = -1
                    )
+
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+app.add_middlewar(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
 
 app.include_router(auth.router)
 
