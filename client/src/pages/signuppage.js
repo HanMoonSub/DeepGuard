@@ -9,20 +9,15 @@ import ellipse from '../assets/Ellipse638.svg';
 const SignupPage = () => {
   const navigate = useNavigate();
 
-  // 입력값 상태 관리
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // 이용약관 동의 및 로딩 상태
   const [isAgreed, setIsAgreed] = useState(false); 
   const [isLoading, setIsLoading] = useState(false);
 
-  // 회원가입 처리 함수
   const handleSignup = async (e) => {
     e.preventDefault();
     
-    // 보안: 1차 유효성 검사
     if (password.length < 8) {
       alert("비밀번호는 8자 이상이어야 합니다.");
       return;
@@ -33,18 +28,23 @@ const SignupPage = () => {
       return;
     }
 
-    setIsLoading(true); // 로딩 시작 (버튼 비활성화)
+    setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8000/signup', {
+      // 엔드포인트 수정: /auth/register
+      const response = await axios.post('http://localhost:8000/auth/register', {
         name,
         email,
         password
       });
 
+      // 백엔드에서 성공 응답(200 또는 201)이 왔을 때
       if (response.status === 200 || response.status === 201) {
-        alert("회원가입 성공! 로그인 페이지로 이동합니다.");
-        navigate('/login');
+        // 서버에서 보내준 response.data.message를 출력
+        alert(response.data.message); 
+        
+        // 성공 시 백엔드가 요청한 로그인 페이지(외부 URL)로 이동
+        window.location.href = 'http://localhost:8000/login';
       }
     } catch (error) {
       if (error.response) {
@@ -54,11 +54,10 @@ const SignupPage = () => {
         alert("서버와 통신할 수 없습니다.");
       }
     } finally {
-      setIsLoading(false); // 성공하든 실패하든 로딩 종료
+      setIsLoading(false);
     }
   };
 
-  // 스타일 정의
   const containerStyle = {
     backgroundColor: '#000000',
     height: '100vh',
@@ -86,7 +85,7 @@ const SignupPage = () => {
   };
 
   const buttonStyle = {
-    backgroundColor: isLoading ? '#555' : '#39FF14', // 로딩 중일 때 색상 변경
+    backgroundColor: isLoading ? '#555' : '#39FF14',
     color: 'black',
     padding: '15px',
     border: 'none',
@@ -122,7 +121,6 @@ const SignupPage = () => {
           <input type="password" placeholder="8자 이상 입력해 주세요." style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} required />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
-            {/* 리액트 방식으로 관리되는 체크박스 */}
             <input 
               type="checkbox" 
               id="terms" 

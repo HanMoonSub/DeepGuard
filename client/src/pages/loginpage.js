@@ -1,32 +1,34 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // axios 라이브러리 설치 필요
+import axios from 'axios'; 
 
 const LoginPage = () => {
   const navigate = useNavigate();
 
-  //변수명으로 상태 정의
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); // hashed_password 아님
+  const [password, setPassword] = useState(''); 
 
-  //로그인 처리 함수 (비동기)
   const handleLogin = async (e) => {
     e.preventDefault();
     
     try {
-      // 금요일에 연동할 백엔드 주소
-      const response = await axios.post('http://localhost:8000/login', {
+      // 엔드포인트 수정: /auth/login
+      const response = await axios.post('http://localhost:8000/auth/login', {
         email,
         password
       });
 
+      // 백엔드에서 성공 응답(200)이 왔을 때
       if (response.status === 200) {
-        alert("로그인 성공!");
-        navigate('/main'); // 로그인 성공 시 메인으로 이동
+        // 서버에서 준 response.data.message를 alert로 띄움
+        alert(response.data.message); 
+        
+        // 성공 시 리액트 내부가 아닌 백엔드 홈(http://localhost:8000)으로 강제 이동
+        window.location.href = 'http://localhost:8000'; 
       }
     } catch (error) {
-      // 백엔드 에러 규격 (status_code, title_message, detail) 처리
       if (error.response) {
+        // 서버가 에러 규격에 맞춰준 데이터 출력
         const { title_message, detail } = error.response.data;
         alert(`[${title_message}] ${detail}`);
       } else {
@@ -35,7 +37,6 @@ const LoginPage = () => {
     }
   };
 
-  // 스타일 정의 (기존 유지)
   const containerStyle = {
     backgroundColor: '#000000',
     height: '100vh',
@@ -72,7 +73,6 @@ const LoginPage = () => {
     <div style={containerStyle}>
       <h2 style={{ marginBottom: '30px', fontSize: '2rem' }}>로그인</h2>
       
-      {/* form 태그로 감싸서 Enter 키로도 로그인이 가능하게 */}
       <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column' }}>
         <label style={{ fontSize: '0.8rem', color: '#888' }}>이메일</label>
         <input 
@@ -99,7 +99,6 @@ const LoginPage = () => {
 
       <div style={{ marginTop: '20px', fontSize: '0.9rem' }}>
         계정이 없나요?{' '}
-        {/*클릭 시 회원가입 페이지로 이동 */}
         <span 
           style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold' }} 
           onClick={() => navigate('/signup')}
