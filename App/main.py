@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,9 @@ from dotenv import load_dotenv
 
 # 가상 인스턴스 생성
 app = FastAPI(lifespan=lifespan)
+
+# StaticFile 등록하기
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Cross Origin Resource Sharing
 app.add_middleware(CORSMiddleware,
