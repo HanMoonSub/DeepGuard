@@ -44,14 +44,27 @@ const SignupPage = () => {
         alert(response.data.message); 
         
         // 성공 시 백엔드가 요청한 로그인 페이지(외부 URL)로 이동
-        window.location.href = 'http://localhost:8000/login';
+        window.location.href = 'http://localhost:3000/login';
       }
     } catch (error) {
+    
       if (error.response) {
-        const { title_message, detail } = error.response.data;
-        alert(`[${title_message}] ${detail}`);
+        const { error_type, status_code, title_message, detail } = error.response.data;
+
+      // 1. 유효성 검사 에러 (Validation Error)
+        if (error_type === "valid") {
+          alert(`[입력 오류] ${detail}`);
+        } 
+      // 2. 일반 HTTP 에러 (HTTPException)
+        else if (error_type === "http") {
+          alert(`[서비스 오류] ${title_message}\n내용: ${detail}`);
+        } 
+      // 3. 기타 에러
+        else {
+          alert(`알 수 없는 에러가 발생했습니다: ${title_message}`);
+        }
       } else {
-        alert("서버와 통신할 수 없습니다.");
+        alert("서버와 통신할 수 없습니다. 네트워크 상태를 확인해주세요.");
       }
     } finally {
       setIsLoading(false);

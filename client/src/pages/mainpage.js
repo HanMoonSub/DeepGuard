@@ -8,13 +8,10 @@ import bgCurve from '../assets/line.svg';
 const MainPage = () => {
   const navigate = useNavigate();
 
-  // 버튼 클릭 핸들러 (로그인 여부에 따라 로직 확장 가능)
   const handleStartAnalysis = () => {
-    // 분석을 시작하려면 로그인이 필요하므로 로그인 페이지로 유도
     navigate('/login');
   };
 
-  // 홈 리다이렉트 핸들러
   const handleHomeRedirect = () => {
     window.location.href = 'http://localhost:8000';
   };
