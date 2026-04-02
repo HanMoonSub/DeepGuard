@@ -5,6 +5,8 @@ import aiofiles as aio
 
 from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
+from sqlalchemy import text, Connection
+from sqlalchemy.exc import SQLAlchemyError
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -43,3 +45,26 @@ async def upload_image(user_email: str | None, imagefile: UploadFile):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="이미지 파일이 제대로 업로드되지 않았습니다. ")
+      
+# 이미지 메타데이터 DB 저장 
+async def register_user_image(conn: Connection, user_id: int | None, image_loc: str):
+    try:
+        query = f"""
+        INSERT INTO user_image(user_id, image_loc)
+        values (:user_id, :image_loc)
+        """
+        
+        # :user_id와 :image_loc는 Bind Parameter
+        stmt = text(query)
+        bind_stmt = stmt.bindparams(user_id=user_id, image_loc=image_loc)
+        
+        # 쿼리 실행 및 변경사항 확정(Commit)
+        await conn.execute(bind_stmt)
+        await conn.commit()
+        
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+    

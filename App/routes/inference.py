@@ -38,7 +38,7 @@ async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로
     image_loc = await image_svc.upload_image(user_email, imagefile) 
     
     # 이미지 메타데이터 DB 저장
-    # await image_svc.register_user_image(conn, user_id, image_loc)
+    await image_svc.register_user_image(conn, user_id, image_loc)
     
     # # 이미지 비동기 추론, DeepFake 결과값 반환
     # result = await inference_svc.predict_image()
