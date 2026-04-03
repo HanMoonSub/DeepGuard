@@ -1,100 +1,131 @@
 import os
-from dotenv import load_dotenv
 import time
-import aiofiles as aio
+import aiofiles as aio  # pip install aiofiles 확인 필요
+from dotenv import load_dotenv
 
 from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.image_schema import UserHistory
 
 load_dotenv()
-UPLOAD_DIR = os.getenv("UPLOAD_DIR")
+# .env에서 UPLOAD_DIR을 가져오되, 경로가 설정되지 않았을 경우를 대비해 'static' 기본값 설정
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "static")
 
-# 사용자 업로드 이미지 서버 내 저장(회원/비회원)
-async def upload_image(user_email: str | None, imagefile: UploadFile):
+# [1] 사용자 업로드 이미지 서버 내 저장 (회원/비회원 공통)
+async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
     try:
-        # 회원 저장 경로 (user_email 이용)
-        # user_name의 경우 중복될 가능성이 존재한다.
-        if user_email:
-            user_dir = f"{UPLOAD_DIR}/{user_email}/"
-        # 비회원 저장 경로 (anonymous 고정)
+        # 1. 사용자별 하위 디렉토리 결정
+        sub_dir = user_email if user_email else "anonymous"
+        
+        # 2. [수정 포인트] 경로 중복 방지 로직
+        # UPLOAD_DIR에 이미 'uploads'가 포함되어 있는지 확인하여 중복 생성을 막습니다.
+        if "uploads" in UPLOAD_DIR:
+            user_dir = os.path.join(UPLOAD_DIR, sub_dir)
         else:
-            user_dir = f"{UPLOAD_DIR}/anonymous/"
-        # 해당 회원 저장 폴더 없을 시, 새로 생성한다.
+            user_dir = os.path.join(UPLOAD_DIR, "uploads", sub_dir)
+
+        # 3. 디렉토리 존재 확인 및 생성
         if not os.path.exists(user_dir):
-            os.makedirs(user_dir)
+            try:
+                os.makedirs(user_dir, exist_ok=True)
+            except OSError as e:
+                print(f"[Storage Error] 디렉토리 생성 실패: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="서버 내 저장 공간을 준비하지 못했습니다."
+                )
 
-        # sample_img.png => sample_img (filename_only), png (ext)
+        # 4. 파일명 중복 방지 (파일명_타임스탬프.확장자)
         filename_only, ext = os.path.splitext(imagefile.filename)
-        # 회원이 동일한 이름의 사진을 업로드 해도 time을 통해 새로운 이름으로 저장 
-        upload_filename = f"{filename_only}_{(int)(time.time())}{ext}"
-        # 실제 서버 내 저장 경로
-        upload_image_loc = user_dir + upload_filename
+        if not ext: ext = ".png"
+        
+        upload_filename = f"{filename_only}_{int(time.time())}{ext}"
+        upload_image_loc = os.path.join(user_dir, upload_filename)
 
-        # 비동기 이미지 저장 
-        async with aio.open(upload_image_loc, "wb") as outfile:
-            while content := await imagefile.read(1024):
-                await outfile.write(content)
-        print("upload succeeded:", upload_image_loc)
+        # 5. 비동기 이미지 저장 (Chunk 단위 읽기)
+        try:
+            async with aio.open(upload_image_loc, "wb") as outfile:
+                while content := await imagefile.read(1024 * 1024):
+                    await outfile.write(content)
+        except Exception as e:
+            print(f"[File Error] 파일 쓰기 실패: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="이미지 파일을 저장하는 중 오류가 발생했습니다."
+            )
 
-        return upload_image_loc[1:]
-    
+        print(f"Upload Succeeded: {upload_image_loc}")
+
+        # 6. DB 저장용 경로 반환 (역슬래시를 슬래시로 통일)
+        return upload_image_loc.replace("\\", "/")
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print(e)
+        print(f"[Unknown Error] {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="이미지 파일이 제대로 업로드되지 않았습니다. ")
-      
-# 이미지 메타데이터 DB 저장 
+            detail="이미지 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
+
+
+# [2] 이미지 메타데이터 DB 저장
 async def register_user_image(conn: Connection, user_id: int | None, image_loc: str):
     try:
-        query = f"""
-        INSERT INTO user_image(user_id, image_loc)
-        values (:user_id, :image_loc)
-        """
+        query = text("""
+            INSERT INTO user_image (user_id, image_loc)
+            VALUES (:user_id, :image_loc)
+        """)
         
-        # :user_id와 :image_loc는 Bind Parameter
-        stmt = text(query)
-        bind_stmt = stmt.bindparams(user_id=user_id, image_loc=image_loc)
-        
-        # 쿼리 실행 및 변경사항 확정(Commit)
-        await conn.execute(bind_stmt)
+        await conn.execute(query, {"user_id": user_id, "image_loc": image_loc})
         await conn.commit()
         
-    except SQLAlchemyError as e:
-        print(e)
+    except DBAPIError as e:
+        print(f"[Database Connection Error] {e}")
         await conn.rollback()
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="데이터베이스 연결이 원활하지 않습니다."
+        )
+    except SQLAlchemyError as e:
+        print(f"[SQL Execution Error] {e}")
+        await conn.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미지 정보를 저장하는 형식이 올바르지 않습니다.")
 
+
+# [3] 사용자 이미지 히스토리 조회
 async def get_user_histories(conn: Connection, user_id: int):
     try:
-        query = """
-        SELECT image_loc, created_at
-        FROM user_image
-        WHERE user_id = :user_id
-        ORDER by created_at DESC;
-        """
-        stmt = text(query)
-        bind_stmt = stmt.bindparams(user_id=user_id)
-        result = await conn.execute(bind_stmt)
+        query = text("""
+            SELECT image_loc, created_at
+            FROM user_image
+            WHERE user_id = :user_id
+            ORDER BY created_at DESC;
+        """)
         
-        user_histories = [UserHistory(
-            image_loc = row.image_loc,
-            created_at = row.created_at
-        )
-                          for row in result]
+        result = await conn.execute(query, {"user_id": user_id})
+        
+        user_histories = [
+            UserHistory(
+                image_loc=row.image_loc,
+                created_at=row.created_at
+            ) for row in result
+        ]
         
         result.close()
         return user_histories
         
     except SQLAlchemyError as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+        print(f"[SQL Error] 히스토리 조회 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="데이터베이스 조회 중 문제가 발생했습니다."
+        )
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="알수없는 이유로 서비스 오류가 발생하였습니다")
+        print(f"[Unknown Error] {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="알 수 없는 이유로 서비스 오류가 발생하였습니다.")
