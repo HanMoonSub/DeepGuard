@@ -7,6 +7,7 @@ from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
+from schemas.image_schema import UserHistory
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -67,4 +68,33 @@ async def register_user_image(conn: Connection, user_id: int | None, image_loc: 
         await conn.rollback()
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                             detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
-    
+
+async def get_user_histories(conn: Connection, user_id: int):
+    try:
+        query = """
+        SELECT image_loc, created_at
+        FROM user_image
+        WHERE user_id = :user_id
+        ORDER by created_at DESC;
+        """
+        stmt = text(query)
+        bind_stmt = stmt.bindparams(user_id=user_id)
+        result = await conn.execute(bind_stmt)
+        
+        user_histories = [UserHistory(
+            image_loc = row.image_loc,
+            created_at = row.created_at
+        )
+                          for row in result]
+        
+        result.close()
+        return user_histories
+        
+    except SQLAlchemyError as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="알수없는 이유로 서비스 오류가 발생하였습니다")
