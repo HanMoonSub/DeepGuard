@@ -1,16 +1,20 @@
 import os
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from routes import auth, home
+from routes import auth, home, inference, image
 from utils.common import lifespan
 from utils import exc_handler
 from dotenv import load_dotenv
 
 # 가상 인스턴스 생성
 app = FastAPI(lifespan=lifespan)
+
+# StaticFile 등록하기
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Cross Origin Resource Sharing
 app.add_middleware(CORSMiddleware,
@@ -27,7 +31,8 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
 
 app.include_router(auth.router)
 app.include_router(home.router)
-
+app.include_router(inference.router)
+app.include_router(image.router)
 
 # Custom HTTPException Handler
 app.add_exception_handler(StarletteHTTPException, exc_handler.custom_http_exception_handler)
