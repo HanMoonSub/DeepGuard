@@ -1,4 +1,14 @@
 import os
+
+import sys
+from pathlib import Path
+
+current_file = Path(__file__).resolve()
+project_root = current_file.parent.parent  # App의 상위 폴더
+
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
@@ -9,6 +19,7 @@ from routes import auth, home, inference, image
 from utils.common import lifespan
 from utils import exc_handler
 from dotenv import load_dotenv
+
 
 # 가상 인스턴스 생성
 app = FastAPI(lifespan=lifespan)

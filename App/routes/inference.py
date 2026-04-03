@@ -3,7 +3,7 @@ from fastapi import (
     File, UploadFile
 )
 from fastapi.exceptions import HTTPException
-from services import image_svc, session_svc
+from services import image_svc, session_svc, inference_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
 
@@ -41,7 +41,7 @@ async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로
     await image_svc.register_user_image(conn, user_id, image_loc)
     
     # # 이미지 비동기 추론, DeepFake 결과값 반환
-    # result = await inference_svc.predict_image()
+    result = await inference_svc.predict_image(image_loc, model_type, domain_type)
     
     # # 추론 결과값 DB에 저장하기
     # await inference_svc.register_image_result(result)
