@@ -115,7 +115,6 @@ async def get_user_histories(conn: Connection, user_id: int):
             ) for row in result
         ]
         
-        result.close()
         return user_histories
         
     except SQLAlchemyError as e:
