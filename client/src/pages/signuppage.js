@@ -31,37 +31,24 @@ const SignupPage = () => {
     setIsLoading(true);
 
     try {
-      // 엔드포인트 수정: /auth/register
       const response = await axios.post('http://localhost:8000/auth/register', {
         name,
         email,
         password
       });
 
-      // 백엔드에서 성공 응답(200 또는 201)이 왔을 때
       if (response.status === 200 || response.status === 201) {
-        // 서버에서 보내준 response.data.message를 출력
-        alert(response.data.message); 
-        
-        // 성공 시 백엔드가 요청한 로그인 페이지(외부 URL)로 이동
-        window.location.href = 'http://localhost:3000/login';
+        alert(response.data.message || "회원가입이 완료되었습니다! 로그인해 주세요."); 
+        navigate('/login');
       }
     } catch (error) {
-    
-      if (error.response) {
-        const { error_type, status_code, title_message, detail } = error.response.data;
+      if (error.response && error.response.data) {
+        const { error_type, title_message, detail } = error.response.data;
 
-      // 1. 유효성 검사 에러 (Validation Error)
         if (error_type === "valid") {
           alert(`[입력 오류] ${detail}`);
-        } 
-      // 2. 일반 HTTP 에러 (HTTPException)
-        else if (error_type === "http") {
-          alert(`[서비스 오류] ${title_message}\n내용: ${detail}`);
-        } 
-      // 3. 기타 에러
-        else {
-          alert(`알 수 없는 에러가 발생했습니다: ${title_message}`);
+        } else {
+          alert(`[${title_message}] ${detail}`);
         }
       } else {
         alert("서버와 통신할 수 없습니다. 네트워크 상태를 확인해주세요.");
@@ -125,10 +112,10 @@ const SignupPage = () => {
 
         <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column' }}>
           <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px' }}>이름</label>
-          <input type="text" placeholder="Lee yesol" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} required />
+          <input type="text" placeholder="이름을 입력하세요" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} required />
 
           <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px' }}>이메일 주소</label>
-          <input type="email" placeholder="yesol@example.com" style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input type="email" placeholder="example@gmail.com" style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} required />
 
           <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px' }}>비밀번호</label>
           <input type="password" placeholder="8자 이상 입력해 주세요." style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} required />
@@ -150,12 +137,12 @@ const SignupPage = () => {
         </form>
         
         <p style={{ marginTop: '25px', fontSize: '14px', color: '#888', textAlign: 'center' }}>
-          Already have an Account? <span style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => navigate('/login')}>Login</span>
+          이미 계정이 있으신가요? <span style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => navigate('/login')}>로그인</span>
         </p>
       </div>
 
       <div style={{ zIndex: 2 }}>
-        <img src={medicalIcon} alt="Medical Icon" style={{ width: '450px', marginTop: '-180px' }} />
+        <img src={medicalIcon} alt="Decoration" style={{ width: '450px', marginTop: '-180px' }} />
       </div>
     </div>
   );

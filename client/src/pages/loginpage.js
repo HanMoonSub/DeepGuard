@@ -2,38 +2,37 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios'; 
 
-const LoginPage = () => {
+const LoginPage = ({ setSessionUser }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState(''); 
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
     try {
-      const response = await axios.post('http://localhost:8000/auth/login', {
-        email,
-        password
-      });
+      const response = await axios.post('http://localhost:8000/auth/login', { email, password });
 
       if (response.status === 200) {
-        alert(response.data.message); 
-        
-        const token = response.data.access_token || 'dummy_token'; 
+        const token = response.data.access_token;
         localStorage.setItem('token', token); 
 
-        const session_user = await axios.get('http://localhost:8000/home', {
-          token
+        const homeRes = await axios.get('http://localhost:8000/home', {
+          headers: { Authorization: `Bearer ${token}` }
         });
 
-        navigate('/main');
+        if (homeRes.data.session_user) {
+          setSessionUser(homeRes.data.session_user);
+          alert(`${homeRes.data.session_user.name}님 환영합니다!`);
+        }
+
+        navigate('/analysis');
       }
     } catch (error) {
-      if (error.response) {
+      if (error.response && error.response.data) {
         const { title_message, detail } = error.response.data;
         alert(`[${title_message}] ${detail}`);
       } else {
-        alert("서버와 통신할 수 없습니다.");
+        alert("서버 통신 실패");
       }
     }
   };
