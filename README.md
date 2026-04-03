@@ -255,7 +255,7 @@ model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 
 ```python
 
-from inference import ImagePredictor
+from inference.image_predictor import ImagePredictor
 
 # Initialize the predictor
 predictor = ImagePredictor(
@@ -279,7 +279,7 @@ print(f"Deepfake Probability: {result:.4f}")
 
 ```python
 
-from inference import VideoPredictor
+from inference.video_predictor import VideoPredictor
 
 # Initialize the predictor
 predictor = VideoPredictor(

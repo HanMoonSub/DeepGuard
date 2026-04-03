@@ -248,7 +248,7 @@ model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 #### 딥페이크 이미지 예측
 
 ```python
-from inference import ImagePredictor
+from inference.image_predictor import ImagePredictor
 
 # 예측기 초기화
 predictor = ImagePredictor(
@@ -271,7 +271,7 @@ print(f"딥페이크 확률: {result:.4f}")
 #### 딥페이크 비디오 예측
 
 ```python
-from inference import VideoPredictor
+from inference.video_predictor import VideoPredictor
 
 # 예측기 초기화
 predictor = VideoPredictor(
