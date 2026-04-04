@@ -1,7 +1,7 @@
 # Deepfakes Detection
 
 <p align="center">
-  <img src="Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
+  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
 </p>
 
 <p align="center">
@@ -132,13 +132,13 @@ Multi Scale Efficient Global Context Vision Transformer is an optimized multi-sc
 
 #### Explore More Details
 
-- [Model Architecture: MS-EffViT](deepguard/MS_EFFViT.md) - _**Multi Scale Efficient Vision Transformer**_
+- [Model Architecture: MS-EffViT](deepguard/MS_EffViT.md) - _**Multi Scale Efficient Vision Transformer**_
 
-- [Advanced Architecture: MS-EFFGCViT](deepguard/MS_EFFGCViT.md) - _**Multi Scale Efficient Global Context Vision Transformer**_
+- [Advanced Architecture: MS-EFFGCViT](deepguard/MS_EffGCViT.md) - _**Multi Scale Efficient Global Context Vision Transformer**_
 
 
 <p align="center">
-  <img src="Images/ms_eff_gcvit.JPG" width="100%" height="700">
+  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/ms_eff_gcvit.JPG" width="100%" height="700">
 </p>
 
 We utilizes two distinct types of self-attention to capture both long-range and short-range information across feature maps.
@@ -149,7 +149,7 @@ We utilizes two distinct types of self-attention to capture both long-range and 
 
 
 <p align="center">
-  <img src="Images/window_attention.JPG" width="100%" height="300">
+  <img src=https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/window_attention.JPG width="100%" height="300">
 </p>
 
 ## 🧬 Model Zoo
