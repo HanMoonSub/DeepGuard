@@ -120,7 +120,8 @@ You can load the models directly via the `DeepGuard` package or through the `tim
 **Installation**
 
 ```bash
-pip install -U git+https://github.com/HanMoonSub/DeepGuard.git
+# pip install -U git+https://github.com/HanMoonSub/DeepGuard.git
+pip install deepguard
 ```
 
 
