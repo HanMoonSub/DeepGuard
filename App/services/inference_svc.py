@@ -1,4 +1,5 @@
 import timm
+import asyncio
 from inference.image_predictor import ImagePredictor
 
 model_cache = {}
@@ -34,10 +35,14 @@ async def predict_image(image_loc: str, model_type: str, domain_type: str):
         
     predictor = model_cache[cache_key]
     
-    result = predictor.predict_img(
-        img_path = f"./{image_loc}",
-        tta_hflip = 0.0
-    )
+    loop = asyncio.get_running_loop()
+    
+    result = await loop.run_in_executor( 
+        None,
+        predictor.predict_img,
+        f"./{image_loc}",
+        0.0
+        )
     
     print(f"Deepfake Probability: {result:.4f}")
     
