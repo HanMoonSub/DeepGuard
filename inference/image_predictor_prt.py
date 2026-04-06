@@ -75,6 +75,7 @@ class ImagePredictor:
         cropped = self._crop_face(img, bbox)
         if cropped is None:
             raise PredictorError("얼굴이 화면 끝에 너무 붙어 있거나 가려져 있어 분석이 어렵습니다.")
+        return cropped
                   
         
     def predict_img(self, img_path: str, tta_hflip: float = 0) -> float:
@@ -96,4 +97,4 @@ class ImagePredictor:
         except PredictorError as e:
             raise e
         except Exception as e:
-            raise PredictorError("분석 중 예상치 못한 오류 발생")
+            raise e

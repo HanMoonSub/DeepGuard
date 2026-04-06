@@ -1,8 +1,10 @@
 import timm
 import asyncio
-from inference.image_predictor import ImagePredictor
+from inference.image_predictor_prt import ImagePredictor
+from inference.utils import PredictorError
 from fastapi import status
 from fastapi.exceptions import HTTPException
+
 
 model_cache = {}
 
@@ -32,7 +34,8 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
     
     try:
         model_name, dataset = MODEL_CONFIG[version_type][model_type][domain_type]
-    except KeyError:
+    except KeyError as e:
+        print(e)
         raise HTTPException(
             status_code = status.HTTP_400_BAD_REQUEST,
             detail = f"지원하지 않는 모델 설정입니다. (입력값: {version_type}, {model_type}, {domain_type}). "
@@ -48,18 +51,39 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
             model_name=model_name,
             dataset=dataset
         )
-    # 캐시 내 모델 존재 시, 바로 사용
     predictor = model_cache[cache_key]
+    
     
     # 비동기 이미지 추론 실행
     loop = asyncio.get_running_loop()
-    result = await loop.run_in_executor(
-        None, 
-        predictor.predict_img, 
-        f"./{image_loc}", 
-        0.0
-    )
+    try:
+        prob = await loop.run_in_executor(
+            None, 
+            predictor.predict_img, 
+            f"./{image_loc}", 
+            0.0
+        )
+        
+        print("딥페이크 확률 값: ", prob)
     
-    # 최종 출력값 출력
-    print(f"Deepfake Probability: {result:.4f}")
-    return result
+        # 분석 성공 시
+        return {
+            "prob": prob,
+            "message": "이미지 분석에 성공하였습니다",
+            "status": "success"
+        }
+    except PredictorError as e:
+        print(e.message)
+        return {
+            "prob": 0.5,
+            "message": e.message,
+            "status": "warning",
+        }
+    
+    except Exception as e:
+        print(str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="서버 분석 중 치명적인 오류가 발생했습니다."
+        )
+        
