@@ -1,6 +1,6 @@
 import os
 import time
-import aiofiles as aio  # pip install aiofiles 확인 필요
+import aiofiles as aio
 from dotenv import load_dotenv
 
 from fastapi import UploadFile, status
@@ -96,7 +96,7 @@ async def register_user_image(conn: Connection, user_id: int | None, image_loc: 
             detail="이미지 정보를 저장하는 형식이 올바르지 않습니다.")
 
 
-# [3] 사용자 이미지 히스토리 조회
+# [3] 사용자 전체 히스토리 조회
 async def get_user_histories(conn: Connection, user_id: int):
     try:
         query = text("""
@@ -105,26 +105,30 @@ async def get_user_histories(conn: Connection, user_id: int):
             WHERE user_id = :user_id
             ORDER BY created_at DESC;
         """)
-        
         result = await conn.execute(query, {"user_id": user_id})
         
-        user_histories = [
-            UserHistory(
-                image_loc=row.image_loc,
-                created_at=row.created_at
-            ) for row in result
+        return [
+            UserHistory(image_loc=row.image_loc, created_at=row.created_at) 
+            for row in result
         ]
-        
-        return user_histories
-        
     except SQLAlchemyError as e:
-        print(f"[SQL Error] 히스토리 조회 실패: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="데이터베이스 조회 중 문제가 발생했습니다."
-        )
-    except Exception as e:
-        print(f"[Unknown Error] {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="알 수 없는 이유로 서비스 오류가 발생하였습니다.")
+        print(f"[SQL Error] {e}")
+        raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+
+# [4] 사용자 개별 히스토리 조회 (Individual)
+async def get_user_individual_history(conn: Connection, user_id: int, image_id: int):
+    try:
+        query = text("""
+            SELECT image_loc, created_at
+            FROM user_image
+            WHERE id = :image_id AND user_id = :user_id
+        """)
+        result = await conn.execute(query, {"image_id": image_id, "user_id": user_id})
+        row = result.fetchone()
+        
+        if row:
+            return UserHistory(image_loc=row.image_loc, created_at=row.created_at)
+        return None
+    except SQLAlchemyError as e:
+        print(f"[SQL Error] {e}")
+        raise HTTPException(status_code=503, detail="데이터베이스 상세 조회 중 문제가 발생했습니다.")
