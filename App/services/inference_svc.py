@@ -4,6 +4,7 @@ from inference.image_predictor_prt import ImagePredictor
 from inference.utils import PredictorError
 from fastapi import status
 from fastapi.exceptions import HTTPException
+from sqlalchemy import Connection
 
 
 model_cache = {}
@@ -26,6 +27,7 @@ MODEL_CONFIG = {
     }
 }
 
+# 사용자 이미지 딥페이크 여부 판단 로직
 async def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str):
     
     # version_type: v1, v2
@@ -75,7 +77,7 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
     except PredictorError as e:
         print(e.message)
         return {
-            "prob": 0.5,
+            "prob": -1,
             "message": e.message,
             "status": "warning",
         }
@@ -87,3 +89,16 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
             detail="서버 분석 중 치명적인 오류가 발생했습니다."
         )
         
+# async def register_image_result(conn: Connection, user_id: int, image_loc: str, score: float,
+#                                 version_type: str, model_type: str, domain_type: str):
+#     score = None
+    
+#     if score > 0.5:
+#         label = "FAKE"
+#     esle:
+#         label = 'REAL'
+#     return None
+    
+    
+    
+    
