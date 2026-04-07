@@ -19,7 +19,7 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
         # 1. 사용자별 하위 디렉토리 결정
         sub_dir = user_email if user_email else "anonymous"
         
-        # 2. [수정 포인트] 경로 중복 방지 로직
+        # 2.경로 중복 방지 로직
         # UPLOAD_DIR에 이미 'uploads'가 포함되어 있는지 확인하여 중복 생성을 막습니다.
         if "uploads" in UPLOAD_DIR:
             user_dir = os.path.join(UPLOAD_DIR, sub_dir)
@@ -115,7 +115,7 @@ async def get_user_histories(conn: Connection, user_id: int):
         print(f"[SQL Error] {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
 
-# [4] 사용자 개별 히스토리 조회 (Individual)
+# [4] 사용자 개별 히스토리 조회
 async def get_user_individual_history(conn: Connection, user_id: int, image_id: int):
     try:
         query = text("""

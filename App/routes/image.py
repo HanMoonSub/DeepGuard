@@ -5,6 +5,7 @@ from db.database import context_get_conn
 
 router = APIRouter(prefix="/image", tags=["image"])
 
+# 사용자 전체 업로드 히스토리 조회 
 @router.get("/history")
 async def get_user_histories(
     conn: Connection = Depends(context_get_conn),
@@ -22,6 +23,7 @@ async def get_user_histories(
         "context": user_histories
     }
 
+# 특정 이미지의 상세 내역 조회 (개별 히스토리)
 @router.get("/history/{image_id}")
 async def get_user_individual_history(
     image_id: int,
