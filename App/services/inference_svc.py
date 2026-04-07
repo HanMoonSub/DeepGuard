@@ -4,7 +4,8 @@ from inference.image_predictor_prt import ImagePredictor
 from inference.utils import PredictorError
 from fastapi import status
 from fastapi.exceptions import HTTPException
-from sqlalchemy import Connection
+from sqlalchemy import text, Connection
+from sqlalchemy.exc import SQLAlchemyError
 
 
 model_cache = {}
@@ -34,14 +35,7 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
     # model_type: fast, pro
     # domain_type: 서양인, 동양인
     
-    try:
-        model_name, dataset = MODEL_CONFIG[version_type][model_type][domain_type]
-    except KeyError as e:
-        print(e)
-        raise HTTPException(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            detail = f"지원하지 않는 모델 설정입니다. (입력값: {version_type}, {model_type}, {domain_type}). "
-                     f"v1은 '서양인'만 지원하며, v2는 '서양인', '동양인' 모두 지원합니다.")
+    model_name, dataset = MODEL_CONFIG[version_type][model_type][domain_type]
 
     # 캐시 확인 및 모델 초기화
     cache_key = (model_name, dataset)
@@ -82,23 +76,42 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
             "status": "warning",
         }
     
+    # CUDA Out of Memory, CUDA Device Error, Timm 모드 로델 실패 등..
     except Exception as e:
         print(str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="서버 분석 중 치명적인 오류가 발생했습니다."
         )
+
+# 이미지 메타데이터 + 추론 결과값 DB에 저장
+async def register_image_result(conn: Connection, user_id: int, image_loc: str, score: float,
+                                version_type: str, model_type: str, domain_type: str):
+    if score > 0.5: # 0.5 ~ 1.0 구간 
+        label = "FAKE"
+    elif score >= 0: # 0.0 ~ 0.5 구간
+        label = "REAL"
+    else: # score가 -1인 경우 
+        label = "UNKNOWN" 
         
-# async def register_image_result(conn: Connection, user_id: int, image_loc: str, score: float,
-#                                 version_type: str, model_type: str, domain_type: str):
-#     score = None
-    
-#     if score > 0.5:
-#         label = "FAKE"
-#     esle:
-#         label = 'REAL'
-#     return None
-    
+    try:
+        query = """
+        INSERT INTO image_result(user_id, image_loc, label, score, version_type, model_type, domain_type)
+        values (:user_id, :image_loc, :label, :score, :version_type, :model_type, :domain_type)
+        """
+        
+        stmt = text(query)
+        bind_stmt = stmt.bindparams(user_id=user_id, image_loc=image_loc, label=label, score=score,
+                                    version_type=version_type, model_type=model_type, domain_type=domain_type)
+        await conn.execute(bind_stmt)
+        await conn.commit()
+        
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="요청데이터가 제대로 전달되지 않았습니다")
+
     
     
     
