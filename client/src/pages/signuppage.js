@@ -81,7 +81,8 @@ const SignupPage = () => {
     color: 'white',
     marginTop: '5px',
     width: '100%',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    outline: 'none'
   };
 
   const buttonStyle = {
@@ -95,7 +96,8 @@ const SignupPage = () => {
     fontSize: '16px',
     marginTop: '30px',
     width: '100%',
-    opacity: isLoading ? 0.7 : 1
+    opacity: isLoading ? 0.7 : 1,
+    transition: '0.3s'
   };
 
   return (
@@ -104,7 +106,7 @@ const SignupPage = () => {
 
       <div style={formSideStyle}>
         <div style={{ marginBottom: '30px' }}>
-          <img src={logo} alt="Deep Guard" style={{ height: '35px' }} />
+          <img src={logo} alt="Deep Guard" style={{ height: '35px', cursor: 'pointer' }} onClick={() => navigate('/main')} />
         </div>
 
         <h1 style={{ fontSize: '36px', marginBottom: '10px', fontWeight: 'bold' }}>Deep Guard에 오신 걸 환영합니다!</h1>
@@ -126,9 +128,9 @@ const SignupPage = () => {
               id="terms" 
               checked={isAgreed} 
               onChange={(e) => setIsAgreed(e.target.checked)} 
-              style={{ accentColor: '#39FF14' }} 
+              style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} 
             />
-            <label htmlFor="terms" style={{ fontSize: '13px', color: '#ccc' }}>이용 수칙에 동의합니다.</label>
+            <label htmlFor="terms" style={{ fontSize: '13px', color: '#ccc', cursor: 'pointer' }}>이용 수칙에 동의합니다.</label>
           </div>
 
           <button type="submit" style={buttonStyle} disabled={isLoading}>
@@ -137,7 +139,7 @@ const SignupPage = () => {
         </form>
         
         <p style={{ marginTop: '25px', fontSize: '14px', color: '#888', textAlign: 'center' }}>
-          이미 계정이 있으신가요? <span style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => navigate('/login')}>로그인</span>
+          이미 계정이 있으신가요? <span style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }} onClick={() => navigate('/login')}>로그인</span>
         </p>
       </div>
 
