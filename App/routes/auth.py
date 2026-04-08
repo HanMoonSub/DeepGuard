@@ -58,7 +58,6 @@ async def login_user(request: Request,
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="등록하신 패스워드와 입력정보가 일치하지 않습니다."
         )
-    
 
     request.session["session_user"] = {"id": user.id, "name": user.name, "email":user.email}
 
