@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios from 'axios'; 
 
 import logo from '../assets/logo.svg';
 
 const LoginPage = ({ setSessionUser }) => {
   const navigate = useNavigate();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -16,30 +15,30 @@ const LoginPage = ({ setSessionUser }) => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8000/auth/login', 
-        { email, password },
-        { withCredentials: true } 
-      );
+      const response = await axios.post('http://localhost:8000/auth/login', { email, password });
+      
+      if (response.status === 200) {
+        const token = response.data.access_token;
+        localStorage.setItem('token', token); 
 
-      if (response.data.status === "success") {
-        
-        try {
-          const checkRes = await axios.get('http://localhost:8000/auth/check', { withCredentials: true });
-          
-          if (checkRes.data && checkRes.data.user) {
-            setSessionUser(checkRes.data.user);
-            alert(`${checkRes.data.user.name}님, 환영합니다!`);
-            
-            navigate('/main'); 
-          }
-        } catch (checkErr) {
-          console.error("세션 유저 정보 동기화 실패:", checkErr);
-          navigate('/main');
+        const homeRes = await axios.get('http://localhost:8000/home', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (homeRes.data.session_user) {
+          setSessionUser(homeRes.data.session_user);
+          alert(`${homeRes.data.session_user.name}님 환영합니다!`);
         }
+        
+        navigate('/analysis');
       }
-    } catch (err) {
-      const errorMsg = err.response?.data?.detail || "로그인 정보가 일치하지 않습니다.";
-      alert(errorMsg);
+    } catch (error) {
+      if (error.response && error.response.data) {
+        const { title_message, detail } = error.response.data;
+        alert(`[${title_message || '오류'}] ${detail || '로그인에 실패했습니다.'}`);
+      } else {
+        alert("서버와 통신할 수 없습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
