@@ -58,8 +58,8 @@ async def register_user(conn: Connection, name: str, email:str, hashed_password:
     except SQLAlchemyError as e:
         print(e)
         await conn.rollback()
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="요청데이터가 제대로 전달되지 않았습니다")
     
 # 비즈니스 로직 (로그인 시 인증 맞는지 확인)
 async def authenticate_user(conn: Connection, email: str):
@@ -84,5 +84,5 @@ async def authenticate_user(conn: Connection, email: str):
         return user
     except SQLAlchemyError as e:
         print(e)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="데이터베이스 조회 중 오류가 발생했습니다.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="요청데이터가 제대로 전달되지 않았습니다")
