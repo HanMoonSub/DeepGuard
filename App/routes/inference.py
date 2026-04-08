@@ -32,17 +32,17 @@ async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로
     
     # 이미지 메타데이터 DB 저장
     await image_svc.register_user_image(conn, user_id, image_loc)
-    
+        
     # # 이미지 비동기 추론, DeepFake 결과값 반환
     result = await inference_svc.predict_image(image_loc, version_type, model_type, domain_type)
-    # 비로그인 회원 추론 시, 해당 결과값 저장 안하고 종료
     
-    # 추론 결과값 DB에 저장하기
+    # 로그인 시, 추론 결과값 DB에 저장하기
     if session_user:
-        await inference_svc.register_image_result(conn, user_id, image_loc, result["prob"],
-                                                   version_type, model_type, domain_type)
+        analysis = result["analysis"]; result_msg = result["message"]
+        await inference_svc.register_image_result(conn, user_id, image_loc, analysis["prob"], analysis["face_conf"], analysis["face_ratio"],
+                                                  analysis["face_brightness"], version_type, model_type, domain_type, result_msg)
     # else: 
-        # 비로그인 회원 추론 시, 해당 결과값 저장 안하고 파일 내 이미지 삭제
+        # 비로그인 추론 결과값 반환만 하고 서버 내 이미지 파일 삭제
         # await image_svc.delete_image(conn)
         
     return result
