@@ -95,40 +95,40 @@ async def register_user_image(conn: Connection, user_id: int | None, image_loc: 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미지 정보를 저장하는 형식이 올바르지 않습니다.")
 
-
-# [3] 사용자 전체 히스토리 조회
+# [3] 사용자 전체 히스토리 조회 (image_result 테이블 반영)
 async def get_user_histories(conn: Connection, user_id: int):
     try:
+        # SQL에 맞춰 테이블명과 컬럼 변경
         query = text("""
-            SELECT image_loc, created_at
-            FROM user_image
+            SELECT id, image_loc, label, score, model_type, created_at
+            FROM image_result
             WHERE user_id = :user_id
             ORDER BY created_at DESC;
         """)
         result = await conn.execute(query, {"user_id": user_id})
         
-        return [
-            UserHistory(image_loc=row.image_loc, created_at=row.created_at) 
-            for row in result
-        ]
+        # 튜플 결과를 딕셔너리 형태로 변환하여 반환 (유연성 확보)
+        return [dict(row._mapping) for row in result]
+    
     except SQLAlchemyError as e:
-        print(f"[SQL Error] {e}")
+        print(f"[SQL Error] 히스토리 조회 실패: {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
 
-# [4] 사용자 개별 히스토리 조회
+# [4] 사용자 개별 히스토리 조회 (Individual)
 async def get_user_individual_history(conn: Connection, user_id: int, image_id: int):
     try:
         query = text("""
-            SELECT image_loc, created_at
-            FROM user_image
+            SELECT id, image_loc, label, score, version_type, model_type, domain_type, created_at
+            FROM image_result
             WHERE id = :image_id AND user_id = :user_id
         """)
         result = await conn.execute(query, {"image_id": image_id, "user_id": user_id})
         row = result.fetchone()
         
         if row:
-            return UserHistory(image_loc=row.image_loc, created_at=row.created_at)
+            return dict(row._mapping)
         return None
     except SQLAlchemyError as e:
-        print(f"[SQL Error] {e}")
+        print(f"[SQL Error] 상세 조회 실패: {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 상세 조회 중 문제가 발생했습니다.")
+    
