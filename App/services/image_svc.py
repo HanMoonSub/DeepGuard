@@ -53,8 +53,8 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
         print(f"Upload Succeeded: {upload_image_loc}")
 
         # 6. DB 저장용 경로 반환
-        return upload_image_loc[1:]
-
+        return upload_image_loc[1:].replace("\\", "/")
+    
     except Exception as e:
         print(f"[Unknown Error] {e}")
         raise HTTPException(

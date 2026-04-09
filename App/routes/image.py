@@ -26,14 +26,9 @@ async def get_user_histories(
 async def get_user_history(
     image_id: int,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_opt)
 ):
     
-    user_id = session_user['id']
-    history = await image_svc.get_user_history(conn, user_id, image_id)
-    
-    if not history:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 기록을 찾을 수 없습니다.")
+    history = await image_svc.get_user_history(conn, image_id)
         
     return {
         "message": "개별 내역을 성공적으로 불러왔습니다",
