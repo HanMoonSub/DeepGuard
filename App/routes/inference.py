@@ -29,9 +29,6 @@ async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로
     
     # 이미지 업로드 이후, 이미지 저장 경로 반환
     image_loc = await image_svc.upload_image(user_email, imagefile) 
-    
-    # 이미지 메타데이터 DB 저장
-    await image_svc.register_user_image(conn, user_id, image_loc)
         
     # # 이미지 비동기 추론, DeepFake 결과값 반환
     result = await inference_svc.predict_image(image_loc, version_type, model_type, domain_type)
@@ -41,9 +38,9 @@ async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로
         analysis = result["analysis"]; result_msg = result["message"]
         await inference_svc.register_image_result(conn, user_id, image_loc, analysis["prob"], analysis["face_conf"], analysis["face_ratio"],
                                                   analysis["face_brightness"], version_type, model_type, domain_type, result_msg)
-    # else: 
+    else: 
         # 비로그인 추론 결과값 반환만 하고 서버 내 이미지 파일 삭제
-        # await image_svc.delete_image(conn)
+        await image_svc.delete_image(image_loc)
         
     return result
     
