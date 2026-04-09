@@ -1,0 +1,35 @@
+# [공통 및 에디터 설정]
+.DS_Store
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# [FastAPI / Python - App 폴더 관련]
+**/__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# [React - client 폴더 관련]
+# 의존성 및 패키지 관리
+client/node_modules/
+client/.pnp
+client/.pnp.js
+client/package-lock.json
+
+# 테스트 및 빌드 결과물
+client/coverage/
+client/build/
+
+# 환경 변수 (보안을 위해 로컬 설정 무시)
+client/.env
+client/.env.local
+client/.env.development.local
+client/.env.test.local
+client/.env.production.local
