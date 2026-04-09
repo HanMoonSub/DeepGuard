@@ -55,8 +55,6 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
         # 6. DB 저장용 경로 반환
         return upload_image_loc[1:]
 
-    except HTTPException:
-        raise
     except Exception as e:
         print(f"[Unknown Error] {e}")
         raise HTTPException(
@@ -123,18 +121,23 @@ async def get_user_histories(conn: Connection, user_id: int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
 # [4] 사용자 개별 히스토리 조회
-async def get_user_history(conn: Connection, user_id: int, image_id: int):
+async def get_user_history(conn: Connection, image_id: int):
     try:
         query = """
             SELECT id, user_id, image_loc, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
-            WHERE id = :image_id AND user_id = :user_id;
+            WHERE id = :image_id;
         """
         stmt = text(query)
-        bind_stmt = stmt.bindparams(image_id=image_id, user_id=user_id)
+        bind_stmt = stmt.bindparams(image_id=image_id)
         result = await conn.execute(bind_stmt)
         
-        user_history = [UserHistory_indi(
+        row = result.fetchone()
+        if row is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail="해당 히스토리를 찾을 수 없습니다.")
+        
+        user_history = UserHistory_indi(
             image_id = row.id,
             user_id = row.user_id,
             image_loc = row.image_loc,
@@ -149,12 +152,10 @@ async def get_user_history(conn: Connection, user_id: int, image_id: int):
             result_msg = row.result_msg,
             created_at = row.created_at
         )
-            for row in result]
         
         result.close()
         
-        for g in user_history:
-            print(g)
+        print(user_history)
         return user_history
     
     except SQLAlchemyError as e:
