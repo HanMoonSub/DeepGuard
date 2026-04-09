@@ -1,15 +1,19 @@
 drop table if exists image_result;
 
-CREATE TABLE image_result (
-    id           INT AUTO_INCREMENT PRIMARY KEY,
-    user_id      INT NOT NULL,
-    image_loc    VARCHAR(300) NOT NULL UNIQUE,
-    label        TINYINT NOT NULL,
-    score        FLOAT NOT NULL,
-    version_type VARCHAR(10) NOT NULL,
-    model_type   VARCHAR(10) NOT NULL,
-    domain_type  VARCHAR(20) NOT NULL,
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+create table deepfake_db.image_result (
+    id integer auto_increment primary key,
+    user_id integer not null,
+    image_loc varchar(300) not null unique,
+    label varchar(10) not null,
+    score float not null,
+    face_conf float not null,
+    face_ratio float not null,
+    face_brightness float not null,
+    version_type varchar(10) not null,
+    model_type varchar(10) not null,
+    domain_type varchar(20) not null,
+    result_msg varchar(200) not null,
+    created_at timestamp default current_timestamp,
     
-    INDEX user_id_idx(user_id)
+    index user_id_idx(user_id)
 );
