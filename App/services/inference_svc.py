@@ -6,6 +6,7 @@ from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
+from services.image_svc import delete_image
 
 
 model_cache = {}
@@ -55,7 +56,7 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
         analysis = await loop.run_in_executor(
             None, 
             predictor.predict_img, 
-            f"./{image_loc}", 
+            "." + image_loc, 
             0.0
         )
         
@@ -78,6 +79,7 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
     # CUDA Out of Memory, CUDA Device Error, Timm 모드 로델 실패 등..
     except Exception as e:
         print(str(e))
+        await delete_image(image_loc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="서버 분석 중 치명적인 오류가 발생했습니다."

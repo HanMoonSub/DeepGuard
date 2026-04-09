@@ -62,7 +62,25 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="이미지 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
 
-# [2] 사용자 전체 히스토리 조회 (image_result 테이블 반영)
+# [2] 사용자 업로드 이미지 서버 내 삭제
+async def delete_image(image_loc: str):
+    try:
+        
+        file_path = "." + image_loc 
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"File removed: {file_path}")
+        else:
+            print(f"File not found: {file_path}")
+
+    except Exception as e:
+        print(f"{e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="알수없는 이유로 문제가 발생하였습니다."
+        )
+# [3] 사용자 전체 히스토리 조회 (image_result 테이블 반영)
 async def get_user_histories(conn: Connection, user_id: int):
     try:
         # SQL에 맞춰 테이블명과 컬럼 변경
