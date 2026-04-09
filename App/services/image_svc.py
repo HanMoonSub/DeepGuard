@@ -8,10 +8,10 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.image_schema import UserHistory
+from schemas.image_schema import UserHistory_indi
 
 load_dotenv()
-# .env에서 UPLOAD_DIR을 가져오되, 경로가 설정되지 않았을 경우를 대비해 'static' 기본값 설정
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "static")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
 # [1] 사용자 업로드 이미지 서버 내 저장 (회원/비회원 공통)
 async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
@@ -19,12 +19,7 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
         # 1. 사용자별 하위 디렉토리 결정
         sub_dir = user_email if user_email else "anonymous"
         
-        # 2.경로 중복 방지 로직
-        # UPLOAD_DIR에 이미 'uploads'가 포함되어 있는지 확인하여 중복 생성을 막습니다.
-        if "uploads" in UPLOAD_DIR:
-            user_dir = os.path.join(UPLOAD_DIR, sub_dir)
-        else:
-            user_dir = os.path.join(UPLOAD_DIR, "uploads", sub_dir)
+        user_dir = os.path.join(UPLOAD_DIR, sub_dir)
 
         # 3. 디렉토리 존재 확인 및 생성
         if not os.path.exists(user_dir):
@@ -39,7 +34,6 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
 
         # 4. 파일명 중복 방지 (파일명_타임스탬프.확장자)
         filename_only, ext = os.path.splitext(imagefile.filename)
-        if not ext: ext = ".png"
         
         upload_filename = f"{filename_only}_{int(time.time())}{ext}"
         upload_image_loc = os.path.join(user_dir, upload_filename)
@@ -58,8 +52,8 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
 
         print(f"Upload Succeeded: {upload_image_loc}")
 
-        # 6. DB 저장용 경로 반환 (역슬래시를 슬래시로 통일)
-        return upload_image_loc.replace("\\", "/")
+        # 6. DB 저장용 경로 반환
+        return upload_image_loc[1:]
 
     except HTTPException:
         raise
@@ -69,66 +63,105 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="이미지 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
 
-
-# [2] 이미지 메타데이터 DB 저장
-async def register_user_image(conn: Connection, user_id: int | None, image_loc: str):
+# [2] 사용자 업로드 이미지 서버 내 삭제
+async def delete_image(image_loc: str):
     try:
-        query = text("""
-            INSERT INTO user_image (user_id, image_loc)
-            VALUES (:user_id, :image_loc)
-        """)
         
-        await conn.execute(query, {"user_id": user_id, "image_loc": image_loc})
-        await conn.commit()
-        
-    except DBAPIError as e:
-        print(f"[Database Connection Error] {e}")
-        await conn.rollback()
+        file_path = "." + image_loc 
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"File removed: {file_path}")
+        else:
+            print(f"File not found: {file_path}")
+
+    except Exception as e:
+        print(f"{e}")
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="데이터베이스 연결이 원활하지 않습니다."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="알수없는 이유로 문제가 발생하였습니다."
         )
-    except SQLAlchemyError as e:
-        print(f"[SQL Execution Error] {e}")
-        await conn.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미지 정보를 저장하는 형식이 올바르지 않습니다.")
-
-
-# [3] 사용자 전체 히스토리 조회
+# [3] 사용자 전체 히스토리 조회 (image_result 테이블 반영)
 async def get_user_histories(conn: Connection, user_id: int):
     try:
-        query = text("""
-            SELECT image_loc, created_at
-            FROM user_image
+        # SQL에 맞춰 테이블명과 컬럼 변경
+        query = ("""
+            SELECT id, user_id, image_loc, label, version_type, model_type, domain_type, created_at
+            FROM image_result
             WHERE user_id = :user_id
             ORDER BY created_at DESC;
         """)
-        result = await conn.execute(query, {"user_id": user_id})
-        
-        return [
-            UserHistory(image_loc=row.image_loc, created_at=row.created_at) 
-            for row in result
-        ]
-    except SQLAlchemyError as e:
-        print(f"[SQL Error] {e}")
-        raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+        stmt = text(query)
+        bind_stmt = stmt.bindparams(user_id = user_id)
+        result = await conn.execute(bind_stmt)
 
-# [4] 사용자 개별 히스토리 조회
-async def get_user_individual_history(conn: Connection, user_id: int, image_id: int):
-    try:
-        query = text("""
-            SELECT image_loc, created_at
-            FROM user_image
-            WHERE id = :image_id AND user_id = :user_id
-        """)
-        result = await conn.execute(query, {"image_id": image_id, "user_id": user_id})
-        row = result.fetchone()
+        user_histories = [UserHistory(
+            image_id = row.id,
+            user_id = row.user_id,
+            image_loc = row.image_loc,
+            label = row.label,
+            version_type = row.version_type,
+            model_type = row.model_type,
+            domain_type = row.domain_type,
+            created_at = row.created_at
+        )
+            for row in result]
         
-        if row:
-            return UserHistory(image_loc=row.image_loc, created_at=row.created_at)
-        return None
+        result.close()
+
+        for h in user_histories:
+            print(h)
+            
+        return user_histories
+    
     except SQLAlchemyError as e:
-        print(f"[SQL Error] {e}")
-        raise HTTPException(status_code=503, detail="데이터베이스 상세 조회 중 문제가 발생했습니다.")
+        print(f"히스토리 조회 실패: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+    
+# [4] 사용자 개별 히스토리 조회
+async def get_user_history(conn: Connection, user_id: int, image_id: int):
+    try:
+        query = """
+            SELECT id, user_id, image_loc, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            FROM image_result
+            WHERE id = :image_id AND user_id = :user_id;
+        """
+        stmt = text(query)
+        bind_stmt = stmt.bindparams(image_id=image_id, user_id=user_id)
+        result = await conn.execute(bind_stmt)
+        
+        user_history = [UserHistory_indi(
+            image_id = row.id,
+            user_id = row.user_id,
+            image_loc = row.image_loc,
+            label = row.label,
+            score = row.score,
+            face_conf = row.face_conf,
+            face_ratio = row.face_ratio,
+            face_brightness = row.face_brightness,
+            version_type = row.version_type,
+            model_type = row.model_type,
+            domain_type = row.domain_type,
+            result_msg = row.result_msg,
+            created_at = row.created_at
+        )
+            for row in result]
+        
+        result.close()
+        
+        for g in user_history:
+            print(g)
+        return user_history
+    
+    except SQLAlchemyError as e:
+        print(f"히스토리 조회 실패: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+    
