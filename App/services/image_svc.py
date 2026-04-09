@@ -8,6 +8,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.image_schema import UserHistory
+from schemas.image_schema import UserHistory_indi
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -84,36 +85,83 @@ async def delete_image(image_loc: str):
 async def get_user_histories(conn: Connection, user_id: int):
     try:
         # SQL에 맞춰 테이블명과 컬럼 변경
-        query = text("""
-            SELECT id, image_loc, label, score, model_type, created_at
+        query = ("""
+            SELECT id, user_id, image_loc, label, version_type, model_type, domain_type, created_at
             FROM image_result
             WHERE user_id = :user_id
             ORDER BY created_at DESC;
         """)
-        result = await conn.execute(query, {"user_id": user_id})
+        stmt = text(query)
+        bind_stmt = stmt.bindparams(user_id = user_id)
+        result = await conn.execute(bind_stmt)
+
+        user_histories = [UserHistory(
+            image_id = row.id,
+            user_id = row.user_id,
+            image_loc = row.image_loc,
+            label = row.label,
+            version_type = row.version_type,
+            model_type = row.model_type,
+            domain_type = row.domain_type,
+            created_at = row.created_at
+        )
+            for row in result]
         
-        # 튜플 결과를 딕셔너리 형태로 변환하여 반환 (유연성 확보)
-        return [dict(row._mapping) for row in result]
+        result.close()
+
+        for h in user_histories:
+            print(h)
+            
+        return user_histories
     
     except SQLAlchemyError as e:
-        print(f"[SQL Error] 히스토리 조회 실패: {e}")
-        raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+        print(f"히스토리 조회 실패: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
 
-# [4] 사용자 개별 히스토리 조회 (Individual)
-async def get_user_individual_history(conn: Connection, user_id: int, image_id: int):
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+    
+# [4] 사용자 개별 히스토리 조회
+async def get_user_history(conn: Connection, user_id: int, image_id: int):
     try:
-        query = text("""
-            SELECT id, image_loc, label, score, version_type, model_type, domain_type, created_at
+        query = """
+            SELECT id, user_id, image_loc, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
-            WHERE id = :image_id AND user_id = :user_id
-        """)
-        result = await conn.execute(query, {"image_id": image_id, "user_id": user_id})
-        row = result.fetchone()
+            WHERE id = :image_id AND user_id = :user_id;
+        """
+        stmt = text(query)
+        bind_stmt = stmt.bindparams(image_id=image_id, user_id=user_id)
+        result = await conn.execute(bind_stmt)
         
-        if row:
-            return dict(row._mapping)
-        return None
+        user_history = [UserHistory_indi(
+            image_id = row.id,
+            user_id = row.user_id,
+            image_loc = row.image_loc,
+            label = row.label,
+            score = row.score,
+            face_conf = row.face_conf,
+            face_ratio = row.face_ratio,
+            face_brightness = row.face_brightness,
+            version_type = row.version_type,
+            model_type = row.model_type,
+            domain_type = row.domain_type,
+            result_msg = row.result_msg,
+            created_at = row.created_at
+        )
+            for row in result]
+        
+        result.close()
+        
+        for g in user_history:
+            print(g)
+        return user_history
+    
     except SQLAlchemyError as e:
-        print(f"[SQL Error] 상세 조회 실패: {e}")
-        raise HTTPException(status_code=503, detail="데이터베이스 상세 조회 중 문제가 발생했습니다.")
+        print(f"히스토리 조회 실패: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
