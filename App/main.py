@@ -12,6 +12,8 @@ project_root = current_file.parent.parent  # App의 상위 폴더
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+load_dotenv()
+
 # -------- Huggingface_Hub 인증 ----------
 if os.getenv("HF_TOKEN"):
     os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
