@@ -42,7 +42,7 @@ function App() {
         <Route path="/main" element={<MainPage sessionUser={sessionUser} onLogout={handleLogout} />} />
         <Route path="/analysis" element={<AnalysisPage sessionUser={sessionUser} onLogout={handleLogout} setSessionUser={setSessionUser} />} />
         <Route path="/login" element={<LoginPage setSessionUser={setSessionUser} />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/signup" element={<RegisterPage />} />
         <Route path="*" element={<Navigate to="/main" />} />
       </Routes>
     </Router>

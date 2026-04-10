@@ -132,7 +132,7 @@ const LoginPage = ({ setSessionUser }) => {
         <div style={{ marginTop: '25px', fontSize: '14px', color: '#888' }}>
           아직 계정이 없으신가요?{' '}
           <span 
-            onClick={() => navigate('/register')} 
+            onClick={() => navigate('/signup')} 
             style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }}
           >
             회원가입
