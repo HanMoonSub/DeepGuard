@@ -6,6 +6,7 @@ import MainPage from './pages/mainpage';
 import LoginPage from './pages/loginpage';
 import RegisterPage from './pages/signuppage'; 
 import AnalysisPage from './pages/analysispage';
+import AnalysisDetailPage from './pages/AnalysisDetailPage';
 
 axios.defaults.withCredentials = true;
 
@@ -21,7 +22,7 @@ function App() {
           setSessionUser(response.data.user);
         }
       } catch (error) {
-        console.log("세션 정보가 없거나 만료됨");
+        setSessionUser(null);
       } finally {
         setLoading(false);
       }
@@ -41,8 +42,9 @@ function App() {
         <Route path="/" element={<Navigate to="/main" />} />
         <Route path="/main" element={<MainPage sessionUser={sessionUser} onLogout={handleLogout} />} />
         <Route path="/analysis" element={<AnalysisPage sessionUser={sessionUser} onLogout={handleLogout} setSessionUser={setSessionUser} />} />
+        <Route path="/analysis-detail" element={<AnalysisDetailPage sessionUser={sessionUser} />} />
         <Route path="/login" element={<LoginPage setSessionUser={setSessionUser} />} />
-        <Route path="/signup" element={<RegisterPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="*" element={<Navigate to="/main" />} />
       </Routes>
     </Router>

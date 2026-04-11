@@ -39,15 +39,16 @@ const SignupPage = () => {
 
       if (response.status === 200 || response.status === 201) {
         alert(response.data.message || "회원가입이 완료되었습니다! 로그인해 주세요."); 
-        navigate('/login'); 
+        navigate('/login');
       }
     } catch (error) {
       if (error.response && error.response.data) {
         const { error_type, title_message, detail } = error.response.data;
+
         if (error_type === "valid") {
           alert(`[입력 오류] ${detail}`);
         } else {
-          alert(`[${title_message || '오류'}] ${detail}`);
+          alert(`[${title_message}] ${detail}`);
         }
       } else {
         alert("서버와 통신할 수 없습니다. 네트워크 상태를 확인해주세요.");
@@ -81,8 +82,7 @@ const SignupPage = () => {
     marginTop: '5px',
     width: '100%',
     boxSizing: 'border-box',
-    outline: 'none', 
-    fontSize: '15px'
+    outline: 'none'
   };
 
   const buttonStyle = {
@@ -97,7 +97,7 @@ const SignupPage = () => {
     marginTop: '30px',
     width: '100%',
     opacity: isLoading ? 0.7 : 1,
-    transition: 'background-color 0.3s'
+    transition: '0.3s'
   };
 
   return (
@@ -106,25 +106,20 @@ const SignupPage = () => {
 
       <div style={formSideStyle}>
         <div style={{ marginBottom: '30px' }}>
-          <img 
-            src={logo} 
-            alt="Deep Guard" 
-            style={{ height: '35px', cursor: 'pointer' }} 
-            onClick={() => navigate('/main')} // 로고 클릭 시 메인으로
-          />
+          <img src={logo} alt="Deep Guard" style={{ height: '35px', cursor: 'pointer' }} onClick={() => navigate('/main')} />
         </div>
 
         <h1 style={{ fontSize: '36px', marginBottom: '10px', fontWeight: 'bold' }}>Deep Guard에 오신 걸 환영합니다!</h1>
         <p style={{ color: '#aaa', marginBottom: '40px' }}>계정을 생성하고 딥가드를 시작하세요</p>
 
         <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column' }}>
-          <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px', fontWeight: 'bold' }}>이름</label>
+          <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px' }}>이름</label>
           <input type="text" placeholder="이름을 입력하세요" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} required />
 
-          <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px', fontWeight: 'bold' }}>이메일 주소</label>
+          <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px' }}>이메일 주소</label>
           <input type="email" placeholder="example@gmail.com" style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} required />
 
-          <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px', fontWeight: 'bold' }}>비밀번호</label>
+          <label style={{ color: '#39FF14', fontSize: '14px', marginTop: '15px' }}>비밀번호</label>
           <input type="password" placeholder="8자 이상 입력해 주세요." style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} required />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
@@ -133,7 +128,7 @@ const SignupPage = () => {
               id="terms" 
               checked={isAgreed} 
               onChange={(e) => setIsAgreed(e.target.checked)} 
-              style={{ accentColor: '#39FF14', width: '18px', height: '18px', cursor: 'pointer' }} 
+              style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} 
             />
             <label htmlFor="terms" style={{ fontSize: '13px', color: '#ccc', cursor: 'pointer' }}>이용 수칙에 동의합니다.</label>
           </div>
@@ -144,13 +139,7 @@ const SignupPage = () => {
         </form>
         
         <p style={{ marginTop: '25px', fontSize: '14px', color: '#888', textAlign: 'center' }}>
-          이미 계정이 있으신가요?{' '}
-          <span 
-            style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }} 
-            onClick={() => navigate('/login')}
-          >
-            로그인
-          </span>
+          이미 계정이 있으신가요? <span style={{ color: '#39FF14', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }} onClick={() => navigate('/login')}>로그인</span>
         </p>
       </div>
 
