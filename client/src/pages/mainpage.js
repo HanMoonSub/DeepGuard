@@ -68,7 +68,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
         <div style={{ border: '1px solid #333', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', color: '#39FF14', marginBottom: '25px', letterSpacing: '1px' }}>DeepGuard AI System</div>
         <h1 style={{ fontSize: '52px', marginBottom: '30px', fontWeight: 'bold', lineHeight: '1.3' }}>
           Deep Guard는 사용자가 업로드한<br/>
-          이미지 또는 비디오의 <span style={{ color: '#39FF14' }}>딥페이크 변조 여부</span>와<br/>
+          이미지 또는 비디오의 <span style={{ color: '#ffffff' }}>딥페이크 변조 여부</span>와<br/>
           상세 정보를 제공합니다.
         </h1>
         <p style={{ color: '#888', marginBottom: '50px', fontSize: '18px' }}>정밀한 AI 모델을 통해 지금 바로 분석을 시작해보세요.</p>
@@ -79,7 +79,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
         <div style={analysisBoxStyle} onMouseOver={(e) => e.currentTarget.style.borderColor = '#39FF14'} onMouseOut={(e) => e.currentTarget.style.borderColor = '#222'}>
           <h3 style={{ fontSize: '28px', marginBottom: '25px' }}>이미지 분석</h3>
           <img src={circle} alt="" style={{ width: '140px', marginBottom: '40px', opacity: 0.8 }} />
-          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleBasicAnalysis}>Basic 모델 (무료) <span>❯</span></button>
+          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleBasicAnalysis}>Fast 모델 <span>❯</span></button>
           <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={handleProAnalysis}>
             <span style={{ color: 'white' }}>Pro 정밀 모델</span>
             <span style={{ color: '#39FF14' }}>❯</span>
@@ -88,7 +88,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
         <div style={analysisBoxStyle} onMouseOver={(e) => e.currentTarget.style.borderColor = '#39FF14'} onMouseOut={(e) => e.currentTarget.style.borderColor = '#222'}>
           <h3 style={{ fontSize: '28px', marginBottom: '25px' }}>비디오 분석</h3>
           <img src={circle} alt="" style={{ width: '140px', marginBottom: '40px', opacity: 0.8 }} />
-          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleBasicAnalysis}>Basic 모델 (무료) <span>❯</span></button>
+          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleBasicAnalysis}>Fast 모델 <span>❯</span></button>
           <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={handleProAnalysis}>
             <span style={{ color: 'white' }}>Pro 정밀 모델</span>
             <span style={{ color: '#39FF14' }}>❯</span>
