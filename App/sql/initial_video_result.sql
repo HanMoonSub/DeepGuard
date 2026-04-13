@@ -4,7 +4,7 @@ create table deepfake_db.video_result (
     id integer auto_increment primary key,
     user_id integer null, -- null 허용
     video_loc varchar(300) not null unique,
-    status varchar(20) not null default "PENDING"
+    status varchar(20) not null default "PENDING",
     label varchar(10) not null,
     score float not null,
     face_conf float not null,
