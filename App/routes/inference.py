@@ -1,15 +1,17 @@
 from fastapi import (
     APIRouter, Depends, status, Form,
-    File, UploadFile
+    File, UploadFile, BackgroundTasks
 )
 from fastapi.exceptions import HTTPException
-from services import image_svc, session_svc, inference_svc
+from services import image_svc, session_svc, inference_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
 
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
+
+    
 # ---- 딥페이크 비동기 이미지 추론 API ------
 @router.post("/image", status_code=status.HTTP_200_OK) # 해당 API 정상 작동시, 200 반환
 async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
@@ -43,5 +45,59 @@ async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로
         await image_svc.delete_image(image_loc)
         
     return result
+
+# ---- 딥페이크 비동기 비디오 추론 API ------
+@router.post("/video", status_code=status.HTTP_202_ACCEPTED) # 해당 API 요청 시, 접수 완료(분석은 백그라운드에서 실행)
+async def predict_video(
+                        background_tasks: BackgroundTasks, # 백그라운드에서 실행
+                        videofile: UploadFile = File(...), # 사용자가 업로드한 비디오 객체
+                        version_type: str = Form(...), # deepguard1, deepguard2
+                        model_type: str = Form(...), # fast model, pro moel 
+                        domain_type: str = Form(...), # model 학습시 사용한 dataset 종류
+                        conn: Connection = Depends(context_get_conn), # 비디오 File 저장
+                        session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
+                        ):
     
+    user_id = None
+    user_email = None
+    
+    if session_user:    
+        user_id = session_user['id']
+        user_email = session_user['email'] 
         
+    # 비디오 업로드 이후, 비디오 저장 경로 반환
+    video_loc = await video_svc.upload_video(user_email, videofile) 
+    
+    # 빈 비디오 DB 생성 후, video_id 받기
+    video_id = await inference_svc.register_video_result(conn, user_id, video_loc, version_type, model_type, domain_type)
+    print("video_id: ", video_id)
+    
+    background_tasks.add_task(
+        inference_svc.process_video_task,
+        video_id, video_loc, version_type, model_type, domain_type, user_id
+    )
+            
+    return {
+        "video_id": video_id, 
+        "message": "비디오 업로드 성공. 비디오 분석 시작 ...",
+        "status": "success",
+    }
+    
+@router.get("/video/result/{video_id}", status_code=status.HTTP_200_OK)
+async def get_video_result(
+                           video_id: int,
+                           conn: Connection = Depends(context_get_conn),
+                           ):
+    
+    video_data = await inference_svc.get_video_result(conn, video_id)  
+    print("video data: ", video_data)
+    
+    if video_data.status == 'FAILED':
+        # await video_svc.delete_video(video_loc) # 서버 내 저장 파일 삭제
+        # await video_svc.detle_video_db # db 내 db 삭제 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=video_data.result_msg  
+        )
+    
+    return video_data
