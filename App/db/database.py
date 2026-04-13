@@ -4,6 +4,7 @@ from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.exc import SQLAlchemyError
+from contextlib import asynccontextmanager
 
 load_dotenv()
 DATABASE_CONN = os.getenv("DATABASE_CONN")
@@ -39,4 +40,12 @@ async def context_get_conn():
     finally:
         if conn:
             await conn.close()
+            
+@asynccontextmanager
+async def background_db_conn():
+    conn = await engine.connect()
+    try:
+        yield conn
+    finally:
+        await conn.close()
     

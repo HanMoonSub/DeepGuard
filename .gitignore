@@ -23,6 +23,9 @@ client/.pnp
 client/.pnp.js
 client/package-lock.json
 
+# [Vercel - client 폴더 관련]
+client/.vercel
+
 # 테스트 및 빌드 결과물
 client/coverage/
 client/build/
