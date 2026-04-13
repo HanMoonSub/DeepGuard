@@ -37,7 +37,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Cross Origin Resource Sharing
 app.add_middleware(CORSMiddleware,
-                   allow_origins=["http://localhost:3000"],
+                   allow_origins=["http://localhost:3000",
+                                  "https://deepguard-web.vercel.app"],
                    allow_methods=["*"],
                    allow_headers=["*"],
                    allow_credentials=True,
