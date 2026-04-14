@@ -11,7 +11,8 @@ from services import image_svc, video_svc
 from db.database import context_get_conn, background_db_conn
 from schemas.video_schema import VideoData
 
-model_cache = {}
+image_cache = {}
+video_cache = {}
 
 # 사용자 모델 설정 변수명 
 MODEL_CONFIG = {
@@ -42,14 +43,14 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
 
     # 캐시 확인 및 모델 초기화
     cache_key = (model_name, dataset)
-    if cache_key not in model_cache:
-        model_cache[cache_key] = ImagePredictor(
+    if cache_key not in image_cache:
+        image_cache[cache_key] = ImagePredictor(
             margin_ratio=0.2,
             conf_thres=0.5,
             model_name=model_name,
             dataset=dataset
         )
-    predictor = model_cache[cache_key]
+    predictor = image_cache[cache_key]
     
     
     # 비동기 이미지 추론 실행
@@ -152,6 +153,7 @@ async def register_video_result(conn: Connection, user_id: int | None, video_loc
 # 사용자 비디오 딥페이크 여부 판단 로직
 async def predict_video(video_loc: str, version_type: str, model_type: str, domain_type: str):
     
+    # video_loc: static 폴더 내 저장된 사용자 비디오 경로
     # version_type: v1, v2
     # model_type: fast, pro
     # domain_type: 서양인, 동양인
@@ -160,14 +162,14 @@ async def predict_video(video_loc: str, version_type: str, model_type: str, doma
 
     # 캐시 확인 및 모델 초기화
     cache_key = (model_name, dataset)
-    if cache_key not in model_cache:
-        model_cache[cache_key] = ImagePredictor(
+    if cache_key not in video_cache:
+        video_cache[cache_key] = ImagePredictor(
             margin_ratio=0.2,
             conf_thres=0.5,
             model_name=model_name,
             dataset=dataset
         )
-    predictor = model_cache[cache_key]
+    predictor = video_cache[cache_key]
     
     
     # 비동기 비디오 추론 실행
