@@ -9,15 +9,13 @@ import bgCurve from '../assets/line.svg';
 const MainPage = ({ sessionUser, onLogout }) => {
   const navigate = useNavigate();
 
-  const handleAnalysisClick = (type) => {
-    navigate('/analysis', { state: { type } });
-  };
-
-  const handleProCheck = (type) => {
+  const handleBasicAnalysis = () => navigate('/analysis');
+  
+  const handleProAnalysis = () => {
     if (sessionUser) {
-      navigate('/analysis', { state: { type, model: 'PRO' } });
+      navigate('/analysis');
     } else {
-      alert("PRO 모델 분석은 로그인이 필요한 기능입니다.");
+      alert("Pro 모델 분석은 로그인이 필요합니다.");
       navigate('/login');
     }
   };
@@ -25,12 +23,11 @@ const MainPage = ({ sessionUser, onLogout }) => {
   const handleLogoutClick = async () => {
     if (!window.confirm("로그아웃 하시겠습니까?")) return;
     try {
-      await axios.get('http://localhost:8000/auth/logout', { withCredentials: true });
+      await axios.get('http://localhost:8000/auth/logout');
       if (onLogout) onLogout(); 
       alert("성공적으로 로그아웃되었습니다.");
       navigate('/main');
     } catch (error) {
-      console.error("로그아웃 실패:", error);
       alert("로그아웃 처리 중 오류가 발생했습니다.");
     }
   };
@@ -47,37 +44,22 @@ const MainPage = ({ sessionUser, onLogout }) => {
 
       <nav style={navStyle}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img 
-            src={logo} 
-            alt="Deep Guard" 
-            style={{ height: '32px', marginRight: '40px', cursor: 'pointer' }} 
-            onClick={() => navigate('/main')} 
-          />
+          <img src={logo} alt="Deep Guard" style={{ height: '32px', marginRight: '40px', cursor: 'pointer' }} onClick={() => navigate('/main')} />
           {sessionUser && (
-            <span style={{ fontSize: '16px', color: '#ccc', marginLeft: '10px' }}>
-              <strong style={{ color: '#39FF14' }}>{sessionUser.name}</strong>님 환영합니다.
+            <span style={{ fontSize: '18px', color: '#ccc', marginLeft: '10px' }}>
+              <strong style={{ color: '#39FF14' }}>{sessionUser.name}</strong>님 환영합니다
             </span>
           )}
         </div>
-
+        
         <div style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
-          <button onClick={() => handleAnalysisClick('image')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>이미지 분석</button>
-          <button onClick={() => handleAnalysisClick('video')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>동영상 분석</button>
+          <button onClick={handleBasicAnalysis} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>이미지 분석</button>
+          <button onClick={handleBasicAnalysis} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>동영상 분석</button>
           
           {sessionUser ? (
-            <button 
-              onClick={handleLogoutClick} 
-              style={{ backgroundColor: '#FF4B4B', color: 'white', padding: '8px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-            >
-              로그아웃
-            </button>
+            <button onClick={handleLogoutClick} style={{ backgroundColor: '#FF4B4B', color: 'white', padding: '8px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>로그아웃</button>
           ) : (
-            <button 
-              onClick={() => navigate('/login')} 
-              style={{ backgroundColor: '#333', color: 'white', padding: '8px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-            >
-              로그인
-            </button>
+            <button onClick={() => navigate('/login')} style={{ backgroundColor: '#333', color: 'white', padding: '8px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>로그인</button>
           )}
         </div>
       </nav>
@@ -90,43 +72,24 @@ const MainPage = ({ sessionUser, onLogout }) => {
           상세 정보를 제공합니다.
         </h1>
         <p style={{ color: '#888', marginBottom: '50px', fontSize: '18px' }}>정밀한 AI 모델을 통해 지금 바로 분석을 시작해보세요.</p>
-        
-        <div style={{ display: 'flex', gap: '25px' }}>
-          <button 
-            style={{ backgroundColor: '#39FF14', color: '#000', padding: '16px 45px', borderRadius: '40px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
-            onClick={() => handleAnalysisClick('image')}
-          >
-            이미지 분석 시작 ❯
-          </button>
-          <button 
-            style={{ backgroundColor: 'transparent', color: 'white', padding: '16px 45px', borderRadius: '40px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #444' }}
-            onClick={() => handleAnalysisClick('video')}
-          >
-            동영상 분석 시작 ❯
-          </button>
-        </div>
+        <button style={{ backgroundColor: '#39FF14', color: '#000', padding: '16px 45px', borderRadius: '40px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', border: 'none' }} onClick={handleBasicAnalysis}>무료 분석 시작 ❯</button>
       </section>
 
       <section style={{ ...sectionStyle, flexDirection: 'row', gap: '40px', paddingBottom: '150px' }}>
         <div style={analysisBoxStyle} onMouseOver={(e) => e.currentTarget.style.borderColor = '#39FF14'} onMouseOut={(e) => e.currentTarget.style.borderColor = '#222'}>
           <h3 style={{ fontSize: '28px', marginBottom: '25px' }}>이미지 분석</h3>
           <img src={circle} alt="" style={{ width: '140px', marginBottom: '40px', opacity: 0.8 }} />
-          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={() => handleAnalysisClick('image')}>
-            Basic 모델 <span>❯</span>
-          </button>
-          <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={() => handleProCheck('image')}>
+          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleBasicAnalysis}>Fast 모델 <span>❯</span></button>
+          <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={handleProAnalysis}>
             <span style={{ color: 'white' }}>Pro 정밀 모델</span>
             <span style={{ color: '#39FF14' }}>❯</span>
           </button>
         </div>
-
         <div style={analysisBoxStyle} onMouseOver={(e) => e.currentTarget.style.borderColor = '#39FF14'} onMouseOut={(e) => e.currentTarget.style.borderColor = '#222'}>
           <h3 style={{ fontSize: '28px', marginBottom: '25px' }}>비디오 분석</h3>
           <img src={circle} alt="" style={{ width: '140px', marginBottom: '40px', opacity: 0.8 }} />
-          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={() => handleAnalysisClick('video')}>
-            Basic 모델 <span>❯</span>
-          </button>
-          <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={() => handleProCheck('video')}>
+          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleBasicAnalysis}>Fast 모델 <span>❯</span></button>
+          <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={handleProAnalysis}>
             <span style={{ color: 'white' }}>Pro 정밀 모델</span>
             <span style={{ color: '#39FF14' }}>❯</span>
           </button>
