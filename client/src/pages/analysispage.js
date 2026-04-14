@@ -16,20 +16,18 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   
   const [result, setResult] = useState(null); 
 
-  // 1. 히스토리 로드 함수 (useCallback으로 경고 해결)
   const fetchHistory = useCallback(async () => {
     if (!sessionUser) return;
     try {
       const response = await axios.get('http://localhost:8000/image/history');
       if (response.data.status === "success") {
-        setHistory(response.data.context); // 백엔드 DB 결과 리스트
+        setHistory(response.data.context); 
       }
     } catch (e) {
       console.log("히스토리 로드 실패");
     }
   }, [sessionUser]);
 
-  // 2. 세션 동기화 및 최초 히스토리 호출
   useEffect(() => {
     const syncSession = async () => {
       if (!sessionUser) {
@@ -95,18 +93,11 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setIsAnalyzing(true);
     try {
       const response = await axios.post('http://localhost:8000/inference/image', formData);
-      const resData = response.data; // { analysis, message, status }
+      const resData = response.data;
       setResult(resData);
       
-      // 히스토리 즉시 갱신
       fetchHistory(); 
 
-      // 상세 페이지로 넘길 데이터 가공 (UNKNOWN(-1) 처리 포함)
-      const analysis = resData.analysis;
-      const finalLabel = analysis.prob === -1 ? 'UNKNOWN' : (analysis.prob > 0.5 ? 'FAKE' : 'REAL');
-
-      // 분석 성공 시 자동으로 상세페이지 이동 혹은 버튼 노출
-      // (사용자 편의를 위해 상세페이지 정보를 보강하여 navigate에 실어 보냄)
     } catch (err) {
       alert(err.response?.data?.detail || "오류가 발생했습니다.");
     } finally {
@@ -114,7 +105,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     }
   };
 
-  // 스타일 정의
   const sideBarStyle = { width: '280px', backgroundColor: '#050505', borderRight: '1px solid #222', display: 'flex', flexDirection: 'column', padding: '25px' };
   const centerZoneStyle = { flex: 1, padding: '40px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' };
   const rightPanelStyle = { width: '340px', backgroundColor: '#0D0D0D', borderLeft: '1px solid #222', padding: '30px', display: 'flex', flexDirection: 'column' };
@@ -122,7 +112,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
   return (
     <div style={{ display: 'flex', backgroundColor: '#000', height: '100vh', width: '100vw', color: 'white', fontFamily: 'sans-serif', overflow: 'hidden' }}>
-      {/* 왼쪽 사이드바: 내 작업 기록 */}
+      
       <aside style={sideBarStyle}>
         <button onClick={() => { setFile(null); setPreviewUrl(null); setResult(null); }} style={{ backgroundColor: '#1A2C50', color: 'white', padding: '14px', borderRadius: '10px', border: 'none', marginBottom: '35px', cursor: 'pointer', fontWeight: 'bold' }}>
           + 새 프로젝트 시작
@@ -136,9 +126,19 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 onClick={() => navigate('/analysis-detail', { state: item })} 
                 style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '12px', border: '1px solid #222', cursor: 'pointer' }}
               >
-                <div style={{ width: '45px', height: '45px', backgroundColor: '#222', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>🖼️</div>
+                <div style={{ width: '45px', height: '45px', backgroundColor: '#222', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                  {item.image_loc ? (
+                    <img 
+                      src={`http://localhost:8000${item.image_loc}`} 
+                      alt="thumb" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      onError={(e) => { e.target.style.display = 'none'; }} // 에러 시 이미지 숨김
+                    />
+                  ) : (
+                    <span style={{ fontSize: '18px' }}>🖼️</span>
+                  )}
+                </div>
                 <div>
-                  {/* 날짜 위 확률 표시 로직 추가 */}
                   <div style={{ fontSize: '12px', color: item.prob > 0.5 ? '#FF4B4B' : (item.prob === -1 ? '#888' : '#39FF14'), fontWeight: 'bold', marginBottom: '2px' }}>
                     {item.prob !== -1 ? `${(item.prob * 100).toFixed(1)}%` : 'N/A'}
                   </div>
@@ -164,7 +164,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         </div>
       </aside>
 
-      {/* 중앙 메인: 드래그 앤 드롭 및 결과 */}
       <main style={centerZoneStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '28px', fontWeight: 'bold' }}>Deep Guard AI</h2>
@@ -181,7 +180,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                  <p style={{fontSize:'32px', fontWeight:'bold', color: result.analysis.prob > 0.5 ? '#FF4B4B' : (result.analysis.prob === -1 ? '#888' : '#39FF14')}}>
                    {result.analysis.prob === -1 ? 'UNKNOWN' : (result.analysis.prob > 0.5 ? 'FAKE' : 'REAL')}
                  </p>
-                 {/* 상세 데이터 바인딩 수정 */}
                  <button 
                   onClick={() => navigate('/analysis-detail', { 
                     state: { 
@@ -201,7 +199,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         </div>
       </main>
 
-      {/* 오른쪽 패널: 분석 설정 */}
       <aside style={rightPanelStyle}>
         <h3 style={{ fontSize: '22px', marginBottom: '30px', borderBottom: '1px solid #222', paddingBottom: '15px' }}>분석 설정</h3>
         <div style={{ marginBottom: '25px' }}>
