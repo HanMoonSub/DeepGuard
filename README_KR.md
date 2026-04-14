@@ -1,7 +1,7 @@
 # Deepfakes Detection (딥페이크 탐지)
 
 <p align="center">
-  <img src="Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
+  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
 </p>
 
 <p align="center">
@@ -130,12 +130,12 @@ DATA_ROOT/
 
 #### 상세 정보 확인
 
-- [모델 구조: MS-EffViT](deepguard/MS_EFFViT.md) - _**Multi Scale Efficient Vision Transformer**_
-- [심화 구조: MS-EFFGCViT](deepguard/MS_EFFGCViT.md) - _**Multi Scale Efficient Global Context Vision Transformer**_
+- [모델 구조: MS-EffViT](deepguard/MS_EffViT.md) - _**Multi Scale Efficient Vision Transformer**_
+- [심화 구조: MS-EFFGCViT](deepguard/MS_EffGCViT.md) - _**Multi Scale Efficient Global Context Vision Transformer**_
 
 
 <p align="center">
-  <img src="Images/ms_eff_gcvit.JPG" width="100%" height="700">
+  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/ms_eff_gcvit.JPG" width="100%" height="700">
 </p>
 
 특징 맵 전체에 걸쳐 장거리(Long-range) 및 단거리(Short-range) 정보를 모두 캡처하기 위해 두 가지 유형의 셀프 어텐션을 활용합니다.
@@ -144,7 +144,7 @@ DATA_ROOT/
 - **Global Window Attention**: Swin Transformer와 달리, 이 모듈은 로컬 윈도우의 Key, Value와 상호작용하는 글로벌 쿼리(Global-queries)를 사용합니다. 이를 통해 각 로컬 영역이 전역 컨텍스트를 수용하게 함으로써 장거리 의존성을 효과적으로 파악하고 전체 공간 구조에 대한 포괄적인 이해를 제공합니다.
 
 <p align="center">
-  <img src="Images/window_attention.JPG" width="100%" height="300">
+  <img src=https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/window_attention.JPG width="100%" height="300">
 </p>
 
 ## 🧬 모델 주(Model Zoo)
@@ -220,7 +220,8 @@ DATA_ROOT/
 **설치**
 
 ```bash
-pip install -U git+[https://github.com/HanMoonSub/DeepGuard.git](https://github.com/HanMoonSub/DeepGuard.git)
+# pip install -U git+[https://github.com/HanMoonSub/DeepGuard.git](https://github.com/HanMoonSub/DeepGuard.git)
+pip install deepguard
 ```
 
 
@@ -248,7 +249,7 @@ model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 #### 딥페이크 이미지 예측
 
 ```python
-from inference import ImagePredictor
+from inference.image_predictor import ImagePredictor
 
 # 예측기 초기화
 predictor = ImagePredictor(
@@ -271,7 +272,7 @@ print(f"딥페이크 확률: {result:.4f}")
 #### 딥페이크 비디오 예측
 
 ```python
-from inference import VideoPredictor
+from inference.video_predictor import VideoPredictor
 
 # 예측기 초기화
 predictor = VideoPredictor(

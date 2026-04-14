@@ -1,0 +1,21 @@
+# 줄바꿈 자동화 (운영 체제 간 코드 깨짐 방지)
+* text=auto
+
+# 파이썬, 자바스크립트 등 소스 코드는 확실히 텍스트로 처리
+*.py text
+*.js text
+*.json text
+*.yaml text
+
+# 대용량 모델 파일 (Git LFS 적용)
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.pkl filter=lfs diff=lfs merge=lfs -text
+
+# 이미지 파일 (바이너리 처리)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
