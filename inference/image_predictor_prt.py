@@ -117,14 +117,7 @@ class ImagePredictor:
             
         face_gray = cv2.cvtColor(cropped, cv2.COLOR_RGB2GRAY)
         face_brightness = (np.mean(face_gray) / 255) * 100
-
-        if face_brightness < 20:
-            raise PredictorError(
-                f"이미지가 어두워 정밀 분석이 불가능합니다. (조도: {face_brightness:.1f}%) "
-                "얼굴이 밝고 선명하게 나온 이미지가 필요합니다."
-            )
-
-            
+        
         return cropped, conf, face_ratio, face_brightness
                   
         
