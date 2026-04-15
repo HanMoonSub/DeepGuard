@@ -1,7 +1,7 @@
 import timm
 import asyncio
 from inference.image_predictor_prt import ImagePredictor
-from inference.video_predictor import VideoPredictor
+from inference.video_predictor_prt import VideoPredictor
 from inference.utils import PredictorError
 from fastapi import status, Depends
 from fastapi.exceptions import HTTPException
@@ -116,7 +116,7 @@ async def register_image_result(conn: Connection, user_id: int, image_loc: str, 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="요청데이터가 제대로 전달되지 않았습니다")
 
-# 빈 비디오 DB 생성 이후, video_id 반환
+# 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
 async def register_video_result(conn: Connection, user_id: int | None, video_loc: str,
                                 version_type: str, model_type: str, domain_type: str):
     try:
@@ -163,7 +163,7 @@ async def predict_video(video_loc: str, version_type: str, model_type: str, doma
     # 캐시 확인 및 모델 초기화
     cache_key = (model_name, dataset)
     if cache_key not in video_cache:
-        video_cache[cache_key] = ImagePredictor(
+        video_cache[cache_key] = VideoPredictor(
             margin_ratio=0.2,
             conf_thres=0.5,
             model_name=model_name,
@@ -176,10 +176,7 @@ async def predict_video(video_loc: str, version_type: str, model_type: str, doma
     loop = asyncio.get_running_loop()
     try:
         analysis = await loop.run_in_executor(
-            None, 
-            predictor.predict_img, 
-            "." + video_loc, 
-            0.0
+            None, predictor.predict_video, "." + video_loc, 10, 'conf', 0.0
         )
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")

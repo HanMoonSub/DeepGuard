@@ -132,7 +132,7 @@ class VideoPredictor:
             
             if not any(face_results):
                 raise PredictorError(
-                    f"추출한 len{frames}개의 Frame에서 모두 얼굴 탐지에 실패하였습니다 "
+                    f"추출한 {len(frames)}개의 Frame에서 모두 얼굴 탐지에 실패하였습니다 "
                 )
             
             cropped_frames = []
