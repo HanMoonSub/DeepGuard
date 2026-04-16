@@ -8,6 +8,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.video_schema import VideoData
+from schemas.video_schema import VideoData_indi
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -95,6 +96,7 @@ async def get_user_histories(conn: Connection, user_id: int):
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,
+            status = row.status,
             label = row.label,
             version_type = row.version_type,
             model_type = row.model_type,
@@ -131,7 +133,7 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
         if row is None:
             return None
             
-        video_history = VideoData(
+        video_history = VideoData_indi(
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,
