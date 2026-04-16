@@ -95,16 +95,10 @@ async def get_user_histories(conn: Connection, user_id: int):
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,
-            status = row.status,
             label = row.label,
-            score = row.score,
-            face_conf = row.face_conf,
-            face_ratio = row.face_ratio,
-            face_brightness = row.face_brightness,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,
-            result_msg = row.result_msg,
             created_at = row.created_at
         ) for row in result]
         
@@ -114,6 +108,11 @@ async def get_user_histories(conn: Connection, user_id: int):
     except SQLAlchemyError as e:
         print(f"비디오 목록 조회 실패: {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+    
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+    
 
 # [4] 사용자 개별 비디오 히스토리 조회
 async def get_user_history(conn: Connection, user_id: int, video_id: int):
@@ -155,3 +154,8 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
     except SQLAlchemyError as e:
         print(f"비디오 상세 조회 실패: {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+    
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+    
