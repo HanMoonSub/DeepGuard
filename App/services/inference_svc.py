@@ -146,7 +146,7 @@ async def register_video_result(conn: Connection, user_id: int | None, video_loc
     except SQLAlchemyError as e:
         print(f"DB Insert Error: {e}")
         await conn.rollback()
-        # await video_svc.delete_video(video_loc) # 서버 내 저장된 비디오 삭제하기
+        await video_svc.delete_video(video_loc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="요청데이터가 제대로 전달되지 않았습니다")
     
@@ -247,7 +247,7 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
         
 # 비디오 딥페이크 분석 프로세스: 비디오 추론 + 비디오 DB 내 저장(백그라운드 실행 함수)
 async def process_video_task(video_id: int, video_loc: str, version_type: str, model_type: str, 
-                             domain_type: str, user_id: int):
+                             domain_type: str, user_id: int | None):
     
     async with background_db_conn() as conn:
         # 비디오 비동기 추론, DeepFake 결과값 반환
@@ -259,10 +259,11 @@ async def process_video_task(video_id: int, video_loc: str, version_type: str, m
         
         # 로그인 상관없이 추론 결과값 DB에 저장하기
         await update_video_result(conn, video_id, analysis, result_msg, current_status)
-           
+        if not user_id:
+            await video_svc.delete_video(video_loc)
+
         # 비로그인 추론 결과값 반환만 하고 서버 내 비디오 파일 삭제
         # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
-        # await video_svc.delete_video(video_loc)
 
 # 비디오 결과 값 가져오기
 async def get_video_result(conn: Connection, 

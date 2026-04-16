@@ -7,12 +7,15 @@ class VideoData(BaseModel):
     video_loc : str
     status : str
     label : str
-    score: float
-    face_conf: float
-    face_ratio: float
-    face_brightness: float
     version_type : str
     model_type : str
     domain_type : str
-    result_msg: str
     created_at : datetime
+
+class VideoData_indi(VideoData):
+    
+    score : float
+    face_conf : float
+    face_ratio : float
+    face_brightness : float
+    result_msg : str

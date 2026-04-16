@@ -24,7 +24,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from routes import auth, home, inference, image
+from routes import auth, home, inference, image, video
 from utils.common import lifespan
 from utils import exc_handler
 
@@ -54,6 +54,7 @@ app.include_router(auth.router)
 app.include_router(home.router)
 app.include_router(inference.router)
 app.include_router(image.router)
+app.include_router(video.router)
 
 # Custom HTTPException Handler
 app.add_exception_handler(StarletteHTTPException, exc_handler.custom_http_exception_handler)
