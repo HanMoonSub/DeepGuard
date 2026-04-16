@@ -93,8 +93,8 @@ async def get_video_result(
     print("video data: ", video_data)
     
     if video_data.status == 'FAILED':
-        # await video_svc.delete_video(video_loc) # 서버 내 저장 파일 삭제
-        # await video_svc.detle_video_db # db 내 db 삭제 
+        await video_svc.delete_video(video_data.video_loc) # 서버 내 저장 파일 삭제
+        # await video_svc.detle_video_db # db에서도 삭제 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=video_data.result_msg  
