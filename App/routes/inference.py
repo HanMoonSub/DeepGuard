@@ -10,8 +10,6 @@ from db.database import context_get_conn
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
-
-    
 # ---- 딥페이크 비동기 이미지 추론 API ------
 @router.post("/image", status_code=status.HTTP_200_OK) # 해당 API 정상 작동시, 200 반환
 async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
@@ -82,19 +80,22 @@ async def predict_video(
         "message": "비디오 업로드 성공. 비디오 분석 시작 ...",
         "status": "success",
     }
-    
+
+# ---- 딥페이크 추론 결과값 불러오기 API ----- 
 @router.get("/video/result/{video_id}", status_code=status.HTTP_200_OK)
 async def get_video_result(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
+                           session_user = Depends(session_svc.get_session_user_opt)
                            ):
     
     video_data = await inference_svc.get_video_result(conn, video_id)  
     print("video data: ", video_data)
     
     if video_data.status == 'FAILED':
-        await video_svc.delete_video(video_data.video_loc) # 서버 내 저장 파일 삭제
-        # await video_svc.detle_video_db # db에서도 삭제 
+        if session_user:
+            await video_svc.delete_video(video_data.video_loc) # 서버 내 저장 파일 삭제
+            # await video_svc.detle_video_db # db에서도 삭제 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=video_data.result_msg  
