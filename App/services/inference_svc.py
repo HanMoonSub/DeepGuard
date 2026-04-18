@@ -113,6 +113,7 @@ async def register_image_result(conn: Connection, user_id: int, image_loc: str, 
     except SQLAlchemyError as e:
         print(e)
         await conn.rollback()
+        await image_svc.delete_image(image_loc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="요청데이터가 제대로 전달되지 않았습니다")
 
