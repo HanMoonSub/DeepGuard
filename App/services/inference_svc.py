@@ -9,7 +9,7 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import context_get_conn, background_db_conn
-from schemas.video_schema import VideoData
+from schemas.video_schema import VideoData, VideoData_indi
 
 image_cache = {}
 video_cache = {}
@@ -298,7 +298,7 @@ async def get_video_result(conn: Connection,
                                 detail="결과를 찾을 수 없습니다.")
         row = result.fetchone()
         
-        video_data = VideoData(
+        video_data = VideoData_indi(
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,
