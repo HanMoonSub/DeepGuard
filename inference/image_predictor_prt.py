@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 from typing import List
 from preprocess.face_detector import FaceDetector2
+from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
 from .utils import PredictorError
 
@@ -19,6 +20,7 @@ class ImagePredictor:
     ):  
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
         self.face_detector = FaceDetector2(conf_thres)
+        self.landmark_detector = LandmarkDetector()
         self.margin_ratio = margin_ratio
         self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
         self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
@@ -46,20 +48,6 @@ class ImagePredictor:
             
         img_h, img_w = img.shape[:2]
         
-        threshold = 5 
-    
-        out_of_bounds = []
-    
-        # 마진 계산 전, bbox 자체가 경계에 너무 붙어있는지 검사
-        if ymin <= threshold: out_of_bounds.append("상단")
-        if ymax >= img_h - threshold: out_of_bounds.append("하단")
-        if xmin <= threshold: out_of_bounds.append("왼쪽")
-        if xmax >= img_w - threshold: out_of_bounds.append("오른쪽")
-    
-        # bbox가 구석에 너무 치우쳐 있다면 차단
-        if out_of_bounds:
-            return None, out_of_bounds
-        
         # --- 이후 크롭 로직 (마진 적용 및 안전하게 클리핑) ---
         w = xmax - xmin
         h = ymax - ymin
@@ -75,7 +63,7 @@ class ImagePredictor:
     
         cropped_img = img[y1:y2, x1:x2]
     
-        return cropped_img, []
+        return cropped_img
         
     def _preprocess_img(self, img_path: str) -> np.ndarray:
         img = cv2.imread(img_path)
@@ -94,27 +82,22 @@ class ImagePredictor:
                 "이미지에서 얼굴을 인식하지 못해 분석을 진행할 수 없습니다. "
                 "얼굴이 정면을 향하고 이목구비가 뚜렷하게 보이는 이미지가 필요합니다."
             )
-        
+                    
         bbox = detect_result[:4]; conf = detect_result[4] * 100
         
         x1, y1, x2, y2 = bbox
         face_w = (x2 - x1); face_h = (y2 - y1); face_area = face_w * face_h
         face_ratio = (face_area / total_area) * 100
-        
-        if face_ratio < 3:
-            raise PredictorError(
-                    f"얼굴 영역이 분석 기준치(3%)에 미달합니다. (현재: {face_ratio:.1f}%) "
-                    "신뢰도 높은 판별을 위해 얼굴이 더 크게 부각된 이미지가 필요합니다."
-            )
                 
-        cropped, directions = self._crop_face(img, bbox)
-        if cropped is None:
-            dir_msg = ", ".join(directions)
+        cropped = self._crop_face(img, bbox)
+        
+        keypoint = self.landmark_detector.detect_batch([cropped])[0]
+        if len(keypoint) == 0:
             raise PredictorError(
-                f"얼굴이 화면 {dir_msg}에 너무 가까이 붙어 있어 정밀 분석이 불가능합니다."
-                "얼굴이 화면 중앙에 위치한 이미지가 필요합니다"
+                "얼굴은 감지되었으나, 일부분이 가려져 있거나 옆모습을 향하고 있어 정밀 분석이 어렵습니다. "
+                "이목구비가 전체적으로 잘 보이는 이미지가 필요합니다."
             )
-            
+    
         face_gray = cv2.cvtColor(cropped, cv2.COLOR_RGB2GRAY)
         face_brightness = (np.mean(face_gray) / 255) * 100
         
