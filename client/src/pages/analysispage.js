@@ -42,7 +42,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     fetchHistory();
   }, [sessionUser, setSessionUser, fetchHistory]);
 
-  // [수정] ESLint 경고 해결: 아래 버튼들에서 이 함수들을 호출하도록 연결했습니다.
+  // ESLint 경고 해결: 아래 버튼들에서 이 함수들을 호출하도록 연결
   const handleVersionChange = (v) => {
     setVersionType(v);
     if (v === 'v1') setDomainType('western');
