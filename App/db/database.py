@@ -7,7 +7,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from contextlib import asynccontextmanager
 
 load_dotenv()
-DATABASE_CONN = os.getenv("DATABASE_CONN")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+
+DATABASE_CONN = f"mysql+aiomysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 print("database_conn: ", DATABASE_CONN)
 
 engine: AsyncEngine = create_async_engine(
