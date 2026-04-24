@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from routes import auth, home, inference, image, video
 from utils.common import lifespan
-from utils import exc_handler
+from utils import exc_handler, middleware
 
 
 # 가상 인스턴스 생성
@@ -47,9 +47,12 @@ app.add_middleware(CORSMiddleware,
                    max_age = -1
                    )
 
-# 세션 미들웨어 등록
-SECRET_KEY = os.getenv("SECRET_KEY")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
+# 세션 미들웨어 등록 - Signed Cookie 이용
+# SECRET_KEY = os.getenv("SECRET_KEY", "unique_secret_key")
+# app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
+
+# 세션 미들웨어 등록 - Redis 이용
+app.add_middleware(middleware.RedisSessionMiddleware, max_age=7200)
 
 # 라우터 등록
 app.include_router(auth.router)
