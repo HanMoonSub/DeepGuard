@@ -36,9 +36,11 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Cross Origin Resource Sharing
+origins_str = os.getenv("CORS_ALLOWED_ORIGINS")
+allowed_origins = [origin.strip() for origin in origins_str.split(",")]
+
 app.add_middleware(CORSMiddleware,
-                   allow_origins=["http://localhost:3000",
-                                  "https://deepguard-web.vercel.app"],
+                   allow_origins=allowed_origins,
                    allow_methods=["*"],
                    allow_headers=["*"],
                    allow_credentials=True,
