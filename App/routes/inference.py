@@ -68,7 +68,6 @@ async def predict_video(
     
     # 빈 비디오 DB 생성 후, video_id 받기
     video_id = await inference_svc.register_video_result(conn, user_id, video_loc, version_type, model_type, domain_type)
-    print("video_id: ", video_id)
     
     background_tasks.add_task(
         inference_svc.process_video_task,
@@ -90,7 +89,6 @@ async def get_video_result(
                            ):
     
     video_data = await inference_svc.get_video_result(conn, video_id)  
-    print("video data: ", video_data)
     
     if video_data.status == 'FAILED':
         if session_user:
