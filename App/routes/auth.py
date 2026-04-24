@@ -58,7 +58,7 @@ async def login_user(request: Request,
             detail="등록하신 패스워드와 입력정보가 일치하지 않습니다."
         )
 
-    request.session["session_user"] = {"id": user.id, "name": user.name, "email":user.email}
+    request.state.session["session_user"] = {"id": user.id, "name": user.name, "email":user.email}
 
 
     # 3. 로그인 성공 응답
@@ -69,7 +69,7 @@ async def login_user(request: Request,
 
 @router.get("/logout")
 async def logout_user(request: Request):
-    request.session.clear()
+    request.state.session.clear()
     return {
         "message": "로그아웃 되었습니다.",
         "status": "success"
