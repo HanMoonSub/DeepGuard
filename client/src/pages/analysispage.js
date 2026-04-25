@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+const apiUrl = process.env.REACT_APP_API_URL;
 
 const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const fetchHistory = useCallback(async () => {
     if (!sessionUser) return;
     try {
-      const response = await axios.get('http://localhost:8000/image/history');
+      const response = await axios.get('/image/history');
       if (response.data.status === "success") {
         setHistory(response.data.context); 
       }
@@ -33,7 +34,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     const syncSession = async () => {
       if (!sessionUser) {
         try {
-          const response = await axios.get('http://localhost:8000/auth/check');
+          const response = await axios.get('/auth/check');
           if (response.data && response.data.user) setSessionUser(response.data.user);
         } catch (error) { console.log("세션 확인 실패"); }
       }
@@ -67,7 +68,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const handleLogoutClick = async () => {
     if (!window.confirm("로그아웃 하시겠습니까?")) return;
     try {
-      await axios.get('http://localhost:8000/auth/logout');
+      await axios.get('/auth/logout');
       onLogout(); 
       alert("성공적으로 로그아웃되었습니다.");
       navigate('/main');
@@ -90,7 +91,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
     setIsAnalyzing(true);
     try {
-      const response = await axios.post('http://localhost:8000/inference/image', formData);
+      const response = await axios.post('/inference/image', formData);
       setResult(response.data);
       fetchHistory(); 
     } catch (err) {
@@ -117,7 +118,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
               const prob = item.prob ?? item.analysis?.prob ?? -1;
               const probNum = Number(prob);
               const displayProb = (prob !== undefined && prob !== null && prob !== -1) ? (probNum * 100).toFixed(1) + '%' : 'N/A';
-              const thumbUrl = item.image_loc ? `http://localhost:8000${item.image_loc}` : null;
+              const thumbUrl = item.image_loc ? `${apiUrl}${item.image_loc}` : null;
 
               // 히스토리 클릭 시 보낼 데이터 규격화
               const transportState = {

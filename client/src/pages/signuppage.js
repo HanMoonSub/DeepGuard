@@ -31,7 +31,7 @@ const SignupPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8000/auth/register', {
+      const response = await axios.post('/auth/register', {
         name,
         email,
         password

@@ -20,7 +20,7 @@ function App() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/auth/check');
+        const response = await axios.get('/auth/check');
         if (response.data && response.data.user) {
           setSessionUser(response.data.user);
         }
