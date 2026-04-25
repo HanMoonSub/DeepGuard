@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends, status, Request
-from services import auth_svc
+from services import auth_svc, session_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
 from fastapi.exceptions import HTTPException
 from schemas.auth_schema import RegisterRequest, LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# --- 로그인 상태 확인 API ---
+# 프론트엔드 새로고침 시 세션 유지 여부를 확인하고 유저 정보를 반환합니다
+@router.get("/check", status_code=status.HTTP_200_OK)
+async def check_session(session_user = Depends(session_svc.get_session_user_opt)):
+    return {"user": session_user}
 
 # --- 회원가입 API ---
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -58,7 +64,7 @@ async def login_user(request: Request,
             detail="등록하신 패스워드와 입력정보가 일치하지 않습니다."
         )
 
-    request.session["session_user"] = {"id": user.id, "name": user.name, "email":user.email}
+    request.state.session["session_user"] = {"id": user.id, "name": user.name, "email":user.email}
 
 
     # 3. 로그인 성공 응답
@@ -67,9 +73,9 @@ async def login_user(request: Request,
         "status": "success"
     }
 
-@router.get("/logout")
+@router.get("/logout", status_code=status.HTTP_200_OK)
 async def logout_user(request: Request):
-    request.session.clear()
+    request.state.session.clear()
     return {
         "message": "로그아웃 되었습니다.",
         "status": "success"

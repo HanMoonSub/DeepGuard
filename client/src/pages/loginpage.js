@@ -14,10 +14,10 @@ const LoginPage = ({ setSessionUser }) => {
     setIsLoading(true);
     try {
       // 1. 로그인 요청
-      await axios.post('http://localhost:8000/auth/login', { email, password });
+      await axios.post('/auth/login', { email, password });
       
       // 2. 세션 정보 가져오기 (home.py)
-      const homeRes = await axios.get('http://localhost:8000/home');
+      const homeRes = await axios.get('/home');
       if (homeRes.data.session_user) {
         setSessionUser(homeRes.data.session_user);
         alert(`${homeRes.data.session_user.name}님 환영합니다!`);

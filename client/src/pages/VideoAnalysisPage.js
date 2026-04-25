@@ -24,7 +24,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const fetchHistory = useCallback(async () => {
     if (!sessionUser) return;
     try {
-      const response = await axios.get('http://localhost:8000/video/history');
+      const response = await axios.get('/video/history');
       if (response.data.status === "success") {
         setHistory(response.data.context || []);
       }
@@ -39,7 +39,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     const syncSession = async () => {
       if (!sessionUser) {
         try {
-          const res = await axios.get('http://localhost:8000/auth/check');
+          const res = await axios.get('/auth/check');
           if (res.data?.user) setSessionUser(res.data.user);
         } catch (error) {
           console.log("세션 확인 실패");
@@ -71,7 +71,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       if (!isMounted.current) return;
 
       try {
-        const response = await axios.get(`http://localhost:8000/inference/video/result/${videoId}`);
+        const response = await axios.get(`/inference/video/result/${videoId}`);
         const data = response.data;
 
         console.log('[VIDEO RESULT]', data);
@@ -121,7 +121,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setResult(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/inference/video', formData);
+      const response = await axios.post('/inference/video', formData);
 
       console.log('[VIDEO POST RESPONSE]', response.status, response.data);
 
@@ -168,7 +168,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const handleLogoutClick = async () => {
     if (!window.confirm("로그아웃 하시겠습니까?")) return;
     try {
-      await axios.get('http://localhost:8000/auth/logout');
+      await axios.get('/auth/logout');
       onLogout(); 
       alert("성공적으로 로그아웃되었습니다.");
       navigate('/main');

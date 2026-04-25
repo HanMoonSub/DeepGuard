@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+const apiUrl = process.env.REACT_APP_API_URL;
 
 const AnalysisDetailPage = ({ sessionUser }) => {
   const { state: data } = useLocation();
@@ -52,10 +53,10 @@ const AnalysisDetailPage = ({ sessionUser }) => {
         <div style={{ flex: 1.2, backgroundColor: '#050505', borderRadius: '28px', border: '1px solid #1A1A1A', height: '600px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
           {/* 비디오 결과이면서 video_loc가 있을 경우 비디오 태그, 그 외엔 이미지 태그 */}
           {data.score !== undefined && data.image_loc ? (
-             <video src={data.image_loc.startsWith('blob') ? data.image_loc : `http://localhost:8000${data.image_loc}`} controls style={{ maxWidth: '90%', maxHeight: '95%', borderRadius: '12px' }} />
+             <video src={data.image_loc.startsWith('blob') ? data.image_loc : `${apiUrl}${data.image_loc}`} controls style={{ maxWidth: '90%', maxHeight: '95%', borderRadius: '12px' }} />
           ) : (
             <img 
-              src={data.image_loc?.startsWith('blob') ? data.image_loc : `http://localhost:8000${data.image_loc}`} 
+              src={data.image_loc?.startsWith('blob') ? data.image_loc : `${apiUrl}${data.image_loc}`} 
               alt="Analyzed media" 
               style={{ maxWidth: '90%', maxHeight: '95%', objectFit: 'contain', borderRadius: '12px' }} 
               onError={(e) => { e.target.src = 'https://via.placeholder.com/600x400?text=No+Image'; }}

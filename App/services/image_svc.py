@@ -107,8 +107,6 @@ async def get_user_histories(conn: Connection, user_id: int):
         
         result.close()
 
-        for h in user_histories:
-            print(h)
             
         return user_histories
     
@@ -155,7 +153,6 @@ async def get_user_history(conn: Connection, image_id: int):
         
         result.close()
         
-        print(user_history)
         return user_history
     
     except SQLAlchemyError as e:
