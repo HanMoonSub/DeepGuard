@@ -23,6 +23,7 @@ class VideoPredictor:
         self.frame_extractor = FrameExtractor(jitter=0)
         self.face_detector = FaceDetector2(conf_thres)
         self.landmark_detector = LandmarkDetector()
+        self.model_name = model_name
         self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
         self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
         
@@ -228,3 +229,9 @@ class VideoPredictor:
             raise e
         except Exception as e :
             raise e
+        
+    def __repr__(self):
+        return (f"VideoPredictor(model_name='{self.model_name}', "
+                f"margin_ratio='{self.margin_ratio}', "
+                f"device='{self.device}', "
+                f"img_size={self.img_size})")
