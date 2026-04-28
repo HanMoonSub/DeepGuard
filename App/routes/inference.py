@@ -11,8 +11,9 @@ from db.database import context_get_conn
 router = APIRouter(prefix="/inference", tags=["inference"])
 
 # ---- 딥페이크 비동기 이미지 추론 API ------
-@router.post("/image", status_code=status.HTTP_200_OK) # 해당 API 정상 작동시, 200 반환
-async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
+@router.post("/image", status_code=status.HTTP_202_ACCEPTED) # 해당 API 요청 시, 접수 완료(분석은 백그라운드에서 실행)
+async def predict_image(background_tasks: BackgroundTasks, # 백그라운드에서 실행
+                        imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
                         version_type: str = Form(...), # deepguard1, deepguard2
                         model_type: str = Form(...), # fast model, pro moel 
                         domain_type: str = Form(...), # model 학습시 사용한 dataset 종류
@@ -30,19 +31,20 @@ async def predict_image(imagefile: UploadFile = File(...), # 사용자가 업로
     # 이미지 업로드 이후, 이미지 저장 경로 반환
     image_loc = await image_svc.upload_image(user_email, imagefile) 
         
-    # # 이미지 비동기 추론, DeepFake 결과값 반환
-    result = await inference_svc.predict_image(image_loc, version_type, model_type, domain_type)
+    # 빈 이미지 DB 생성 후, image_id 받기
+    image_id = await inference_svc.register_image_result(conn, user_id, image_loc, version_type, model_type, domain_type)
     
-    # 로그인 시, 추론 결과값 DB에 저장하기
-    if session_user:
-        analysis = result["analysis"]; result_msg = result["message"]
-        await inference_svc.register_image_result(conn, user_id, image_loc, analysis["prob"], analysis["face_conf"], analysis["face_ratio"],
-                                                  analysis["face_brightness"], version_type, model_type, domain_type, result_msg)
-    else: 
-        # 비로그인 추론 결과값 반환만 하고 서버 내 이미지 파일 삭제
-        await image_svc.delete_image(image_loc)
-        
-    return result
+    # FastAPI 백그라운드 서버에서 이미지 비동기 추론 진행
+    background_tasks.add_task(
+        inference_svc.process_image_task,
+        image_id, image_loc, version_type, model_type, domain_type, user_id
+    )
+    
+    return {
+        "image_id": image_id, 
+        "message": "이미지 업로드 성공. 이미지 분석 시작 ...",
+        "status": "success",
+    }
 
 # ---- 딥페이크 비동기 비디오 추론 API ------
 @router.post("/video", status_code=status.HTTP_202_ACCEPTED) # 해당 API 요청 시, 접수 완료(분석은 백그라운드에서 실행)
@@ -69,6 +71,7 @@ async def predict_video(
     # 빈 비디오 DB 생성 후, video_id 받기
     video_id = await inference_svc.register_video_result(conn, user_id, video_loc, version_type, model_type, domain_type)
     
+    # FastAPI 백그라운드 서버에서 비디오 비동기 추론 진행
     background_tasks.add_task(
         inference_svc.process_video_task,
         video_id, video_loc, version_type, model_type, domain_type, user_id
