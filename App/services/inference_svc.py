@@ -69,6 +69,7 @@ async def register_image_result(conn: Connection, user_id: int | None, image_loc
 # 사용자 이미지 딥페이크 여부 판단 로직
 async def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str):
     
+    # image_loc: static 폴더 내 저장된 사용자 이미지 경로
     # version_type: v1, v2
     # model_type: fast, pro
     # domain_type: 서양인, 동양인
@@ -86,18 +87,14 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
         )
     predictor = image_cache[cache_key]
     
-    
     # 비동기 이미지 추론 실행
     loop = asyncio.get_running_loop()
     try:
         analysis = await loop.run_in_executor(
-            None, 
-            predictor.predict_img, 
-            "." + image_loc, 
-            0.0
+            None, predictor.predict_img, "." + image_loc, 0.0
         )
         
-        print(f"딥페이크 확률 값: {analysis["prob"]}, 얼굴 신뢰도: {analysis["face_conf"]}, 얼굴 비율: {analysis["face_ratio"]}, 얼굴 밝기: {analysis["face_brightness"]}")
+        print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
         # 분석 성공 시
         return {
@@ -116,11 +113,11 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
     # CUDA Out of Memory, CUDA Device Error, Timm 모드 로델 실패 등..
     except Exception as e:
         print(str(e))
-        await image_svc.delete_image(image_loc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="이미지 분석 중 치명적인 오류가 발생했습니다."
-        )
+        return {
+            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1},
+            "message": f"이미지 분석 중 치명적인 오류가 발생했습니다.",
+            "status": "failed"
+        }
 
 # 이미지 메타데이터 + 추론 결과값 DB에 저장
 async def update_image_result(conn: Connection, image_id: int, analysis: dict,
