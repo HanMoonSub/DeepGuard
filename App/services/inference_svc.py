@@ -167,6 +167,45 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
         await conn.rollback()
         raise e
 
+# 딥페이크 이미지 분석 프로세스: 이미지 추론 + 이미지 DB 내 저장(백그라운드 실행 함수) 
+async def process_image_task(image_id: int, image_loc: str, version_type: str, model_type: str, 
+                             domain_type: str, user_id: int | None):
+    try:
+        # 이미지 비동기 추론, DeepFake 결과값 반환
+        result = await predict_image(image_loc, version_type, model_type, domain_type)
+    
+        async with background_db_conn() as conn:    
+            # 로그인 상관없이 이미지 추론 결과값 DB에 저장하기
+            await update_image_result(
+                conn, 
+                image_id, 
+                result["analysis"], 
+                result["message"], 
+                result["status"]
+                )
+    except Exception as e:
+        print(f"Image Result Update Error: {str(e)}")
+        try:
+            async with background_db_conn() as conn:  
+                await update_image_result(
+                    conn, 
+                    image_id, 
+                    {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                    "이미지 추론 결과 업데이트 중 오류가 발생하였습니다.", 
+                    "failed"
+                )
+        except Exception as db_err:
+            print(f"Final Emergency DB Update Failed: {db_err}")
+        
+    finally:
+        if not user_id:
+            await image_svc.delete_image(image_loc)
+
+        # 비로그인 추론 결과값 반환만 하고 서버 내 이미지 파일 삭제
+        # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
+        # if not user_id:
+        #   await image_svc.delete_image_db(image_loc)
+
 # 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
 async def register_video_result(conn: Connection, user_id: int | None, video_loc: str,
                                 version_type: str, model_type: str, domain_type: str):
@@ -296,7 +335,7 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
         await conn.rollback()
         raise e
         
-# 비디오 딥페이크 분석 프로세스: 비디오 추론 + 비디오 DB 내 저장(백그라운드 실행 함수)
+# 딥페이크 비디오 분석 프로세스: 비디오 추론 + 비디오 DB 내 저장(백그라운드 실행 함수)
 async def process_video_task(video_id: int, video_loc: str, version_type: str, model_type: str, 
                              domain_type: str, user_id: int | None):
     
