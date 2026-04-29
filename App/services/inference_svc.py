@@ -11,6 +11,7 @@ from services import image_svc, video_svc
 from db.database import context_get_conn, background_db_conn
 from schemas.image_schema import ImageData_indi
 from schemas.video_schema import VideoData, VideoData_indi
+from celery_app import celery_app
 
 image_cache = {}
 video_cache = {}
@@ -86,45 +87,48 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
             "status": "failed"
         }
 
-# 딥페이크 이미지 분석 프로세스: 이미지 추론 + 이미지 DB 내 저장(백그라운드 실행 함수) 
-async def process_image_task(image_id: int, image_loc: str, version_type: str, model_type: str, 
+# Celery 이미지 추론 Task
+@celery_app.task(name="process_image_task")
+def process_image_task(image_id: int, image_loc: str, version_type: str, model_type: str, 
                              domain_type: str, user_id: int | None):
-    try:
-        # 이미지 비동기 추론, DeepFake 결과값 반환
-        result = await predict_image(image_loc, version_type, model_type, domain_type)
-    
-        async with background_db_conn() as conn:    
-            # 로그인 상관없이 이미지 추론 결과값 DB에 저장하기
-            await image_svc.update_image_result(
-                conn, 
-                image_id, 
-                result["analysis"], 
-                result["message"], 
-                result["status"]
-                )
-    except Exception as e:
-        print(f"Image Result Update Error: {str(e)}")
+    async def run_inference():    
         try:
-            async with background_db_conn() as conn:  
+            # 이미지 비동기 추론, DeepFake 결과값 반환
+            result = await predict_image(image_loc, version_type, model_type, domain_type)
+        
+            async with background_db_conn() as conn:    
+                # 로그인 상관없이 이미지 추론 결과값 DB에 저장하기
                 await image_svc.update_image_result(
                     conn, 
                     image_id, 
-                    {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
-                    "이미지 추론 결과 업데이트 중 오류가 발생하였습니다.", 
-                    "failed"
-                )
-        except Exception as db_err:
-            print(f"Final Emergency DB Update Failed: {db_err}")
-        
-    finally:
-        if not user_id:
-            await image_svc.delete_image(image_loc)
+                    result["analysis"], 
+                    result["message"], 
+                    result["status"]
+                    )
+        except Exception as e:
+            print(f"Image Result Update Error: {str(e)}")
+            try:
+                async with background_db_conn() as conn:  
+                    await image_svc.update_image_result(
+                        conn, 
+                        image_id, 
+                        {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                        "이미지 추론 결과 업데이트 중 오류가 발생하였습니다.", 
+                        "failed"
+                    )
+            except Exception as db_err:
+                print(f"Final Emergency DB Update Failed: {db_err}")
+            
+        finally:
+            if not user_id:
+                await image_svc.delete_image(image_loc)
 
-        # 비로그인 추론 결과값 반환만 하고 서버 내 이미지 파일 삭제
-        # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
-        # if not user_id:
-        #   await image_svc.delete_image_db(image_loc)
-
+            # 비로그인 추론 결과값 반환만 하고 서버 내 이미지 파일 삭제
+            # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
+            # if not user_id:
+            #   await image_svc.delete_image_db(image_loc)
+    asyncio.run(run_inference())
+    
 # 이미지 결과 값 가져오기
 async def get_image_result(conn: Connection, 
                            image_id: int):
@@ -221,46 +225,48 @@ async def predict_video(video_loc: str, version_type: str, model_type: str, doma
             "status": "failed"
         }
         
-# 딥페이크 비디오 분석 프로세스: 비디오 추론 + 비디오 DB 내 저장(백그라운드 실행 함수)
-async def process_video_task(video_id: int, video_loc: str, version_type: str, model_type: str, 
+# Celery 비디오 추론 Task
+@celery_app.task(name="process_video_task")
+def process_video_task(video_id: int, video_loc: str, version_type: str, model_type: str, 
                              domain_type: str, user_id: int | None):
-    
-    try:
-        # 비디오 비동기 추론, DeepFake 결과값 반환
-        result = await predict_video(video_loc, version_type, model_type, domain_type)
-    
-        async with background_db_conn() as conn:    
-            # 로그인 상관없이 추론 결과값 DB에 저장하기
-            await video_svc.update_video_result(
-                conn, 
-                video_id, 
-                result["analysis"], 
-                result["message"], 
-                result["status"]
-                )
-    except Exception as e:
-        print(f"Video Result Update Error: {str(e)}")
+    async def run_inference():
         try:
-            async with background_db_conn() as conn:  
+            # 비디오 비동기 추론, DeepFake 결과값 반환
+            result = await predict_video(video_loc, version_type, model_type, domain_type)
+        
+            async with background_db_conn() as conn:    
+                # 로그인 상관없이 추론 결과값 DB에 저장하기
                 await video_svc.update_video_result(
                     conn, 
                     video_id, 
-                    {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
-                    "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
-                    "failed"
-                )
-        except Exception as db_err:
-            print(f"Final Emergency DB Update Failed: {db_err}")
-        
-    finally:
-        if not user_id:
-            await video_svc.delete_video(video_loc)
+                    result["analysis"], 
+                    result["message"], 
+                    result["status"]
+                    )
+        except Exception as e:
+            print(f"Video Result Update Error: {str(e)}")
+            try:
+                async with background_db_conn() as conn:  
+                    await video_svc.update_video_result(
+                        conn, 
+                        video_id, 
+                        {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                        "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
+                        "failed"
+                    )
+            except Exception as db_err:
+                print(f"Final Emergency DB Update Failed: {db_err}")
+            
+        finally:
+            if not user_id:
+                await video_svc.delete_video(video_loc)
 
-        # 비로그인 추론 결과값 반환만 하고 서버 내 비디오 파일 삭제
-        # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
-        # if not user_id:
-        #   await video_svc.delete_video_db(video_loc)
-        
+            # 비로그인 추론 결과값 반환만 하고 서버 내 비디오 파일 삭제
+            # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
+            # if not user_id:
+            #   await video_svc.delete_video_db(video_loc)
+    asyncio.run(run_inference())
+    
 # 비디오 결과 값 가져오기
 async def get_video_result(conn: Connection, 
                            video_id: int):
