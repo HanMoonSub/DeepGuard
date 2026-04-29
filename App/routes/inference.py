@@ -84,7 +84,7 @@ async def predict_video(
     }
 
 # ---- 딥페이크 추론 결과값 불러오기 API ----- 
-@router.get("/video/result/{video_id}", status_code=status.HTTP_200_OK)
+@router.get("/video/{video_id}", status_code=status.HTTP_200_OK)
 async def get_video_result(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),

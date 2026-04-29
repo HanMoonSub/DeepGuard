@@ -71,7 +71,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       if (!isMounted.current) return;
 
       try {
-        const response = await axios.get(`/inference/video/result/${videoId}`);
+        const response = await axios.get(`/inference/video/${videoId}`);
         const data = response.data;
 
         console.log('[VIDEO RESULT]', data);
