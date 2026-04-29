@@ -9,6 +9,7 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import context_get_conn, background_db_conn
+from schemas.image_schema import ImageData_indi
 from schemas.video_schema import VideoData, VideoData_indi
 
 image_cache = {}
@@ -203,6 +204,48 @@ async def process_image_task(image_id: int, image_loc: str, version_type: str, m
         # if not user_id:
         #   await image_svc.delete_image_db(image_loc)
 
+# 이미지 결과 값 가져오기
+async def get_image_result(conn: Connection, 
+                           image_id: int):
+    try:
+        query = text("SELECT * FROM image_result WHERE id = :image_id")
+        result = await conn.execute(query, {"image_id": image_id})
+        
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail=f"요청하신 이미지 분석 결과(ID: {image_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
+        row = result.fetchone()
+        
+        image_data = ImageData_indi(
+            image_id = row.id,
+            user_id = row.user_id,
+            image_loc = row.image_loc,
+            status = row.status,
+            label = row.label,
+            score = row.score,
+            face_conf = row.face_conf,
+            face_ratio = row.face_ratio,
+            face_brightness = row.face_brightness,
+            version_type = row.version_type,
+            model_type = row.model_type,
+            domain_type = row.domain_type,
+            result_msg = row.result_msg,
+            created_at = row.created_at,
+        )
+        
+        result.close()
+        return image_data
+        
+    except SQLAlchemyError as e:
+        print(f"이미지 분석 결과값 가져오기 실패: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail="알수없는 이유로 문제가 발생하였습니다.")
+        
 # 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
 async def register_video_result(conn: Connection, user_id: int | None, video_loc: str,
                                 version_type: str, model_type: str, domain_type: str):
@@ -381,7 +424,7 @@ async def get_video_result(conn: Connection,
         
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                                detail="결과를 찾을 수 없습니다.")
+                                detail=f"요청하신 비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
         row = result.fetchone()
         
         video_data = VideoData_indi(
