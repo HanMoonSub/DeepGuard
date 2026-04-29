@@ -32,7 +32,7 @@ async def predict_image(background_tasks: BackgroundTasks, # 백그라운드에�
     image_loc = await image_svc.upload_image(user_email, imagefile) 
         
     # 빈 이미지 DB 생성 후, image_id 받기
-    image_id = await inference_svc.register_image_result(conn, user_id, image_loc, version_type, model_type, domain_type)
+    image_id = await image_svc.register_image_result(conn, user_id, image_loc, version_type, model_type, domain_type)
     
     # FastAPI 백그라운드 서버에서 이미지 비동기 추론 진행
     background_tasks.add_task(
