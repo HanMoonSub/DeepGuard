@@ -88,7 +88,7 @@ async def predict_video(
     video_loc = await video_svc.upload_video(user_email, videofile) 
     
     # 빈 비디오 DB 생성 후, video_id 받기
-    video_id = await inference_svc.register_video_result(conn, user_id, video_loc, version_type, model_type, domain_type)
+    video_id = await video_svc.register_video_result(conn, user_id, video_loc, version_type, model_type, domain_type)
     
     # FastAPI 백그라운드 서버에서 비디오 비동기 추론 진행
     background_tasks.add_task(

@@ -160,4 +160,78 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+# [5] 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
+async def register_video_result(conn: Connection, user_id: int | None, video_loc: str,
+                                version_type: str, model_type: str, domain_type: str):
+    try:
+        query = """
+            INSERT INTO video_result (
+                user_id, video_loc, status, label, score, face_conf, face_ratio, 
+                face_brightness, version_type, model_type, domain_type, result_msg
+            )
+            VALUES (
+                :user_id, :video_loc, 'PENDING', 'UNKNOWN', -1.0, -1.0, -1.0, 
+                -1.0, :version_type, :model_type, :domain_type, '분석 대기 중...'
+            )
+        """
+        stmt = text(query)
+        result = await conn.execute(stmt, {
+            "user_id": user_id, 
+            "video_loc": video_loc,
+            "version_type": version_type,
+            "model_type": model_type,
+            "domain_type": domain_type
+        })
+        await conn.commit()
+        
+        # MySQL에서 방금 생성된 auto_increment ID 가져오기
+        return result.lastrowid
+        
+    except SQLAlchemyError as e:
+        print(f"DB Insert Error: {e}")
+        await conn.rollback()
+        await delete_video(video_loc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="요청데이터가 제대로 전달되지 않았습니다")
+        
+# [6] 비디오 메타데이터 + 추론 결과값 DB에 저장
+async def update_video_result(conn: Connection, video_id: int, analysis: dict,
+                              result_msg: str, status: str):
     
+    if status == 'success':
+        label = "FAKE" if analysis["prob"] > 0.5 else "REAL"
+    else:
+        label = "UNKNOWN"
+        
+    try:
+        query = """
+            UPDATE video_result 
+            SET status = :status,
+                label = :label, 
+                score = :score, 
+                face_conf = :face_conf, 
+                face_ratio = :face_ratio, 
+                face_brightness = :face_brightness, 
+                result_msg = :result_msg
+            WHERE id = :video_id
+        """
+        
+        db_status = status.upper()
+        
+        stmt = text(query)
+        await conn.execute(stmt, {
+            "status": db_status,
+            "label": label,
+            "score": analysis["prob"],
+            "face_conf": analysis["face_conf"],
+            "face_ratio": analysis["face_ratio"],
+            "face_brightness": analysis["face_brightness"],
+            "result_msg": result_msg,
+            "video_id": video_id
+        })
+        await conn.commit()
+        
+    except SQLAlchemyError as e:
+        await conn.rollback()
+        raise e
