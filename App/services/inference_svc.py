@@ -8,7 +8,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
-from db.database import context_get_conn, background_db_conn
+from db.database import context_get_conn, background_db_conn, engine
 from schemas.image_schema import ImageData_indi
 from schemas.video_schema import VideoData, VideoData_indi
 from celery_app import celery_app
@@ -127,7 +127,13 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
             # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
             # if not user_id:
             #   await image_svc.delete_image_db(image_loc)
-    asyncio.run(run_inference())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(run_inference())
+    finally:
+        loop.run_until_complete(engine.dispose())
+        loop.close()
     
 # 이미지 결과 값 가져오기
 async def get_image_result(conn: Connection, 
@@ -265,7 +271,13 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
             # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
             # if not user_id:
             #   await video_svc.delete_video_db(video_loc)
-    asyncio.run(run_inference())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(run_inference())
+    finally:
+        loop.run_until_complete(engine.dispose())
+        loop.close()
     
 # 비디오 결과 값 가져오기
 async def get_video_result(conn: Connection, 
