@@ -171,7 +171,8 @@ async def get_image_result(conn: Connection,
         print(f"이미지 분석 결과값 가져오기 실패: {e}")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
                             detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
-
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -315,7 +316,8 @@ async def get_video_result(conn: Connection,
         print(f"비디오 분석 결과값 가져오기 실패: {e}")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
                             detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
-
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
