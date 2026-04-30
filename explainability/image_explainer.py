@@ -8,7 +8,7 @@ from typing import List
 from preprocess.face_detector import FaceDetector2
 from deepguard.data import get_test_transforms
 
-class ImageVisualizer:
+class ImageExplainer:
     def __init__(
         self,
         model_name: str, 
