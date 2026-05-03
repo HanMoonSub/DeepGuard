@@ -1,4 +1,3 @@
-import timm
 import asyncio
 from inference.image_predictor_prt import ImagePredictor
 from inference.video_predictor_prt import VideoPredictor
@@ -35,7 +34,7 @@ MODEL_CONFIG = {
 }
 
 # 사용자 이미지 딥페이크 여부 판단 로직
-async def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str):
+def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str):
     
     # image_loc: static 폴더 내 저장된 사용자 이미지 경로
     # version_type: v1, v2
@@ -55,12 +54,8 @@ async def predict_image(image_loc: str, version_type: str, model_type: str, doma
         )
     predictor = image_cache[cache_key]
     
-    # 비동기 이미지 추론 실행
-    loop = asyncio.get_running_loop()
     try:
-        analysis = await loop.run_in_executor(
-            None, predictor.predict_img, "." + image_loc, 0.0
-        )
+        analysis = predictor.predict_img("." + image_loc, 0.0)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
@@ -93,8 +88,8 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
                              domain_type: str, user_id: int | None):
     async def run_inference():    
         try:
-            # 이미지 비동기 추론, DeepFake 결과값 반환
-            result = await predict_image(image_loc, version_type, model_type, domain_type)
+            # 이미지 추론, DeepFake 결과값 반환
+            result = predict_image(image_loc, version_type, model_type, domain_type)
         
             async with background_db_conn() as conn:    
                 # 로그인 상관없이 이미지 추론 결과값 DB에 저장하기
@@ -178,7 +173,7 @@ async def get_image_result(conn: Connection,
                             detail="알수없는 이유로 문제가 발생하였습니다.")
         
 # 사용자 비디오 딥페이크 여부 판단 로직
-async def predict_video(video_loc: str, version_type: str, model_type: str, domain_type: str):
+def predict_video(video_loc: str, version_type: str, model_type: str, domain_type: str):
     
     # video_loc: static 폴더 내 저장된 사용자 비디오 경로
     # version_type: v1, v2
@@ -198,13 +193,8 @@ async def predict_video(video_loc: str, version_type: str, model_type: str, doma
         )
     predictor = video_cache[cache_key]
     
-    
-    # 비동기 비디오 추론 실행
-    loop = asyncio.get_running_loop()
     try:
-        analysis = await loop.run_in_executor(
-            None, predictor.predict_video, "." + video_loc, 10, 'conf', 0.0
-        )
+        analysis = predictor.predict_video("." + video_loc, 10, 'conf', 0.0)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
@@ -237,8 +227,8 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                              domain_type: str, user_id: int | None):
     async def run_inference():
         try:
-            # 비디오 비동기 추론, DeepFake 결과값 반환
-            result = await predict_video(video_loc, version_type, model_type, domain_type)
+            # 비디오 추론, DeepFake 결과값 반환
+            result = predict_video(video_loc, version_type, model_type, domain_type)
         
             async with background_db_conn() as conn:    
                 # 로그인 상관없이 추론 결과값 DB에 저장하기
