@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import List
 from preprocess.face_detector import FaceDetector2
 from deepguard.data import get_test_transforms
+from pytorch_grad_cam import GradCAM, GradCAMPlusPlus
+from utils import reshape_transforms, model_targets
 
-class ImageExplainer:
+class BaseExplainer:
     def __init__(
         self,
         model_name: str, 
@@ -17,7 +19,8 @@ class ImageExplainer:
         aug_smooth: bool, # This has the effect of better centering the CAM around the objects
         eigen_smooth: bool, # This has the effect of removing a lot of noise
         margin_ratio: float = 0.2, 
-        conf_thres: float = 0.5, 
+        conf_thres: float = 0.5,
+        category: int = 1, # 0 or 1 
     ):  
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
         self.face_detector = FaceDetector2(conf_thres)
@@ -25,7 +28,7 @@ class ImageExplainer:
         self.model_name = model_name
         self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
         self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
-        
+        self.category = category
         # Model Inference Mode
         self.model.to(self.device)
         self.model.eval()
@@ -81,6 +84,22 @@ class ImageExplainer:
         img = transforms(image=img)['image'] # (3,H,W)
         return img.unsqueeze(0) # (1,3,H,W)
             
+    def _build_xai(self):
+        self.cam = GradCAM(
+            model = self.model,
+            target_layers = [self.model.l_gcvit.stages[-1].norm2,
+                             self.model.h_gcvit.stages[-1].norm2],
+            reshape_transform = reshape_transforms.reshape_transform_gcvit
+        )
+    
+    def extract_xai(self, img_path):
+        input_tensor = self._get_transform(img_path)
+        targets = model_targets.BinaryClassifierOutputTarget(category=self.category)
+        
+        self.cam(input_tensor = input_tensor, 
+                 targets = targets,
+                 aug_smooth = self.aug_smooth,
+                 eigen_smooth = self.eigen_smooth)
         
     def __repr__(self):
         return "Display Fogery Region where AI model focus on watching"
