@@ -4,7 +4,9 @@ from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.pool import NullPool
 from contextlib import asynccontextmanager
+
 
 load_dotenv()
 DB_USER = os.getenv("DB_USER")
@@ -23,6 +25,12 @@ engine: AsyncEngine = create_async_engine(
     pool_recycle = 3600 # 1hour 
 )
 
+# Celery worker 전용 engine 추가
+celery_engine: AsyncEngine = create_async_engine(
+    url=DATABASE_CONN,
+    poolclass=NullPool  # 풀 없이 매 연결마다 새로 생성
+)
+
 async def context_get_conn():
     conn = None
     try:
@@ -38,7 +46,7 @@ async def context_get_conn():
             
 @asynccontextmanager
 async def background_db_conn():
-    conn = await engine.connect()
+    conn = await celery_engine.connect()  # celery_engine으로 교체
     try:
         yield conn
     finally:
