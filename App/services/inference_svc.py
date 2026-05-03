@@ -100,8 +100,8 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
                     result["message"], 
                     result["status"]
                     )
-        except Exception as e:
-            print(f"Image Result Update Error: {str(e)}")
+        except SQLAlchemyError as e:
+            print(f"[DB Error] Image Result Update Failed: {str(e)}")
             try:
                 async with background_db_conn() as conn:  
                     await image_svc.update_image_result(
@@ -113,7 +113,10 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
                     )
             except Exception as db_err:
                 print(f"Final Emergency DB Update Failed: {db_err}")
-            
+        
+        except Exception as e:
+            print(f"[Unknown Error] Image Task Failed: {str(e)}")
+        
         finally:
             if not user_id:
                 await image_svc.delete_image(image_loc)
@@ -239,8 +242,8 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     result["message"], 
                     result["status"]
                     )
-        except Exception as e:
-            print(f"Video Result Update Error: {str(e)}")
+        except SQLAlchemyError as e:
+            print(f"[DB Error] Video Result Update Failed: {str(e)}")
             try:
                 async with background_db_conn() as conn:  
                     await video_svc.update_video_result(
@@ -252,7 +255,10 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     )
             except Exception as db_err:
                 print(f"Final Emergency DB Update Failed: {db_err}")
-            
+        
+        except Exception as e:
+            print(f"[Unknown Error] Video Task Failed: {str(e)}")
+          
         finally:
             if not user_id:
                 await video_svc.delete_video(video_loc)
