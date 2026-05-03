@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios'; 
 import logo from '../assets/logo.svg';
 
+// 백엔드 세션 쿠키 전역 설정
+axios.defaults.withCredentials = true;
+
 const LoginPage = ({ setSessionUser }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -13,10 +16,10 @@ const LoginPage = ({ setSessionUser }) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // 1. 로그인 요청
+      // 로그인 요청
       await axios.post('http://localhost:8000/auth/login', { email, password });
       
-      // 2. 세션 정보 가져오기 (home.py)
+      // 세션 정보 가져오기 (home.py)
       const homeRes = await axios.get('http://localhost:8000/home');
       if (homeRes.data.session_user) {
         setSessionUser(homeRes.data.session_user);
