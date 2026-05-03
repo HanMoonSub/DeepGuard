@@ -132,7 +132,6 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
     try:
         loop.run_until_complete(run_inference())
     finally:
-        loop.run_until_complete(engine.dispose())
         loop.close()
     
 # 이미지 결과 값 가져오기
@@ -277,7 +276,6 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
     try:
         loop.run_until_complete(run_inference())
     finally:
-        loop.run_until_complete(engine.dispose())
         loop.close()
     
 # 비디오 결과 값 가져오기
