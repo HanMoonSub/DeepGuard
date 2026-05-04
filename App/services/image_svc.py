@@ -1,4 +1,5 @@
 import os
+import asyncio
 import time
 import aiofiles as aio
 from dotenv import load_dotenv
@@ -9,6 +10,8 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.image_schema import UserHistory
 from schemas.image_schema import UserHistory_indi
+from db.database import celery_db_conn
+
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -54,6 +57,9 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
 
         # 6. DB 저장용 경로 반환
         return upload_image_loc[1:].replace("\\", "/")
+    
+    except HTTPException:
+        raise
     
     except Exception as e:
         print(f"[Unknown Error] {e}")
@@ -159,32 +165,125 @@ async def get_user_history(conn: Connection, image_id: int):
         print(f"히스토리 조회 실패: {e}")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
 
-# [5] 이미지 DB 레코드 및 물리 파일 완전 삭제
-async def delete_image_complete(conn: Connection, image_id: int):
+# [5] 비회원 데이터 5분 후 자동 삭제 태스크
+async def delete_image_delayed_db(image_id: int):
+    await asyncio.sleep(300)  # 300s 5m 대기
     try:
-        # 1. 삭제할 파일 경로 조회
-        select_query = text("SELECT image_loc FROM image_result WHERE id = :image_id")
-        result = await conn.execute(select_query.bindparams(image_id=image_id))
-        row = result.fetchone()
-
-        if row:
-            # 2. 물리 파일 삭제
-            await delete_image(row.image_loc)
-
-            # 3. DB 레코드 삭제
-            delete_query = text("DELETE FROM image_result WHERE id = :image_id")
-            await conn.execute(delete_query.bindparams(image_id=image_id))
-            
-            await conn.commit()
-            print(f"Successfully deleted image data: {image_id}")
-            return True
-        return False
+        async with celery_db_conn() as conn:
+            await delete_image_db(conn, image_id)
+            print(f"Non-user auto-cleanup finished: {image_id}")
     except Exception as e:
-        print(f"Image Complete Delete Error: {e}")
+        print(f"[Cleanup Error] Video ID {image_id}: {e}")  
+
+
+# [6] 이미지 DB 레코드 및 물리 파일 완전 삭제
+async def delete_image_db(conn: Connection, image_id: int):
+    try:
+        delete_query = text("DELETE FROM image_result WHERE id = :image_id")
+        result = await conn.execute(delete_query.bindparams(image_id=image_id))
+
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 이미지 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+            
+        await conn.commit()
+
+    
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+# [7] 빈 이미지 DB 생성 이후, image_id 반환(접수 완료)
+async def register_image_result(conn: Connection, user_id: int | None, image_loc: str, 
+                                version_type: str, model_type: str, domain_type: str):
+    try:
+        query = """
+            INSERT INTO image_result (
+                user_id, image_loc, status, label, score, face_conf, face_ratio,
+                face_brightness, version_type, model_type, domain_type, result_msg
+            )
+            VALUES (
+                :user_id, :image_loc, 'PENDING', 'UNKNOWN', -1.0, -1.0, -1.0,
+                -1.0, :version_type, :model_type, :domain_type, '분석 대기 중...')
+        """
+        
+        stmt = text(query)
+        result = await conn.execute(stmt, {
+            "user_id": user_id, 
+            "image_loc": image_loc,
+            "version_type": version_type,
+            "model_type": model_type,
+            "domain_type": domain_type
+        })
+        await conn.commit()
+        
+        # MySQL에서 방금 생성된 auto_increment ID 가져오기
+        return result.lastrowid
+        
+    except SQLAlchemyError as e:
+        print(f"DB Insert Error: {e}")
+        await conn.rollback()
+        await delete_image(image_loc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="요청데이터가 제대로 전달되지 않았습니다")
+        
+# [8] 이미지 메타데이터 + 추론 결과값 DB에 저장
+async def update_image_result(conn: Connection, image_id: int, analysis: dict,
+                              result_msg: str, status: str): 
+    
+    # status 종류: success, warning, failed
+    # success: 이미지 추론 성공
+    # warning: 이미지 추론 과정 PredictError 발생
+    # failed: 이미지 추로 과정 알수 없는 오류 발생 
+    
+    if status == 'success':
+        label = "FAKE" if analysis["prob"] > 0.5 else "REAL"
+    else:
+        label = "UNKNOWN"
+    try:
+        query = """
+            UPDATE image_result 
+            SET status = :status,
+                label = :label, 
+                score = :score, 
+                face_conf = :face_conf, 
+                face_ratio = :face_ratio, 
+                face_brightness = :face_brightness, 
+                result_msg = :result_msg
+            WHERE id = :image_id
+        """
+        
+        db_status = status.upper()
+        
+        stmt = text(query)
+        await conn.execute(stmt, {
+            "status": db_status,
+            "label": label,
+            "score": analysis["prob"],
+            "face_conf": analysis["face_conf"],
+            "face_ratio": analysis["face_ratio"],
+            "face_brightness": analysis["face_brightness"],
+            "result_msg": result_msg,
+            "image_id": image_id
+        })
+        await conn.commit()
+        
+    except SQLAlchemyError as e:
         await conn.rollback()
         raise e

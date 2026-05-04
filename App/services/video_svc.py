@@ -1,4 +1,5 @@
 import os
+import asyncio
 import time
 import aiofiles as aio
 from dotenv import load_dotenv
@@ -9,6 +10,7 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.video_schema import VideoData
 from schemas.video_schema import VideoData_indi
+from db.database import celery_db_conn
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -54,6 +56,9 @@ async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
 
         # 6. DB 저장용 경로 반환
         return upload_video_loc[1:].replace("\\", "/")
+    
+    except HTTPException:
+        raise
     
     except Exception as e:
         print(f"[Unknown Error] {e}")
@@ -114,7 +119,7 @@ async def get_user_histories(conn: Connection, user_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
-    
+ 
 
 # [4] 사용자 개별 비디오 히스토리 조회
 async def get_user_history(conn: Connection, user_id: int, video_id: int):
@@ -161,27 +166,114 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
-# [5] 비디오 DB 레코드 및 물리 파일 완전 삭제
-async def delete_video_complete(conn: Connection, video_id: int):
+# [5] 비회원 데이터 5분 후 자동 삭제 태스크
+async def delete_video_delayed_db(video_id: int):
+    await asyncio.sleep(300)  # 300s (5m) 대기
     try:
-        # 1. 삭제할 파일의 경로 조회
-        select_query = text("SELECT video_loc FROM video_result WHERE id = :video_id")
-        result = await conn.execute(select_query.bindparams(video_id=video_id))
-        row = result.fetchone()
-
-        if row:
-            # 2. 물리 파일 삭제
-            await delete_video(row.video_loc)
-
-            # 3. DB 레코드 삭제
-            delete_query = text("DELETE FROM video_result WHERE id = :video_id")
-            await conn.execute(delete_query.bindparams(video_id=video_id))
-            
-            await conn.commit()
-            print(f"Successfully deleted video data: {video_id}")
-            return True
-        return False
+        async with celery_db_conn() as conn:
+            # video_svc의 통합 삭제 함수 호출
+            await delete_video_db(conn, video_id)
+            print(f"Non-user auto-cleanup finished: {video_id}")
     except Exception as e:
-        print(f"Video Complete Delete Error: {e}")
+        print(f"[Cleanup Error] Video ID {video_id}: {e}") 
+
+# [6] 비디오 DB 레코드 및 물리 파일 완전 삭제
+async def delete_video_db(conn: Connection, video_id: int):
+    try:
+        delete_query = text("DELETE FROM video_result WHERE id = :video_id")
+        result = await conn.execute(delete_query.bindparams(video_id=video_id))
+
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+            
+        await conn.commit()
+
+    
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+# [6] 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
+async def register_video_result(conn: Connection, user_id: int | None, video_loc: str,
+                                version_type: str, model_type: str, domain_type: str):
+    try:
+        query = """
+            INSERT INTO video_result (
+                user_id, video_loc, status, label, score, face_conf, face_ratio, 
+                face_brightness, version_type, model_type, domain_type, result_msg
+            )
+            VALUES (
+                :user_id, :video_loc, 'PENDING', 'UNKNOWN', -1.0, -1.0, -1.0, 
+                -1.0, :version_type, :model_type, :domain_type, '분석 대기 중...'
+            )
+        """
+        stmt = text(query)
+        result = await conn.execute(stmt, {
+            "user_id": user_id, 
+            "video_loc": video_loc,
+            "version_type": version_type,
+            "model_type": model_type,
+            "domain_type": domain_type
+        })
+        await conn.commit()
+        
+        # MySQL에서 방금 생성된 auto_increment ID 가져오기
+        return result.lastrowid
+        
+    except SQLAlchemyError as e:
+        print(f"DB Insert Error: {e}")
+        await conn.rollback()
+        await delete_video(video_loc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="요청데이터가 제대로 전달되지 않았습니다")
+        
+# [7] 비디오 메타데이터 + 추론 결과값 DB에 저장
+async def update_video_result(conn: Connection, video_id: int, analysis: dict,
+                              result_msg: str, status: str):
+    
+    if status == 'success':
+        label = "FAKE" if analysis["prob"] > 0.5 else "REAL"
+    else:
+        label = "UNKNOWN"
+        
+    try:
+        query = """
+            UPDATE video_result 
+            SET status = :status,
+                label = :label, 
+                score = :score, 
+                face_conf = :face_conf, 
+                face_ratio = :face_ratio, 
+                face_brightness = :face_brightness, 
+                result_msg = :result_msg
+            WHERE id = :video_id
+        """
+        
+        db_status = status.upper()
+        
+        stmt = text(query)
+        await conn.execute(stmt, {
+            "status": db_status,
+            "label": label,
+            "score": analysis["prob"],
+            "face_conf": analysis["face_conf"],
+            "face_ratio": analysis["face_ratio"],
+            "face_brightness": analysis["face_brightness"],
+            "result_msg": result_msg,
+            "video_id": video_id
+        })
+        await conn.commit()
+        
+    except SQLAlchemyError as e:
         await conn.rollback()
         raise e
