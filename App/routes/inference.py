@@ -115,3 +115,13 @@ async def get_video_result(
         )
     
     return video_data
+
+# ---- 딥페이크 상세 분석 (타임라인) 불러오기 API ----
+@router.get("/video/{video_id}/detail", status_code=status.HTTP_200_OK)
+async def get_video_detail(
+                           video_id: int,
+                           conn: Connection = Depends(context_get_conn),
+                           session_user = Depends(session_svc.get_session_user_opt)
+                           ):
+    video_detail = await inference_svc.get_video_frame_results(conn, video_id)
+    return video_detail
