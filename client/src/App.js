@@ -18,10 +18,10 @@ function App() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/home');
+        const response = await axios.get('/auth/check');
         
-        if (response.data && response.data.session_user) {
-          setSessionUser(response.data.session_user);
+        if (response.data && response.data.user) {
+          setSessionUser(response.data.user);
         }
       } catch (error) {
         setSessionUser(null);

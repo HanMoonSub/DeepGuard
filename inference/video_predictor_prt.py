@@ -6,6 +6,7 @@ import torch
 from typing import Dict, List
 from preprocess.frame_extractor import FrameExtractor
 from preprocess.face_detector import FaceDetector2
+from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
 from .utils import PredictorError
 
@@ -21,6 +22,7 @@ class VideoPredictor:
         self.margin_ratio = margin_ratio
         self.frame_extractor = FrameExtractor(jitter=0)
         self.face_detector = FaceDetector2(conf_thres)
+        self.landmark_detector = LandmarkDetector()
         self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
         self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
         
@@ -78,7 +80,7 @@ class VideoPredictor:
             
             if not frames:
                 raise PredictorError(
-                    "해당 비디오 내 모든 Frame에서 추출에 실패하였습니다"
+                    f"해당 비디오 내 {num_frames}개의 Frame에서 모두 추출에 실패하였습니다"
                 )
             
             return frames
@@ -135,21 +137,33 @@ class VideoPredictor:
                     f"추출한 {len(frames)}개의 Frame에서 모두 얼굴 탐지에 실패하였습니다 "
                 )
             
-            cropped_frames = []
-            face_confs = []
-            face_brightnesses = []
-            face_ratios = []
+            cropped_frames, face_confs, face_ratios, face_brightnesses, landmarks = [], [], [], [], []
             
             for i, face_result in enumerate(face_results):
                 if len(face_result) == 0: continue
                 
-                bbox = face_result[:4]; conf = face_result[4] * 100
-                face_confs.append(conf)
+                bbox = face_result[:4]
+                conf = face_result[4] * 100
                 cropped_frame, face_ratio = self._crop_face(frames[i], bbox)
-                cropped_frames.append(cropped_frame); face_ratios.append(face_ratio)
+                
+                # 랜드마크 추출
+                keypoint = self.landmark_detector.detect_batch([cropped_frame])[0]
+                if len(keypoint) == 0: 
+                    continue
+                
+                # 데이터 수집
+                face_confs.append(conf)
+                cropped_frames.append(cropped_frame)
+                face_ratios.append(face_ratio)
+                landmarks.append(keypoint)
                 
                 face_gray = cv2.cvtColor(cropped_frame, cv2.COLOR_RGB2GRAY)
                 face_brightnesses.append((np.mean(face_gray) / 255) * 100)
+                
+            if not landmarks:
+                raise PredictorError(
+                    f"추출한 {len(frames)}개의 Frame에서 얼굴이 옆모습이거나 가려져 있어 탐지가 어렵습니다"
+                )
         
             return cropped_frames, face_confs, face_ratios, face_brightnesses
         

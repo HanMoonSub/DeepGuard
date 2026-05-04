@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from routes import auth, home, inference, image, video
 from utils.common import lifespan
-from utils import exc_handler
+from utils import exc_handler, middleware
 
 
 # 가상 인스턴스 생성
@@ -36,18 +36,23 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Cross Origin Resource Sharing
+origins_str = os.getenv("CORS_ALLOWED_ORIGINS")
+allowed_origins = [origin.strip() for origin in origins_str.split(",")]
+
 app.add_middleware(CORSMiddleware,
-                   allow_origins=["http://localhost:3000",
-                                  "https://deepguard-web.vercel.app"],
+                   allow_origins=allowed_origins,
                    allow_methods=["*"],
                    allow_headers=["*"],
                    allow_credentials=True,
                    max_age = -1
                    )
 
-# 세션 미들웨어 등록
-SECRET_KEY = os.getenv("SECRET_KEY")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
+# 세션 미들웨어 등록 - Signed Cookie 이용
+# SECRET_KEY = os.getenv("SECRET_KEY", "unique_secret_key")
+# app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
+
+# 세션 미들웨어 등록 - Redis 이용
+app.add_middleware(middleware.RedisSessionMiddleware, max_age=7200)
 
 # 라우터 등록
 app.include_router(auth.router)

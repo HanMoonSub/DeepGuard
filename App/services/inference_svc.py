@@ -9,7 +9,7 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import context_get_conn, background_db_conn
-from schemas.video_schema import VideoData
+from schemas.video_schema import VideoData, VideoData_indi
 
 image_cache = {}
 video_cache = {}
@@ -113,6 +113,7 @@ async def register_image_result(conn: Connection, user_id: int, image_loc: str, 
     except SQLAlchemyError as e:
         print(e)
         await conn.rollback()
+        await image_svc.delete_image(image_loc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="요청데이터가 제대로 전달되지 않았습니다")
 
@@ -242,29 +243,49 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
         await conn.commit()
         
     except SQLAlchemyError as e:
-        print(f"DB Update Error (ID: {video_id}): {e}")
         await conn.rollback()
+        raise e
         
 # 비디오 딥페이크 분석 프로세스: 비디오 추론 + 비디오 DB 내 저장(백그라운드 실행 함수)
 async def process_video_task(video_id: int, video_loc: str, version_type: str, model_type: str, 
                              domain_type: str, user_id: int | None):
     
-    async with background_db_conn() as conn:
+    try:
         # 비디오 비동기 추론, DeepFake 결과값 반환
         result = await predict_video(video_loc, version_type, model_type, domain_type)
     
-        analysis = result["analysis"] # {"prob", "face_conf", "face_ratio", "face_brightness"}
-        result_msg = result["message"]
-        current_status = result["status"] # "success", "warning", "failed"
+        async with background_db_conn() as conn:    
+            # 로그인 상관없이 추론 결과값 DB에 저장하기
+            await update_video_result(
+                conn, 
+                video_id, 
+                result["analysis"], 
+                result["message"], 
+                result["status"]
+                )
+    except Exception as e:
+        print(f"Video Result Update Error: {str(e)}")
+        try:
+            async with background_db_conn() as conn:  
+                await update_video_result(
+                    conn, 
+                    video_id, 
+                    {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                    "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
+                    "failed"
+                )
+        except Exception as db_err:
+            print(f"Final Emergency DB Update Failed: {db_err}")
         
-        # 로그인 상관없이 추론 결과값 DB에 저장하기
-        await update_video_result(conn, video_id, analysis, result_msg, current_status)
+    finally:
         if not user_id:
             await video_svc.delete_video(video_loc)
 
         # 비로그인 추론 결과값 반환만 하고 서버 내 비디오 파일 삭제
         # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
-
+        # if not user_id:
+        #   await video_svc.delete_video_db(video_loc)
+        
 # 비디오 결과 값 가져오기
 async def get_video_result(conn: Connection, 
                            video_id: int):
@@ -277,7 +298,7 @@ async def get_video_result(conn: Connection,
                                 detail="결과를 찾을 수 없습니다.")
         row = result.fetchone()
         
-        video_data = VideoData(
+        video_data = VideoData_indi(
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,

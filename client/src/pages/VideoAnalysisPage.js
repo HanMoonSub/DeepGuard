@@ -27,7 +27,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const fetchHistory = useCallback(async () => {
     if (!sessionUser) return;
     try {
-      const response = await axios.get('http://localhost:8000/video/history');
+      const response = await axios.get('/video/history');
       if (response.data.status === "success") {
         setHistory(response.data.context || []);
       }
@@ -41,9 +41,11 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     const syncSession = async () => {
       if (!sessionUser) {
         try {
-          const res = await axios.get('http://localhost:8000/home');
-          if (res.data?.session_user) setSessionUser(res.data.session_user);
-        } catch (error) { console.log("세션 확인 실패"); }
+          const res = await axios.get('/auth/check');
+          if (res.data?.user) setSessionUser(res.data.user);
+        } catch (error) {
+          console.log("세션 확인 실패");
+        }
       }
     };
     syncSession();
@@ -88,7 +90,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     pollingTimer.current = setInterval(async () => {
       if (!isMounted.current) return;
       try {
-        const response = await axios.get(`http://localhost:8000/inference/video/result/${videoId}`);
+        const response = await axios.get(`/inference/video/result/${videoId}`);
         const data = response.data;
         if (data.status === 'SUCCESS') {
           clearInterval(pollingTimer.current); pollingTimer.current = null;
@@ -113,7 +115,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
     setIsAnalyzing(true); setStatusMessage('서버 접수 중...'); setResult(null);
     try {
-      const response = await axios.post('http://localhost:8000/inference/video', formData);
+      const response = await axios.post('/inference/video', formData);
       const videoId = response.data?.video_id;
       if (videoId) startPolling(videoId); else { alert("ID 실패"); setIsAnalyzing(false); }
     } catch (err) { setIsAnalyzing(false); setStatusMessage(''); }
@@ -142,7 +144,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
   const handleLogoutClick = async () => {
     if (!window.confirm("로그아웃 하시겠습니까?")) return;
-    try { await axios.get('http://localhost:8000/auth/logout'); onLogout(); navigate('/main'); } catch (error) {}
+    try { await axios.get('/auth/logout'); onLogout(); navigate('/main'); } catch (error) {}
   };
 
   const sideBarStyle = { width: '280px', backgroundColor: '#050505', borderRight: '1px solid #222', display: 'flex', flexDirection: 'column', padding: '25px' };

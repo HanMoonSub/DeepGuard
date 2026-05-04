@@ -27,7 +27,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
   const handleLogoutClick = async () => {
     if (!window.confirm("로그아웃 하시겠습니까?")) return;
     try {
-      await axios.get('http://localhost:8000/auth/logout');
+      await axios.get('/auth/logout');
       if (onLogout) onLogout(); 
       alert("성공적으로 로그아웃되었습니다.");
       navigate('/main');
