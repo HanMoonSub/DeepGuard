@@ -279,12 +279,8 @@ async def process_video_task(video_id: int, video_loc: str, version_type: str, m
         
     finally:
         if not user_id:
-            await video_svc.delete_video(video_loc)
+            asyncio.create_task(delayed_cleanup_task(video_id))
 
-        # 비로그인 추론 결과값 반환만 하고 서버 내 비디오 파일 삭제
-        # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
-        # if not user_id:
-        #   await video_svc.delete_video_db(video_loc)
         
 # 비디오 결과 값 가져오기
 async def get_video_result(conn: Connection, 
@@ -328,3 +324,14 @@ async def get_video_result(conn: Connection,
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                             detail="알수없는 이유로 문제가 발생하였습니다.")
     
+
+# 비회원 데이터 1시간 후 자동 삭제 태스크
+async def delayed_cleanup_task(video_id: int):
+    await asyncio.sleep(3600)  # 3600초(1시간) 대기
+    try:
+        async with background_db_conn() as conn:
+            # video_svc의 통합 삭제 함수 호출
+            await video_svc.delete_video_complete(conn, video_id)
+            print(f"Non-user auto-cleanup finished: {video_id}")
+    except Exception as e:
+        print(f"[Cleanup Error] Video ID {video_id}: {e}")

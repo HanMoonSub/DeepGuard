@@ -162,4 +162,29 @@ async def get_user_history(conn: Connection, image_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
-    
+
+
+# [5] 이미지 DB 레코드 및 물리 파일 완전 삭제
+async def delete_image_complete(conn: Connection, image_id: int):
+    try:
+        # 1. 삭제할 파일 경로 조회
+        select_query = text("SELECT image_loc FROM image_result WHERE id = :image_id")
+        result = await conn.execute(select_query.bindparams(image_id=image_id))
+        row = result.fetchone()
+
+        if row:
+            # 2. 물리 파일 삭제
+            await delete_image(row.image_loc)
+
+            # 3. DB 레코드 삭제
+            delete_query = text("DELETE FROM image_result WHERE id = :image_id")
+            await conn.execute(delete_query.bindparams(image_id=image_id))
+            
+            await conn.commit()
+            print(f"Successfully deleted image data: {image_id}")
+            return True
+        return False
+    except Exception as e:
+        print(f"Image Complete Delete Error: {e}")
+        await conn.rollback()
+        raise e

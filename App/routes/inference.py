@@ -91,12 +91,13 @@ async def get_video_result(
     video_data = await inference_svc.get_video_result(conn, video_id)  
     
     if video_data.status == 'FAILED':
-        if session_user:
-            await video_svc.delete_video(video_data.video_loc) # 서버 내 저장 파일 삭제
-            # await video_svc.detle_video_db # db에서도 삭제 
+        
+        await video_svc.delete_video_complete(conn, video_id)
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=video_data.result_msg  
         )
     
     return video_data
+

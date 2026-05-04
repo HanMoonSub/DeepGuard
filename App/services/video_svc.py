@@ -161,3 +161,27 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
+# [5] 비디오 DB 레코드 및 물리 파일 완전 삭제
+async def delete_video_complete(conn: Connection, video_id: int):
+    try:
+        # 1. 삭제할 파일의 경로 조회
+        select_query = text("SELECT video_loc FROM video_result WHERE id = :video_id")
+        result = await conn.execute(select_query.bindparams(video_id=video_id))
+        row = result.fetchone()
+
+        if row:
+            # 2. 물리 파일 삭제
+            await delete_video(row.video_loc)
+
+            # 3. DB 레코드 삭제
+            delete_query = text("DELETE FROM video_result WHERE id = :video_id")
+            await conn.execute(delete_query.bindparams(video_id=video_id))
+            
+            await conn.commit()
+            print(f"Successfully deleted video data: {video_id}")
+            return True
+        return False
+    except Exception as e:
+        print(f"Video Complete Delete Error: {e}")
+        await conn.rollback()
+        raise e
