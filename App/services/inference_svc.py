@@ -55,7 +55,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     predictor = image_cache[cache_key]
     
     try:
-        analysis = predictor.predict_img("." + image_loc, 0.0)
+        analysis = predictor.predict_img("." + image_loc)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
@@ -197,7 +197,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     predictor = video_cache[cache_key]
     
     try:
-        analysis = predictor.predict_video("." + video_loc, 10, 'conf', 0.0)
+        analysis = predictor.predict_video("." + video_loc)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
