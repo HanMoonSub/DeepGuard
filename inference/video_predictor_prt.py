@@ -36,7 +36,7 @@ class VideoPredictor:
                     endpoint=True, dtype=np.int32)
         return sorted(list(set(frame_indices)))
         
-    def _extract_frames(self, video_path: str, num_frames: int) -> Dict[int, np.ndarray]:
+    def _extract_frames(self, video_path: str) -> Dict[int, np.ndarray]:
         """
         Extracts frames from the video and returns a dictionary in the format {frame_index: frame_data}.
         Returns an empty dictionary {} if the extraction fails.
@@ -44,17 +44,16 @@ class VideoPredictor:
         cap = None
         try:
             if not os.path.exists(video_path):
-                raise PredictorError(
-                    "해당 비디오 파일 경로가 존재하지 않습니다"
-                )
+                raise PredictorError("해당 비디오 파일 경로가 존재하지 않습니다")
             
             cap = cv2.VideoCapture(filename=video_path)
             if not cap.isOpened():
-                raise PredictorError(
-                    "비디오를 불러올 수 없습니다. 파일이 손상되었거나 지원하지 않는 형식인지 확인해 주세요."
-                )
+                raise PredictorError("비디오를 불러올 수 없습니다. 파일이 손상되었거나 지원하지 않는 형식인지 확인해 주세요.")
             
             frame_cnt = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            duration_sec = int(frame_cnt / fps)
+            num_frames = max(10, min(duration_sec, 60))
             
             frame_indices = self._get_frame_indices(frame_cnt, num_frames)     
             frames = {}
@@ -83,7 +82,7 @@ class VideoPredictor:
                     f"해당 비디오 내 {num_frames}개의 Frame에서 모두 추출에 실패하였습니다"
                 )
             
-            return frames
+            return frames, fps
         
         except PredictorError as e:
             raise e
@@ -122,22 +121,21 @@ class VideoPredictor:
         
         return cropped_frame, face_ratio
     
-    def _preprocess_frames(self, video_path: str, num_frames: int) -> List[np.ndarray]:
+    def _preprocess_frames(self, video_path: str) -> List[np.ndarray]:
         """
         Detects and crops faces from extracted frames, returning them as a list.
         Returns an empty list [] if no faces are detected or an error occurs.
         """
         try:
-            frames_dict = self._extract_frames(video_path, num_frames)
+            frames_dict, fps = self._extract_frames(video_path)
+            frame_indices = list(frames_dict.keys())
             
             face_results, frames = self._get_face_bboxes(frames_dict)
             
             if not any(face_results):
-                raise PredictorError(
-                    f"추출한 {len(frames)}개의 Frame에서 모두 얼굴 탐지에 실패하였습니다 "
-                )
+                raise PredictorError(f"추출한 {len(frames)}개의 Frame에서 모두 얼굴 탐지에 실패하였습니다 ")
             
-            cropped_frames, face_confs, face_ratios, face_brightnesses, landmarks = [], [], [], [], []
+            cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times = [], [], [], [], []
             
             for i, face_result in enumerate(face_results):
                 if len(face_result) == 0: continue
@@ -151,21 +149,18 @@ class VideoPredictor:
                 if len(keypoint) == 0: 
                     continue
                 
-                # 데이터 수집
-                face_confs.append(conf)
-                cropped_frames.append(cropped_frame)
-                face_ratios.append(face_ratio)
-                landmarks.append(keypoint)
-                
                 face_gray = cv2.cvtColor(cropped_frame, cv2.COLOR_RGB2GRAY)
-                face_brightnesses.append((np.mean(face_gray) / 255) * 100)
                 
-            if not landmarks:
-                raise PredictorError(
-                    f"추출한 {len(frames)}개의 Frame에서 얼굴이 옆모습이거나 가려져 있어 탐지가 어렵습니다"
-                )
+                cropped_frames.append(cropped_frame)
+                face_confs.append(conf)
+                face_ratios.append(face_ratio)
+                face_brightnesses.append((np.mean(face_gray) / 255) * 100)
+                frame_times.append(round(frame_indices[i] / fps, 2))
+                
+            if not cropped_frames:
+                raise PredictorError(f"추출한 {len(frames)}개의 Frame에서 얼굴이 옆모습이거나 가려져 있어 탐지가 어렵습니다")
         
-            return cropped_frames, face_confs, face_ratios, face_brightnesses
+            return cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times
         
         except PredictorError as e:
             raise e
@@ -197,9 +192,9 @@ class VideoPredictor:
             else:
                 return np.mean(preds), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
         
-    def _get_predict(self, video_path: str, num_frames: int, tta_hflip: float) -> np.ndarray:
+    def _get_predict(self, video_path: str, tta_hflip: float) -> np.ndarray:
         try:
-            cropped_frames, face_confs, face_ratios, face_brightnesses = self._preprocess_frames(video_path, num_frames)
+            cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times = self._preprocess_frames(video_path)
     
             transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
             frames_list = [transforms(image=f)['image'] for f in cropped_frames]
@@ -209,20 +204,40 @@ class VideoPredictor:
                 outs = self.model(batch_frames) # (num_frames,1)
                 preds = torch.sigmoid(outs.view(-1)).cpu().numpy() # (num_frames,)
             
-            return preds, face_confs, face_ratios, face_brightnesses
+            return preds, face_confs, face_ratios, face_brightnesses, frame_times
         
         except PredictorError as e:
             raise e
         except Exception as e:
             raise e 
     
-    def predict_video(self, video_path: str, num_frames: int = 20, agg_mode: str = 'conf', tta_hflip: float = 0) -> np.ndarray:
+    def predict_video(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> np.ndarray:
         try:
-            preds, face_confs, face_ratios, face_brightnesses = self._get_predict(video_path, num_frames, tta_hflip)
+            preds, face_confs, face_ratios, face_brightnesses, frame_times = self._get_predict(video_path, tta_hflip)
             
-            total_pred, total_face_conf, total_face_ratio, total_face_brightness = self._frame_aggregate(preds, face_confs, face_ratios, face_brightnesses, agg_mode)
-            return {"prob": total_pred, "face_conf": total_face_conf, 
-                    "face_ratio": total_face_ratio, "face_brightness": total_face_brightness}
+            agg_prob, agg_conf, agg_ratio, agg_brightness = self._frame_aggregate(
+                preds, face_confs, face_ratios, face_brightnesses, agg_mode
+            )
+            
+            frame_results = [
+                {
+                    "frame_index":     i,
+                    "frame_time":      frame_times[i],
+                    "score":           float(preds[i]),
+                    "face_conf":       float(face_confs[i]),
+                    "face_ratio":      float(face_ratios[i]),
+                    "face_brightness": float(face_brightnesses[i]),
+                }
+                for i in range(len(preds))
+            ]
+            
+            return {
+                "prob":            float(agg_prob),
+                "face_conf":       float(agg_conf),
+                "face_ratio":      float(agg_ratio),
+                "face_brightness": float(agg_brightness),
+                "frame_results":   frame_results, 
+            }
             
         except PredictorError as e:
             raise e
