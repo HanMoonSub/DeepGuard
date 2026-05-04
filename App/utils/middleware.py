@@ -1,6 +1,6 @@
 from fastapi import Request, FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
-import redis
+import redis.asyncio as aioredis
 import uuid
 import json
 import logging
@@ -9,12 +9,13 @@ from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.CRITICAL)
 load_dotenv()
+
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = os.getenv("REDIS_PORT", 6379)
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379)) 
 
 # Redis setup
-redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, max_connections=10)
-redis_client = redis.Redis(connection_pool=redis_pool)
+redis_pool = aioredis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, max_connections=10)
+redis_client = aioredis.Redis(connection_pool=redis_pool)
 
 class RedisSessionMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI, session_cookie: str = "session_redis_id", max_age: int = 3600):
@@ -26,15 +27,16 @@ class RedisSessionMiddleware(BaseHTTPMiddleware):
         response = None 
         session_id = request.cookies.get(self.session_cookie)
         initial_session_was_empty = True
+        
         if self.max_age is None or self.max_age <= 0:
-            response = await call_next(request)
-            return response
+            return await call_next(request)
+            
         try:
             if session_id:
-                session_data = redis_client.get(session_id)
+                session_data = await redis_client.get(session_id)
                 if session_data:
                     request.state.session = json.loads(session_data)
-                    redis_client.expire(session_id, self.max_age)
+                    await redis_client.expire(session_id, self.max_age)
                     initial_session_was_empty = False
                 else:
                     request.state.session = {}
@@ -48,11 +50,11 @@ class RedisSessionMiddleware(BaseHTTPMiddleware):
 
                 response.set_cookie(self.session_cookie, session_id, max_age=self.max_age, httponly=True,
                                     secure=is_https, samesite='None' if is_https else 'Lax')
-                redis_client.setex(session_id, self.max_age, json.dumps(request.state.session))
+                await redis_client.setex(session_id, self.max_age, json.dumps(request.state.session))
                 
             else:
                 if not initial_session_was_empty:
-                    redis_client.delete(session_id)
+                    await redis_client.delete(session_id)
                     response.delete_cookie(self.session_cookie)
         except Exception as e:
             logging.critical("error in redis session middleware:" + str(e))

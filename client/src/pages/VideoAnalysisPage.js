@@ -90,7 +90,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     pollingTimer.current = setInterval(async () => {
       if (!isMounted.current) return;
       try {
-        const response = await axios.get(`/inference/video/result/${videoId}`);
+        const response = await axios.get(`/inference/video/${videoId}`);
         const data = response.data;
         if (data.status === 'SUCCESS') {
           clearInterval(pollingTimer.current); pollingTimer.current = null;
