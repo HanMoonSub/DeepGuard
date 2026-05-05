@@ -34,3 +34,14 @@ def show_cam_on_image(img: np.ndarray,
     cam = (1 - image_weight) * heatmap + image_weight * img
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
+
+def deprocess_image(tensor):
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+
+    # (1, C, H, W -> H, W, C)
+    img = tensor.squeeze().cpu().numpy().transpose(1, 2, 0)
+    img = (img * std) + mean
+    img = np.clip(img, 0, 1) # range(0~1)
+
+    return np.float32(img)
