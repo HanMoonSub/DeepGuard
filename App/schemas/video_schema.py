@@ -22,6 +22,12 @@ class VideoDataDetail(VideoData):
     face_ratio : float
     face_brightness : float
     result_msg : str
+    # 상세 분석 메타데이터
+    fps: float | None = None
+    total_frames: int | None = None
+    num_sampled: int | None = None
+    num_extracted: int | None = None
+    num_detected: int | None = None
 
 # 비디오 상세 결과 값 가져오기
 class VideoFrameData(BaseModel):
