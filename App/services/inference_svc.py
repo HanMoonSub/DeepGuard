@@ -242,6 +242,10 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     result["message"], 
                     result["status"]
                     )
+                if result["status"] == "success" and result["analysis"].get("frame_results"):
+                    await video_svc.save_video_frame_results(
+                        conn, video_id, result['analysis']["frame_results"]
+                    ) 
         except SQLAlchemyError as e:
             print(f"[DB Error] Video Result Update Failed: {str(e)}")
             try:
@@ -253,6 +257,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                         "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
                         "failed"
                     )
+                     
             except Exception as db_err:
                 print(f"Final Emergency DB Update Failed: {db_err}")
         
