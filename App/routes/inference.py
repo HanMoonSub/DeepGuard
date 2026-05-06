@@ -50,7 +50,7 @@ async def get_image_result(
                             conn: Connection = Depends(context_get_conn),
                             session_user = Depends(session_svc.get_session_user_opt)
                             ):
-    image_data = await inference_svc.get_image_result(conn, image_id)
+    image_data = await image_svc.get_image_result(conn, image_id)
     
     if image_data.status == "FAILED":
         if session_user:
