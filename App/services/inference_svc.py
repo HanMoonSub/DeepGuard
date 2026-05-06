@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import context_get_conn, background_db_conn, engine
 from schemas.image_schema import ImageData_indi
-from schemas.video_schema import VideoData, VideoData_indi, VideoFrameData, VideoDetailData
+from schemas.video_schema import VideoData, VideoDataDetail, VideoFrameData
 from celery_app import celery_app
 
 image_cache = {}
@@ -291,7 +291,7 @@ async def get_video_result(conn: Connection,
                                 detail=f"요청하신 비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
         row = result.fetchone()
         
-        video_data = VideoData_indi(
+        video_data = VideoDataDetail(
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,

@@ -7,8 +7,7 @@ from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
-from schemas.video_schema import VideoData
-from schemas.video_schema import VideoData_indi
+from schemas.video_schema import VideoData, VideoDataDetail
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -86,7 +85,8 @@ async def delete_video(video_loc: str):
 async def get_user_histories(conn: Connection, user_id: int):
     try:
         query = """
-            SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, user_id, video_loc, status, label, 
+                   version_type, model_type, domain_type, result_msg, created_at
             FROM video_result
             WHERE user_id = :user_id
             ORDER BY created_at DESC;
@@ -127,16 +127,14 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
             FROM video_result
             WHERE id = :video_id AND user_id = :user_id;
         """
-        stmt = text(query)
-        # 보안을 위해 video_id뿐만 아니라 user_id도 바인딩하여 본인 확인
-        bind_stmt = stmt.bindparams(video_id=video_id, user_id=user_id)
-        result = await conn.execute(bind_stmt)
+        stmt = text("SELECT * FROM table WHERE video_id = :video_id AND user_id = :user_id")
+        result = await conn.execute(stmt, {"video_id": video_id, "user_id": user_id})
         
         row = result.fetchone()
         if row is None:
             return None
             
-        video_history = VideoData_indi(
+        video_history = VideoDataDetail(
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,
@@ -153,7 +151,6 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
             created_at = row.created_at
         )
         
-        result.close()
         return video_history
     
     except SQLAlchemyError as e:
