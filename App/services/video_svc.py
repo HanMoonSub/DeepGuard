@@ -122,12 +122,12 @@ async def get_user_histories(conn: Connection, user_id: int):
 # [4] 사용자 개별 비디오 히스토리 조회
 async def get_user_history(conn: Connection, user_id: int, video_id: int):
     try:
-        query = """
-            SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
+        stmt = text("""
+            SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
+                    face_brightness, version_type, model_type, domain_type, result_msg, created_at
             FROM video_result
-            WHERE id = :video_id AND user_id = :user_id;
-        """
-        stmt = text("SELECT * FROM table WHERE video_id = :video_id AND user_id = :user_id")
+            WHERE id = :video_id AND user_id = :user_id
+        """)
         result = await conn.execute(stmt, {"video_id": video_id, "user_id": user_id})
         
         row = result.fetchone()

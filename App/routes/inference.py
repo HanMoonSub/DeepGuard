@@ -103,7 +103,7 @@ async def get_video_result(
                            session_user = Depends(session_svc.get_session_user_opt)
                            ):
     
-    video_data = await inference_svc.get_video_result(conn, video_id)  
+    video_data = await video_svc.get_video_result(conn, video_id)  
     
     if video_data.status == 'FAILED':
         if session_user:
@@ -123,5 +123,5 @@ async def get_video_detail(
                            conn: Connection = Depends(context_get_conn),
                            session_user = Depends(session_svc.get_session_user_prt) # 로그인 유저만 가능
                            ):
-    video_detail = await inference_svc.get_video_frame_results(conn, video_id)
+    video_detail = await video_svc.get_video_frame_results(conn, video_id)
     return video_detail
