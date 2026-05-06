@@ -189,7 +189,7 @@ async def register_video_result(conn: Connection, user_id: int | None, video_loc
         return result.lastrowid
         
     except SQLAlchemyError as e:
-        print(f"DB Insert Error: {e}")
+        print(f"Video DB Register Error: {e}")
         await conn.rollback()
         await delete_video(video_loc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -233,6 +233,7 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
         await conn.commit()
         
     except SQLAlchemyError as e:
+        print(f"Video DB Update Error: {e}")
         await conn.rollback()
         raise e
     
@@ -278,6 +279,35 @@ async def get_video_result(conn: Connection,
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                             detail="알수없는 이유로 문제가 발생하였습니다.")
 
+# 비디오 상세 결과 값 저장하기
+async def save_video_frame_results(conn: Connection, video_id: int, frame_results: list):
+    try:
+        query = """
+            INSERT INTO video_frame_result
+                (video_id, frame_index, frame_time, score, face_conf, face_ratio, face_brightness)
+            VALUES
+                (:video_id, :frame_index, :frame_time, :score, :face_conf, :face_ratio, :face_brightness)
+        """
+        rows = [
+            {
+                "video_id":        video_id,
+                "frame_index":     frame["frame_index"],
+                "frame_time":      frame["frame_time"],
+                "score":           frame["score"],
+                "face_conf":       frame["face_conf"],
+                "face_ratio":      frame["face_ratio"],
+                "face_brightness": frame["face_brightness"],
+            }
+            for frame in frame_results
+        ]
+        await conn.execute(text(query), rows)
+        await conn.commit()
+
+    except SQLAlchemyError as e:
+        print(f"[Video Frame DB Insert Error] {e}")
+        await conn.rollback()
+        raise e
+        
 # 비디오 상세 결과 값 가져오기
 async def get_video_frame_results(conn: Connection, video_id: int):
     try:
