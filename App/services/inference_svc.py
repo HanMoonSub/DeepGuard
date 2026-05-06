@@ -198,11 +198,17 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     result["message"], 
                     result["status"]
                     )
-                if result["status"] == "success" and result["analysis"].get("frame_results"):
-                    await video_svc.save_video_frame_results(
-                        conn, video_id, result['analysis']["frame_results"]
-                    ) 
+            if result["status"] == "success" and result["analysis"].get("frame_results"):
+                try:
+                    async with background_db_conn() as conn:
+                        await video_svc.save_video_frame_results(
+                            conn, video_id, result["analysis"]["frame_results"]
+                        )
+                except SQLAlchemyError as e:
+                    print(f"[Video Frame DB Insert Error] {e}")
+              
         except SQLAlchemyError as e:
+            print(f"Video DB Update Error: {e}")
             try:
                 async with background_db_conn() as conn:  
                     await video_svc.update_video_result(

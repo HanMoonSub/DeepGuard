@@ -233,7 +233,6 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
         await conn.commit()
         
     except SQLAlchemyError as e:
-        print(f"Video DB Update Error: {e}")
         await conn.rollback()
         raise e
     
@@ -304,7 +303,6 @@ async def save_video_frame_results(conn: Connection, video_id: int, frame_result
         await conn.commit()
 
     except SQLAlchemyError as e:
-        print(f"[Video Frame DB Insert Error] {e}")
         await conn.rollback()
         raise e
         
