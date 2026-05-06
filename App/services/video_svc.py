@@ -312,18 +312,14 @@ async def get_video_frame_results(conn: Connection, video_id: int):
         video_query = text("SELECT * FROM video_result WHERE id = :video_id")
         result = await conn.execute(video_query, {"video_id": video_id})
         row = result.fetchone()
-                
-        if row is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다.")
-
-        if row.status == "PENDING":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="아직 분석이 완료되지 않았습니다. 잠시 후 다시 시도해주세요.")
-
+        
         if row.status == "WARNING":
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                         detail="분석이 실패한 비디오는 상세 결과를 제공할 수 없습니다.")
+        
+        if row is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다.")
 
         frame_query = text("""
             SELECT frame_index, frame_time, score, face_conf, face_ratio, face_brightness
