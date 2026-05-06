@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import context_get_conn, background_db_conn, engine
 from schemas.image_schema import ImageData_indi
-from schemas.video_schema import VideoData, VideoData_indi
+from schemas.video_schema import VideoData, VideoData_indi, VideoFrameData, VideoDetailData
 from celery_app import celery_app
 
 image_cache = {}
@@ -308,7 +308,6 @@ async def get_video_result(conn: Connection,
             created_at = row.created_at,
         )
         
-        result.close()
         return video_data
         
     except SQLAlchemyError as e:
@@ -321,4 +320,53 @@ async def get_video_result(conn: Connection,
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                             detail="알수없는 이유로 문제가 발생하였습니다.")
-    
+
+# 비디오 상세 결과 값 가져오기
+async def get_video_frame_results(conn: Connection, video_id: int):
+    try:
+        video_query = text("SELECT * FROM video_result WHERE id = :video_id")
+        result = await conn.execute(video_query, {"video_id": video_id})
+        row = result.fetchone()
+                
+        if row is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다.")
+
+        if row.status == "PENDING":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="아직 분석이 완료되지 않았습니다. 잠시 후 다시 시도해주세요.")
+
+        if row.status == "WARNING":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="분석이 실패한 비디오는 상세 결과를 제공할 수 없습니다.")
+
+        frame_query = text("""
+            SELECT frame_index, frame_time, score, face_conf, face_ratio, face_brightness
+            FROM video_frame_result
+            WHERE video_id = :video_id
+            ORDER BY frame_index ASC
+        """)
+        frame_result = await conn.execute(frame_query, {"video_id": video_id})
+        frames = [
+            VideoFrameData(
+                frame_index=r.frame_index,
+                frame_time=r.frame_time,
+                score=r.score,
+                face_conf=r.face_conf,
+                face_ratio=r.face_ratio,
+                face_brightness=r.face_brightness,
+            )
+            for r in frame_result
+        ]
+        
+        return frames
+        
+        
+    except SQLAlchemyError as e:
+        print(f"[Frame Query Error] {e}")
+        raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
