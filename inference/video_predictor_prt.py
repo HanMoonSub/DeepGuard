@@ -30,12 +30,6 @@ class VideoPredictor:
         self.model.to(self.device)
         self.model.eval()
         
-    def _get_frame_indices(self, frame_cnt: int, num_frames: int):
-        
-        frame_indices = np.linspace(0, frame_cnt - 1, num=num_frames,
-                    endpoint=True, dtype=np.int32)
-        return sorted(list(set(frame_indices)))
-        
     def _extract_frames(self, video_path: str) -> Dict[int, np.ndarray]:
         """
         Extracts frames from the video and returns a dictionary in the format {frame_index: frame_data}.
@@ -55,7 +49,8 @@ class VideoPredictor:
             duration_sec = int(frame_cnt / fps)
             num_frames = max(10, min(duration_sec, 60))
             
-            frame_indices = self._get_frame_indices(frame_cnt, num_frames)     
+            frame_indices = [min(int(sec * fps), frame_cnt - 1) for sec in range(num_frames)]
+            frame_indices = sorted(set(frame_indices))     
             frames = {}
             target_idx = 0
             max_target = frame_indices[-1]
@@ -155,7 +150,7 @@ class VideoPredictor:
                 face_confs.append(conf)
                 face_ratios.append(face_ratio)
                 face_brightnesses.append((np.mean(face_gray) / 255) * 100)
-                frame_times.append(round(frame_indices[i] / fps, 2))
+                frame_times.append(i)
                 
             if not cropped_frames:
                 raise PredictorError(f"추출한 {len(frames)}개의 Frame에서 얼굴이 옆모습이거나 가려져 있어 탐지가 어렵습니다")
