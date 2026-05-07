@@ -7,8 +7,10 @@ from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
-from schemas.video_schema import VideoData, VideoDataDetail, VideoFrameData
-
+from schemas.video_schema import (
+    VideoData, VideoDataDetail, VideoFrameData,
+    VideoAnalysisMeta, VideoDetailResponse
+)
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
@@ -213,7 +215,7 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
                 face_conf = :face_conf, 
                 face_ratio = :face_ratio, 
                 face_brightness = :face_brightness, 
-                result_msg = :result_msg
+                result_msg = :result_msg,
                 fps = :fps,
                 total_frames = :total_frames,
                 num_sampled = :num_sampled,
@@ -350,7 +352,15 @@ async def get_video_frame_results(conn: Connection, video_id: int):
             for r in frame_result
         ]
         
-        return frames
+        meta = VideoAnalysisMeta(
+            fps=row.fps,
+            total_frames=row.total_frames,
+            num_sampled=row.num_sampled,
+            num_extracted=row.num_extracted,
+            num_detected=row.num_detected,
+        )
+        
+        return VideoDetailResponse(meta=meta, frames=frames)
         
         
     except SQLAlchemyError as e:

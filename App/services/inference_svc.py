@@ -166,7 +166,8 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except PredictorError as e:
         print(e.message)
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": []},
+            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+                         "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": e.message,
             "status": "warning",
         }
@@ -175,7 +176,8 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except Exception as e:
         print(str(e))
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": []},
+            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+                         "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": f"비디오 분석 중 치명적인 오류가 발생했습니다.",
             "status": "failed"
         }
