@@ -8,9 +8,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.video_schema import (
-    VideoData, VideoDataDetail, VideoFrameData,
-    VideoAnalysisMeta, VideoDetailResponse
-)
+    VideoData, VideoDetailData, VideoFrameData, VideoMetaData )
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
@@ -136,7 +134,7 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
         if row is None:
             return None
             
-        video_history = VideoDataDetail(
+        video_history = VideoDetailData(
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,
@@ -215,12 +213,7 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
                 face_conf = :face_conf, 
                 face_ratio = :face_ratio, 
                 face_brightness = :face_brightness, 
-                result_msg = :result_msg,
-                fps = :fps,
-                total_frames = :total_frames,
-                num_sampled = :num_sampled,
-                num_extracted = :num_extracted,
-                num_detected = :num_detected
+                result_msg = :result_msg
             WHERE id = :video_id
         """
         
@@ -235,11 +228,6 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
             "face_ratio": analysis["face_ratio"],
             "face_brightness": analysis["face_brightness"],
             "result_msg": result_msg,
-            "fps": analysis.get("fps"),
-            "total_frames": analysis.get("total_frames"),
-            "num_sampled": analysis.get("num_sampled"),
-            "num_extracted": analysis.get("num_extracted"),
-            "num_detected": analysis.get("num_detected"),
             "video_id": video_id
         })
         await conn.commit()
@@ -260,7 +248,7 @@ async def get_video_result(conn: Connection,
                                 detail=f"요청하신 비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
         row = result.fetchone()
         
-        video_data = VideoDataDetail(
+        video_data = VideoDetailData(
             id = row.id,
             user_id = row.user_id,
             video_loc = row.video_loc,
@@ -274,7 +262,7 @@ async def get_video_result(conn: Connection,
             model_type = row.model_type,
             domain_type = row.domain_type,
             result_msg = row.result_msg,
-            created_at = row.created_at,
+            created_at = row.created_at
         )
         
         return video_data
@@ -290,7 +278,29 @@ async def get_video_result(conn: Connection,
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                             detail="알수없는 이유로 문제가 발생하였습니다.")
 
-# 비디오 상세 결과 값 저장하기
+# 비디오 메타 데이터 정보 저장하기
+async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict):
+    try:
+        query = """
+            INSERT INTO video_meta_result (video_id, fps, total_frames, num_sampled, num_extracted, num_detected)
+            VALUES (:video_id, :fps, :total_frames, :num_sampled, :num_extracted, :num_detected)
+        """
+        await conn.execute(text(query), {
+            "video_id":     video_id,
+            "fps":          analysis["fps"],
+            "total_frames": analysis["total_frames"],
+            "num_sampled":  analysis["num_sampled"],
+            "num_extracted":analysis["num_extracted"],
+            "num_detected": analysis["num_detected"],
+        })
+        await conn.commit()
+
+    except SQLAlchemyError as e:
+        await conn.rollback()
+        raise e
+    
+# 비디오 상세 결과 값 저장하기 
+# 비디오 프레임 별 딥페이크 점수, 얼굴 신뢰도, 얼굴 비율, 얼굴 조도 반환
 async def save_video_frame_results(conn: Connection, video_id: int, frame_results: list):
     try:
         query = """
@@ -318,29 +328,50 @@ async def save_video_frame_results(conn: Connection, video_id: int, frame_result
         await conn.rollback()
         raise e
         
+# 비디오 메타 데이터 정보 가져오기
+async def get_video_meta_result(conn: Connection, video_id: int):         
+    try:
+        query = text("""
+            SELECT fps, total_frames, num_sampled, num_extracted, num_detected
+            FROM video_meta_result
+            WHERE video_id = :video_id
+        """)
+        result = await conn.execute(query, {"video_id": video_id})
+        row = result.fetchone()
+
+        if row is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"비디오 ID: {video_id}의 메타 정보를 찾을 수 없습니다.")
+
+        return VideoMetaData(
+            fps=row.fps,
+            total_frames=row.total_frames,
+            num_sampled=row.num_sampled,
+            num_extracted=row.num_extracted,
+            num_detected=row.num_detected,
+        )
+
+    except SQLAlchemyError as e:
+        print(f"[Meta Query Error] {e}")
+        raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
+ 
 # 비디오 상세 결과 값 가져오기
 async def get_video_frame_results(conn: Connection, video_id: int):
     try:
-        video_query = text("SELECT * FROM video_result WHERE id = :video_id")
-        result = await conn.execute(video_query, {"video_id": video_id})
-        row = result.fetchone()
-        
-        if row.status == "WARNING":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="분석이 실패한 비디오는 상세 결과를 제공할 수 없습니다.")
-        
-        if row is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다.")
-
-        frame_query = text("""
+        query = text("""
             SELECT frame_index, frame_time, score, face_conf, face_ratio, face_brightness
             FROM video_frame_result
             WHERE video_id = :video_id
             ORDER BY frame_index ASC
         """)
-        frame_result = await conn.execute(frame_query, {"video_id": video_id})
-        frames = [
+        result = await conn.execute(query, {"video_id": video_id})
+
+        return [
             VideoFrameData(
                 frame_index=r.frame_index,
                 frame_time=r.frame_time,
@@ -349,25 +380,14 @@ async def get_video_frame_results(conn: Connection, video_id: int):
                 face_ratio=r.face_ratio,
                 face_brightness=r.face_brightness,
             )
-            for r in frame_result
+            for r in result
         ]
-        
-        meta = VideoAnalysisMeta(
-            fps=row.fps,
-            total_frames=row.total_frames,
-            num_sampled=row.num_sampled,
-            num_extracted=row.num_extracted,
-            num_detected=row.num_detected,
-        )
-        
-        return VideoDetailResponse(meta=meta, frames=frames)
+
         
         
     except SQLAlchemyError as e:
         print(f"[Frame Query Error] {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
-    except HTTPException:
-        raise
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")

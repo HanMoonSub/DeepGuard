@@ -200,15 +200,23 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     result["message"], 
                     result["status"]
                     )
-            if result["status"] == "success" and result["analysis"].get("frame_results"):
-                try:
-                    async with background_db_conn() as conn:
-                        await video_svc.save_video_frame_results(
-                            conn, video_id, result["analysis"]["frame_results"]
-                        )
-                except SQLAlchemyError as e:
-                    print(f"[Video Frame DB Insert Error] {e}")
-              
+            if result["status"] == "success":
+                if result["analysis"].get("fps") is not None:
+                    try:
+                        async with background_db_conn() as conn:
+                            await video_svc.save_video_meta_result(conn, video_id, result["analysis"])
+                    except Exception as e:
+                        print(f"[Video Meta Save Error] video_id={video_id}: {e}")
+
+                if result["analysis"].get("frame_results"):
+                    try:
+                        async with background_db_conn() as conn:
+                            await video_svc.save_video_frame_results(
+                                conn, video_id, result["analysis"]["frame_results"]
+                            )
+                    except Exception as e:
+                        print(f"[Video Frame Save Error] video_id={video_id}: {e}")
+                        
         except SQLAlchemyError as e:
             print(f"Video DB Update Error: {e}")
             try:
@@ -219,8 +227,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                         {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
                         "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
                         "failed"
-                    )
-                     
+                    )          
             except Exception as db_err:
                 print(f"Final Emergency DB Update Failed: {db_err}")
         

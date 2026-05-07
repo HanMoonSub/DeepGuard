@@ -15,7 +15,7 @@ class VideoData(BaseModel):
 
 # 비디오 결과 값 가져오기 
 # 사용자 개별 비디오 히스토리 조회
-class VideoDataDetail(VideoData):
+class VideoDetailData(VideoData):
     
     score : float
     face_conf : float
@@ -32,13 +32,13 @@ class VideoFrameData(BaseModel):
     face_ratio: float
     face_brightness: float
     
-class VideoAnalysisMeta(BaseModel):
-    fps: float | None
-    total_frames: int | None
-    num_sampled: int | None
-    num_extracted: int | None
-    num_detected: int | None
+class VideoMetaData(BaseModel):
+    fps: float
+    total_frames: int
+    num_sampled: int
+    num_extracted: int
+    num_detected: int
 
 class VideoDetailResponse(BaseModel):
-    meta: VideoAnalysisMeta
+    meta: VideoMetaData
     frames: list[VideoFrameData]

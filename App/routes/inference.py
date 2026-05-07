@@ -6,6 +6,7 @@ from fastapi.exceptions import HTTPException
 from services import image_svc, session_svc, inference_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
+from schemas.video_schema import VideoDetailResponse
 
 
 router = APIRouter(prefix="/inference", tags=["inference"])
@@ -123,5 +124,13 @@ async def get_video_detail(
                            conn: Connection = Depends(context_get_conn),
                            session_user = Depends(session_svc.get_session_user_prt) # 로그인 유저만 가능
                            ):
-    video_detail = await video_svc.get_video_frame_results(conn, video_id)
-    return video_detail
+    video_data = await video_svc.get_video_result(conn, video_id)
+
+    if video_data.status == "WARNING":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="분석이 실패한 비디오는 상세 결과를 제공할 수 없습니다.")
+
+    meta = await video_svc.get_video_meta_result(conn, video_id)
+    frames = await video_svc.get_video_frame_results(conn, video_id)
+
+    return VideoDetailResponse(meta=meta, frames=frames)
