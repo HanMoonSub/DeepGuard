@@ -77,7 +77,7 @@ class VideoPredictor:
                     f"해당 비디오 내 {num_frames}개의 Frame에서 모두 추출에 실패하였습니다"
                 )
             
-            return frames, fps
+            return frames, fps, frame_cnt, len(frame_indices), len(frames)
         
         except PredictorError as e:
             raise e
@@ -122,7 +122,7 @@ class VideoPredictor:
         Returns an empty list [] if no faces are detected or an error occurs.
         """
         try:
-            frames_dict, fps = self._extract_frames(video_path)
+            frames_dict, fps, total_frames, num_sampled, num_extracted = self._extract_frames(video_path)
             frame_indices = list(frames_dict.keys())
             
             face_results, frames = self._get_face_bboxes(frames_dict)
@@ -155,7 +155,10 @@ class VideoPredictor:
             if not cropped_frames:
                 raise PredictorError(f"추출한 {len(frames)}개의 Frame에서 얼굴이 옆모습이거나 가려져 있어 탐지가 어렵습니다")
         
-            return cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times
+            num_detected = len(cropped_frames)
+
+            return (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
+                fps, total_frames, num_sampled, num_extracted, num_detected)
         
         except PredictorError as e:
             raise e
@@ -189,8 +192,9 @@ class VideoPredictor:
         
     def _get_predict(self, video_path: str, tta_hflip: float) -> np.ndarray:
         try:
-            cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times = self._preprocess_frames(video_path)
-    
+            (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
+            fps, total_frames, num_sampled, num_extracted, num_detected) = self._preprocess_frames(video_path)
+
             transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
             frames_list = [transforms(image=f)['image'] for f in cropped_frames]
             batch_frames = torch.stack(frames_list).to(self.device) # (num_frames,3,H,W)
@@ -199,7 +203,8 @@ class VideoPredictor:
                 outs = self.model(batch_frames) # (num_frames,1)
                 preds = torch.sigmoid(outs.view(-1)).cpu().numpy() # (num_frames,)
             
-            return preds, face_confs, face_ratios, face_brightnesses, frame_times
+            return (preds, face_confs, face_ratios, face_brightnesses, frame_times,
+                fps, total_frames, num_sampled, num_extracted, num_detected)
         
         except PredictorError as e:
             raise e
@@ -208,8 +213,10 @@ class VideoPredictor:
     
     def predict_video(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> np.ndarray:
         try:
-            preds, face_confs, face_ratios, face_brightnesses, frame_times = self._get_predict(video_path, tta_hflip)
-            
+            (preds, face_confs, face_ratios, face_brightnesses, frame_times,
+             fps, total_frames, num_sampled, num_extracted, num_detected) = self._get_predict(video_path, tta_hflip)
+
+
             agg_prob, agg_conf, agg_ratio, agg_brightness = self._frame_aggregate(
                 preds, face_confs, face_ratios, face_brightnesses, agg_mode
             )
@@ -231,7 +238,12 @@ class VideoPredictor:
                 "face_conf":       float(agg_conf),
                 "face_ratio":      float(agg_ratio),
                 "face_brightness": float(agg_brightness),
-                "frame_results":   frame_results, 
+                "frame_results":   frame_results,
+                "fps":             round(fps, 2),
+                "total_frames":    total_frames,
+                "num_sampled":     num_sampled,
+                "num_extracted":   num_extracted,
+                "num_detected":    num_detected,
             }
             
         except PredictorError as e:
