@@ -214,6 +214,11 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
                 face_ratio = :face_ratio, 
                 face_brightness = :face_brightness, 
                 result_msg = :result_msg
+                fps = :fps,
+                total_frames = :total_frames,
+                num_sampled = :num_sampled,
+                num_extracted = :num_extracted,
+                num_detected = :num_detected
             WHERE id = :video_id
         """
         
@@ -228,6 +233,11 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
             "face_ratio": analysis["face_ratio"],
             "face_brightness": analysis["face_brightness"],
             "result_msg": result_msg,
+            "fps": analysis.get("fps"),
+            "total_frames": analysis.get("total_frames"),
+            "num_sampled": analysis.get("num_sampled"),
+            "num_extracted": analysis.get("num_extracted"),
+            "num_detected": analysis.get("num_detected"),
             "video_id": video_id
         })
         await conn.commit()
