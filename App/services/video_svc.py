@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.video_schema import VideoData
 from schemas.video_schema import VideoData_indi
 from db.database import celery_db_conn
+from celery_app import celery_app
 
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
@@ -167,15 +168,23 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
 # [5] 비회원 데이터 5분 후 자동 삭제 태스크
-async def delete_video_delayed_db(video_id: int):
-    await asyncio.sleep(300)  # 300s (5m) 대기
+@celery_app.task(name="cleanup_anonymous_video")
+def cleanup_anonymous_video(video_id: int):
+    import time
+    time.sleep(300)
+    
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        async with celery_db_conn() as conn:
-            # video_svc의 통합 삭제 함수 호출
-            await delete_video_db(conn, video_id)
-            print(f"Non-user auto-cleanup finished: {video_id}")
+        async def _delete():
+            async with celery_db_conn() as conn:
+                await delete_video_db(conn, video_id)
+                print(f"[Cleanup] Non-user video {video_id} deleted from DB")
+        loop.run_until_complete(_delete())
     except Exception as e:
-        print(f"[Cleanup Error] Video ID {video_id}: {e}") 
+        print(f"[Cleanup Error] {e}")
+    finally:
+        loop.close() 
 
 # [6] 비디오 DB 레코드 및 물리 파일 완전 삭제
 async def delete_video_db(conn: Connection, video_id: int):

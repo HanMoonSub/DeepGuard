@@ -7,7 +7,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
-from db.database import context_get_conn, background_db_conn, celery_db_conn, engine
+from db.database import context_get_conn, celery_db_conn, engine
 from schemas.image_schema import ImageData_indi
 from schemas.video_schema import VideoData, VideoData_indi
 from celery_app import celery_app
@@ -122,7 +122,7 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
                 #서버 내 파일 삭제
                 await image_svc.delete_image(image_loc)
                 #비회원일 경우 5분 뒤 DB 자동 삭제
-                asyncio.create_task(image_svc.delete_image_delayed_db(image_id))
+                image_svc.cleanup_anonymous_image.apply_async(args=[image_id], countdown=300)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -263,7 +263,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                 #서버 내 파일 삭제
                 await video_svc.delete_video(video_loc)
                 #비회원일 경우 5분 뒤 DB 자동 삭제
-                asyncio.create_task(video_svc.delete_video_delayed_db(video_id))
+                video_svc.cleanup_anonymous_video.apply_async(args=[video_id], countdown=300)
                 
 
     loop = asyncio.new_event_loop()

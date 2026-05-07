@@ -43,20 +43,6 @@ async def context_get_conn():
     finally:
         if conn:
             await conn.close()
-
-@asynccontextmanager
-async def background_db_conn():
-    conn = None
-    try:
-        conn = await engine.connect()
-        yield conn
-    except SQLAlchemyError as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다")
-    finally:
-        if conn:
-            await conn.close()
             
 @asynccontextmanager
 async def celery_db_conn():

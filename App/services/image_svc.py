@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.image_schema import UserHistory
 from schemas.image_schema import UserHistory_indi
 from db.database import celery_db_conn
+from celery_app import celery_app
 
 
 load_dotenv()
@@ -174,14 +175,23 @@ async def get_user_history(conn: Connection, image_id: int):
 
 
 # [5] 비회원 데이터 5분 후 자동 삭제 태스크
-async def delete_image_delayed_db(image_id: int):
-    await asyncio.sleep(300)  # 300s 5m 대기
+@celery_app.task(name="cleanup_anonymous_image")
+def cleanup_anonymous_image(image_id: int):
+    import time
+    time.sleep(300)
+    
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        async with celery_db_conn() as conn:
-            await delete_image_db(conn, image_id)
-            print(f"Non-user auto-cleanup finished: {image_id}")
+        async def _delete():
+            async with celery_db_conn() as conn:
+                await delete_image_db(conn, image_id)
+                print(f"[Cleanup] Non-user image {image_id} deleted from DB")
+        loop.run_until_complete(_delete())
     except Exception as e:
-        print(f"[Cleanup Error] Video ID {image_id}: {e}")  
+        print(f"[Cleanup Error] {e}")
+    finally:
+        loop.close() 
 
 
 # [6] 이미지 DB 레코드 및 물리 파일 완전 삭제
@@ -287,3 +297,4 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
     except SQLAlchemyError as e:
         await conn.rollback()
         raise e
+    
