@@ -61,16 +61,6 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     if (selectedIds.length === 0) return;
     if (!window.confirm(`${selectedIds.length}개의 기록을 삭제하시겠습니까?`)) return;
 
-    /* -----------------------------------------------------------------
-       try {
-         await axios.post('http://localhost:8000/video/delete', { ids: selectedIds });
-         alert("서버에서 삭제되었습니다.");
-         fetchHistory();
-       } catch (error) {
-         alert("삭제 실패"); return;
-       }
-       ----------------------------------------------------------------- */
-
     const updatedHistory = history.filter(item => !selectedIds.includes(item.id));
     setHistory(updatedHistory);
     setSelectedIds([]);
@@ -209,13 +199,22 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <div style={{...innerBoxStyle, border: showOptions ? '2px solid #39FF14' : '2px dashed #333'}} onClick={() => { if(!previewUrl) setShowOptions(!showOptions); }} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); handleFileSelect(e.dataTransfer.files[0]); }}>
             {previewUrl ? <video src={previewUrl} style={{ maxWidth: '95%', maxHeight: '95%' }} controls /> : 
               <div style={{textAlign:'center', display: 'flex', flexDirection: 'column', alignItems: 'center'}}><div style={plusBtnStyle}>+</div><p style={{fontSize:'20px', fontWeight:'bold', marginBottom: '8px'}}>Video Upload</p><p style={{color:'#555', fontSize:'14px'}}>영상을 업로드하세요</p>
-                 {showOptions && <div style={{ marginTop: '25px', display: 'flex', gap: '12px' }}><button onClick={(e) => { e.stopPropagation(); document.getElementById('vInput').click(); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#39FF14', border: '1px solid #39FF14', borderRadius: '8px', cursor:'pointer', fontWeight:'bold' }}>내 PC 영상</button><button onClick={(e) => { e.stopPropagation(); alert("준비 중"); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#fff', border: '1px solid #444', borderRadius: '8px', cursor:'pointer', fontWeight:'bold' }}>Cloud Drive</button></div>}
+                  {showOptions && <div style={{ marginTop: '25px', display: 'flex', gap: '12px' }}><button onClick={(e) => { e.stopPropagation(); document.getElementById('vInput').click(); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#39FF14', border: '1px solid #39FF14', borderRadius: '8px', cursor:'pointer', fontWeight:'bold' }}>내 PC 영상</button><button onClick={(e) => { e.stopPropagation(); alert("준비 중"); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#fff', border: '1px solid #444', borderRadius: '8px', cursor:'pointer', fontWeight:'bold' }}>Cloud Drive</button></div>}
               </div>
             }
             <input id="vInput" type="file" accept="video/*" hidden onChange={(e) => handleFileSelect(e.target.files[0])} />
           </div>
-          <div style={{...innerBoxStyle, cursor: 'default'}}>
-            {isAnalyzing ? ( <div style={{textAlign:'center'}}><p>{statusMessage}</p></div> ) : result ? (
+          {/* 결과 박스: 추론 중일 때 테두리 색상 변경 및 이모티콘 애니메이션 추가 */}
+          <div style={{...innerBoxStyle, border: isAnalyzing ? '2px solid #39FF14' : '2px dashed #333', cursor: 'default'}}>
+            {isAnalyzing ? ( 
+              <div style={{textAlign:'center'}}>
+                <div style={{ fontSize: '40px', marginBottom: '15px', animation: 'pulse 1.5s infinite' }}>🔍</div>
+                <p style={{ color: '#39FF14', fontWeight: 'bold' }}>{statusMessage}</p>
+                <style>
+                  {`@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }`}
+                </style>
+              </div> 
+            ) : result ? (
               <div style={{textAlign:'center'}}>
                 <p style={{fontSize:'48px', fontWeight:'bold', color: result.label?.toLowerCase() === 'fake' ? '#FF4B4B' : '#39FF14'}}>{result.label?.toLowerCase() === 'fake' ? 'FAKE' : 'REAL'}</p>
                 <button onClick={() => navigate('/analysis-detail', { state: { ...result, prob: result.score, video_loc: result.video_loc } })} style={{ color: '#39FF14', background:'none', border:'none', textDecoration: 'underline', marginTop: '15px', cursor:'pointer' }}>상세 결과 보기</button>
