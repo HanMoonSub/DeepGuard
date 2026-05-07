@@ -42,12 +42,12 @@ async def get_video_history(
         "context": history
     }
 
-# 비디오 히스토리 삭제버튼 삭제
+# 비디오 히스토리 삭제
 @router.delete("/history/{video_id}", status_code=status.HTTP_200_OK, summary="버튼 삭제")
 async def delete_video_history(
     video_id: int,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user)
+    session_user = Depends(session_svc.get_session_user_opt)
 ):
     user_id = session_user['id']
     

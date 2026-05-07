@@ -119,10 +119,7 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
         
         finally:
             if not user_id:
-                #서버 내 파일 삭제
-                await image_svc.delete_image(image_loc)
-                #비회원일 경우 5분 뒤 DB 자동 삭제
-                image_svc.cleanup_anonymous_image.apply_async(args=[image_id], countdown=300)
+                image_svc.cleanup_anonymous_image.apply_async(args=[image_id, image_loc], countdown=300)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -260,10 +257,8 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
           
         finally:
             if not user_id:
-                #서버 내 파일 삭제
-                await video_svc.delete_video(video_loc)
-                #비회원일 경우 5분 뒤 DB 자동 삭제
-                video_svc.cleanup_anonymous_video.apply_async(args=[video_id], countdown=300)
+                video_svc.cleanup_anonymous_video.apply_async(args=[video_id, video_loc], countdown=60)
+
                 
 
     loop = asyncio.new_event_loop()

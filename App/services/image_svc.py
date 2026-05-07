@@ -139,8 +139,7 @@ async def get_user_history(conn: Connection, image_id: int):
         
         row = result.fetchone()
         if row is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                                detail="해당 히스토리를 찾을 수 없습니다.")
+            return None
         
         user_history = UserHistory_indi(
             image_id = row.id,
@@ -173,25 +172,22 @@ async def get_user_history(conn: Connection, image_id: int):
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
-
 # [5] 비회원 데이터 5분 후 자동 삭제 태스크
 @celery_app.task(name="cleanup_anonymous_image")
-def cleanup_anonymous_image(image_id: int):
-    import time
-    time.sleep(300)
-    
+def cleanup_anonymous_image(image_id: int, image_loc: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         async def _delete():
             async with celery_db_conn() as conn:
                 await delete_image_db(conn, image_id)
-                print(f"[Cleanup] Non-user image {image_id} deleted from DB")
+            await delete_image(image_loc)
+            print(f"[Cleanup] 비회원 이미지 삭제 완료 - image_id: {image_id}, image_loc: {image_loc}")
         loop.run_until_complete(_delete())
     except Exception as e:
-        print(f"[Cleanup Error] {e}")
+        print(f"[Cleanup Error] 비회원 이미지 삭제 실패 - image_id: {image_id}, error: {e}")
     finally:
-        loop.close() 
+        loop.close()
 
 
 # [6] 이미지 DB 레코드 및 물리 파일 완전 삭제

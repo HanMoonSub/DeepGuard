@@ -169,22 +169,20 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
     
 # [5] 비회원 데이터 5분 후 자동 삭제 태스크
 @celery_app.task(name="cleanup_anonymous_video")
-def cleanup_anonymous_video(video_id: int):
-    import time
-    time.sleep(300)
-    
+def cleanup_anonymous_video(video_id: int, video_loc: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         async def _delete():
             async with celery_db_conn() as conn:
                 await delete_video_db(conn, video_id)
-                print(f"[Cleanup] Non-user video {video_id} deleted from DB")
+            await delete_video(video_loc)
+            print(f"[Cleanup] 비회원 비디오 삭제 완료 - video_id: {video_id}, video_loc: {video_loc}")
         loop.run_until_complete(_delete())
     except Exception as e:
-        print(f"[Cleanup Error] {e}")
+        print(f"[Cleanup Error] 비회원 비디오 삭제 실패 - video_id: {video_id}, error: {e}")
     finally:
-        loop.close() 
+        loop.close()
 
 # [6] 비디오 DB 레코드 및 물리 파일 완전 삭제
 async def delete_video_db(conn: Connection, video_id: int):
