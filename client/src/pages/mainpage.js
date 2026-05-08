@@ -12,7 +12,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
   // 이미지 분석 페이지로 이동
   const handleBasicAnalysis = () => navigate('/analysis');
   
-  // 동영상 분석 페이지로 이동 (신규)
+  // 동영상 분석 페이지로 이동
   const handleVideoAnalysis = () => navigate('/video-analysis');
 
   const handleProAnalysis = () => {
