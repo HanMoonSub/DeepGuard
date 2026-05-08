@@ -1,6 +1,6 @@
 from pytorch_grad_cam import (
     GradCAM, GradCAMPlusPlus, GradCAMElementWise,
-    XGradCAM, HiResCAM, FullGrad, ShapleyCAM, FinerCAM,
+    XGradCAM, HiResCAM
 )
 from explainability.cam_explainer import CAMExplainer
 
@@ -44,29 +44,4 @@ class HiResCAMExplainer(CAMExplainer):
         return HiResCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
 
 
-class FullGradExplainer(CAMExplainer):
-    """
-    Computes the gradients of the biases from all over the network, and then sums them
-    """
-    def _build_cam(self):
-        return FullGrad(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
-
-
-class ShapleyCAMExplainer(CAMExplainer):
-    """
-    Weight the activations using the gradient and Hessian-vector product.
-    """
-    def _build_cam(self):
-        return ShapleyCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
-
-
-class FinerCAMExplainer(CAMExplainer):
-    """
-    Improves fine-grained classification by comparing similar classes, suppressing shared features and highlighting discriminative details.
-    """
-    def __init__(self, base_method=GradCAM, **kwargs):
-        self.base_method = base_method
-        super().__init__(**kwargs)
-
-    def _build_cam(self):
-        return FinerCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn, base_method=self.base_method)
+    

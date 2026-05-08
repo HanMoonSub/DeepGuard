@@ -44,7 +44,7 @@ class CAMExplainer(BaseExplainer, ABC):
             deprocess_image(tensor),  # (H,W,3), range(0~1), np.ndarray
             grayscale_cam, # (H,W), range(0~1), np.ndarray
             use_rgb=True, 
-            colormap = self.colormap
+            colormap = self.colormap,
             image_weight=self.image_weight)
         
         return heatmap # (H,W,3), range(0~255), np.uint8
@@ -53,5 +53,13 @@ class CAMExplainer(BaseExplainer, ABC):
         grayscale_cam, _ = self.display_heatmap(img_path)
         
         return 1 - grayscale_cam # (H,W), range(0~1), np.float32
-        
+    
+    def __repr__(self):
+        return (f"{self.__class__.__name__}("
+                f"model={self.model_name}, dataset={self.dataset}, "
+                f"margin_ratio={self.margin_ratio}, conf_thres={self.conf_thres}, "
+                f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, "
+                f"aug_smooth={self.aug_smooth}, eigen_smooth={self.eigen_smooth}, "
+                f"colormap={self.colormap}, image_weight={self.image_weight}, "
+                f"category={self.category},device={self.device})")
         

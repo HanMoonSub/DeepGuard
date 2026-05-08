@@ -31,6 +31,9 @@ class KPCACAMExplainer(CAMExplainer):
         return KPCA_CAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn,
                         kernel=self.kernel, gamma=self.gamma)
     
+    def __repr__(self):
+        return super().__repr__().rstrip(")") + f", kernel={self.kernel}, gamma={self.gamma})"
+
 class SegEigenCAMExplainer(CAMExplainer):
     """
     Like EigenCAM but with gradient weighting (absolute gradients ⊙ activations )

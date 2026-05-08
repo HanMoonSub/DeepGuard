@@ -26,8 +26,10 @@ class BaseExplainer:
         
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
         self.margin_ratio = margin_ratio
+        self.conf_thres = conf_thres
         self.category = category
         self.model_name = model_name
+        self.dataset = dataset
         self.branch_level = branch_level
         self.l_stage_idx = l_stage_idx
                 
@@ -109,5 +111,7 @@ class BaseExplainer:
             
     def __repr__(self):
         return (f"{self.__class__.__name__}("
-                f"model={self.model_name}, branch={self.branch}, "
-                f"device={self.device})")
+                f"model={self.model_name}, dataset={self.dataset}, "
+                f"margin_ratio={self.margin_ratio}, conf_thres={self.conf_thres}, "
+                f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, "
+                f"category={self.category},device={self.device})")

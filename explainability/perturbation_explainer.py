@@ -15,6 +15,8 @@ class AblationCAMExplainer(CAMExplainer):
     def _build_cam(self):
         return AblationCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn,
                            batch_size=self.batch_size, ratio_channels_to_ablate=self.ratio_channels_to_ablate)
+    def __repr__(self):
+        return super().__repr__().rstrip(")") + f", ratio={self.ratio_channels_to_ablate})"
 
 
 class ScoreCAMExplainer(CAMExplainer):
@@ -36,3 +38,6 @@ class FEMExplainer(CAMExplainer):
 
     def _build_cam(self):
         return FEM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn, k=self.k)
+    
+    def __repr__(self):
+        return super().__repr__().rstrip(")") + f", k={self.k})"
