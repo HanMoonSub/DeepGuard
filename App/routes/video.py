@@ -9,7 +9,7 @@ router = APIRouter(prefix="/video", tags=["video"])
 @router.get("/history", status_code=status.HTTP_200_OK)
 async def get_video_histories(
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_opt)
+    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
 ):
         
     user_id = session_user['id']
@@ -26,7 +26,7 @@ async def get_video_histories(
 async def get_video_history(
     video_id: int,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_opt)
+    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
 ):
     
     user_id = session_user['id']
@@ -47,7 +47,7 @@ async def get_video_history(
 async def delete_video_history(
     video_id: int,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_opt)
+    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
 ):
     user_id = session_user['id']
     

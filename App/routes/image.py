@@ -9,7 +9,7 @@ router = APIRouter(prefix="/image", tags=["image"])
 @router.get("/history", status_code=status.HTTP_200_OK)
 async def get_user_histories(
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_opt)
+    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
 ):
     
     user_id = session_user['id']
@@ -44,7 +44,7 @@ async def get_user_history(
 async def delete_image_history(
     image_id: int,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_opt)
+    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
 ):
     history = await image_svc.get_user_history(conn, image_id)
 
