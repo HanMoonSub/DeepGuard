@@ -8,8 +8,6 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import context_get_conn, celery_db_conn, engine
-from schemas.image_schema import ImageData_indi
-from schemas.video_schema import VideoData, VideoData_indi
 from celery_app import celery_app
 
 image_cache = {}
@@ -55,7 +53,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     predictor = image_cache[cache_key]
     
     try:
-        analysis = predictor.predict_img("." + image_loc, 0.0)
+        analysis = predictor.predict_img("." + image_loc)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
@@ -128,48 +126,6 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
     finally:
         loop.close()
     
-# 이미지 결과 값 가져오기
-async def get_image_result(conn: Connection, 
-                           image_id: int):
-    try:
-        query = text("SELECT * FROM image_result WHERE id = :image_id")
-        result = await conn.execute(query, {"image_id": image_id})
-        
-        if result.rowcount == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                                detail=f"요청하신 이미지 분석 결과(ID: {image_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
-        row = result.fetchone()
-        
-        image_data = ImageData_indi(
-            image_id = row.id,
-            user_id = row.user_id,
-            image_loc = row.image_loc,
-            status = row.status,
-            label = row.label,
-            score = row.score,
-            face_conf = row.face_conf,
-            face_ratio = row.face_ratio,
-            face_brightness = row.face_brightness,
-            version_type = row.version_type,
-            model_type = row.model_type,
-            domain_type = row.domain_type,
-            result_msg = row.result_msg,
-            created_at = row.created_at,
-        )
-        
-        result.close()
-        return image_data
-        
-    except SQLAlchemyError as e:
-        print(f"이미지 분석 결과값 가져오기 실패: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
-                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                            detail="알수없는 이유로 문제가 발생하였습니다.")
         
 # 사용자 비디오 딥페이크 여부 판단 로직
 def predict_video(video_loc: str, version_type: str, model_type: str, domain_type: str):
@@ -193,7 +149,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     predictor = video_cache[cache_key]
     
     try:
-        analysis = predictor.predict_video("." + video_loc, 10, 'conf', 0.0)
+        analysis = predictor.predict_video("." + video_loc)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
@@ -206,7 +162,8 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except PredictorError as e:
         print(e.message)
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1},
+            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+                         "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": e.message,
             "status": "warning",
         }
@@ -215,7 +172,8 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except Exception as e:
         print(str(e))
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1},
+            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+                         "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": f"비디오 분석 중 치명적인 오류가 발생했습니다.",
             "status": "failed"
         }
@@ -238,8 +196,25 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     result["message"], 
                     result["status"]
                     )
+            if result["status"] == "success":
+                if result["analysis"].get("fps") is not None:
+                    try:
+                        async with celery_db_conn() as conn:
+                            await video_svc.save_video_meta_result(conn, video_id, result["analysis"])
+                    except Exception as e:
+                        print(f"[Video Meta Save Error] video_id={video_id}: {e}")
+
+                if result["analysis"].get("frame_results"):
+                    try:
+                        async with celery_db_conn() as conn:
+                            await video_svc.save_video_frame_results(
+                                conn, video_id, result["analysis"]["frame_results"]
+                            )
+                    except Exception as e:
+                        print(f"[Video Frame Save Error] video_id={video_id}: {e}")
+                        
         except SQLAlchemyError as e:
-            print(f"[DB Error] Video Result Update Failed: {str(e)}")
+            print(f"Video DB Update Error: {e}")
             try:
                 async with celery_db_conn() as conn:  
                     await video_svc.update_video_result(
@@ -248,7 +223,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                         {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
                         "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
                         "failed"
-                    )
+                    )          
             except Exception as db_err:
                 print(f"Final Emergency DB Update Failed: {db_err}")
         
@@ -267,47 +242,4 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
         loop.run_until_complete(run_inference())
     finally:
         loop.close()
-    
-# 비디오 결과 값 가져오기
-async def get_video_result(conn: Connection, 
-                           video_id: int):
-    try:
-        query = text("SELECT * FROM video_result WHERE id = :video_id")
-        result = await conn.execute(query, {"video_id": video_id})
-        
-        if result.rowcount == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                                detail=f"요청하신 비디오 분석 결과(ID: {video_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
-        row = result.fetchone()
-        
-        video_data = VideoData_indi(
-            id = row.id,
-            user_id = row.user_id,
-            video_loc = row.video_loc,
-            status = row.status,
-            label = row.label,
-            score = row.score,
-            face_conf = row.face_conf,
-            face_ratio = row.face_ratio,
-            face_brightness = row.face_brightness,
-            version_type = row.version_type,
-            model_type = row.model_type,
-            domain_type = row.domain_type,
-            result_msg = row.result_msg,
-            created_at = row.created_at,
-        )
-        
-        result.close()
-        return video_data
-        
-    except SQLAlchemyError as e:
-        print(f"비디오 분석 결과값 가져오기 실패: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
-                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                            detail="알수없는 이유로 문제가 발생하였습니다.")
     

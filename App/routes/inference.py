@@ -6,12 +6,12 @@ from fastapi.exceptions import HTTPException
 from services import image_svc, session_svc, inference_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
+from schemas.video_schema import VideoDetailResponse
 
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
-# ---- 딥페이크 비동기 이미지 추론 API ------
-@router.post("/image", status_code=status.HTTP_202_ACCEPTED) # 해당 API 요청 시, 접수 완료(분석은 백그라운드에서 실행)
+@router.post("/image", status_code=status.HTTP_202_ACCEPTED, summary="딥페이크 비동기 이미지 추론 접수") 
 async def predict_image(
                         imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
                         version_type: str = Form(...), # deepguard1, deepguard2
@@ -43,14 +43,13 @@ async def predict_image(
         "status": "success",
     }
 
-# ---- 딥페이크 이미지 추론 결과값 불러오기 API ----
-@router.get("/image/{image_id}", status_code=status.HTTP_200_OK)
+@router.get("/image/{image_id}", status_code=status.HTTP_200_OK, summary="딥페이크 비동기 이미지 추론 결과값 가져오기")
 async def get_image_result(
                             image_id: int,
                             conn: Connection = Depends(context_get_conn),
                             session_user = Depends(session_svc.get_session_user_opt)
                             ):
-    image_data = await inference_svc.get_image_result(conn, image_id)
+    image_data = await image_svc.get_image_result(conn, image_id)
     
     if image_data.status == "FAILED":
         if session_user:
@@ -63,8 +62,7 @@ async def get_image_result(
         )
     return image_data
 
-# ---- 딥페이크 비동기 비디오 추론 API ------
-@router.post("/video", status_code=status.HTTP_202_ACCEPTED) # 해당 API 요청 시, 접수 완료(분석은 백그라운드에서 실행)
+@router.post("/video", status_code=status.HTTP_202_ACCEPTED, summary="딥페이크 비동기 비디오 추론 접수")
 async def predict_video(
                         videofile: UploadFile = File(...), # 사용자가 업로드한 비디오 객체
                         version_type: str = Form(...), # deepguard1, deepguard2
@@ -96,15 +94,14 @@ async def predict_video(
         "status": "success",
     }
 
-# ---- 딥페이크 비디오 추론 결과값 불러오기 API ----- 
-@router.get("/video/{video_id}", status_code=status.HTTP_200_OK)
+@router.get("/video/{video_id}", status_code=status.HTTP_200_OK, summary="딥페이크 비디오 비디오 추론 결과값 가져오기")
 async def get_video_result(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
                            session_user = Depends(session_svc.get_session_user_opt)
                            ):
     
-    video_data = await inference_svc.get_video_result(conn, video_id)  
+    video_data = await video_svc.get_video_result(conn, video_id)  
     
     if video_data.status == 'FAILED':
 
@@ -120,3 +117,13 @@ async def get_video_result(
     
     return video_data
 
+@router.get("/video/{video_id}/detail", status_code=status.HTTP_200_OK, summary="딥페이크 상세 분석 결과값 가져오기")
+async def get_video_detail(
+                           video_id: int,
+                           conn: Connection = Depends(context_get_conn),
+                           session_user = Depends(session_svc.get_session_user_prt) # 로그인 유저만 가능
+                           ):
+    meta = await video_svc.get_video_meta_result(conn, video_id)
+    frames = await video_svc.get_video_frame_results(conn, video_id)
+
+    return VideoDetailResponse(meta=meta, frames=frames)

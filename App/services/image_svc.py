@@ -17,7 +17,7 @@ from celery_app import celery_app
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
-# [1] 사용자 업로드 이미지 서버 내 저장 (회원/비회원 공통)
+# 사용자 업로드 이미지 서버 내 저장 (회원/비회원 공통)
 async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
     try:
         # 1. 사용자별 하위 디렉토리 결정
@@ -68,7 +68,7 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="이미지 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
 
-# [2] 사용자 업로드 이미지 서버 내 삭제
+# 사용자 업로드 이미지 서버 내 삭제
 async def delete_image(image_loc: str):
     try:
         
@@ -86,7 +86,7 @@ async def delete_image(image_loc: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="알수없는 이유로 문제가 발생하였습니다."
         )
-# [3] 사용자 전체 히스토리 조회 (image_result 테이블 반영)
+# 사용자 전체 히스토리 조회 (image_result 테이블 반영)
 async def get_user_histories(conn: Connection, user_id: int):
     try:
         # SQL에 맞춰 테이블명과 컬럼 변경
@@ -125,7 +125,7 @@ async def get_user_histories(conn: Connection, user_id: int):
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
-# [4] 사용자 개별 히스토리 조회
+# 사용자 개별 히스토리 조회
 async def get_user_history(conn: Connection, image_id: int):
     try:
         query = """
@@ -172,7 +172,7 @@ async def get_user_history(conn: Connection, image_id: int):
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
-# [5] 비회원 데이터 5분 후 자동 삭제 태스크
+# 비회원 데이터 5분 후 자동 삭제 태스크
 @celery_app.task(name="cleanup_anonymous_image")
 def cleanup_anonymous_image(image_id: int, image_loc: str):
     loop = asyncio.new_event_loop()
@@ -190,7 +190,7 @@ def cleanup_anonymous_image(image_id: int, image_loc: str):
         loop.close()
 
 
-# [6] 이미지 DB 레코드 및 물리 파일 완전 삭제
+# 이미지 DB 레코드 및 물리 파일 완전 삭제
 async def delete_image_db(conn: Connection, image_id: int):
     try:
         delete_query = text("DELETE FROM image_result WHERE id = :image_id")
@@ -215,7 +215,7 @@ async def delete_image_db(conn: Connection, image_id: int):
         await conn.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
-# [7] 빈 이미지 DB 생성 이후, image_id 반환(접수 완료)
+# 빈 이미지 DB 생성 이후, image_id 반환(접수 완료)
 async def register_image_result(conn: Connection, user_id: int | None, image_loc: str, 
                                 version_type: str, model_type: str, domain_type: str):
     try:
@@ -249,7 +249,7 @@ async def register_image_result(conn: Connection, user_id: int | None, image_loc
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="요청데이터가 제대로 전달되지 않았습니다")
         
-# [8] 이미지 메타데이터 + 추론 결과값 DB에 저장
+# 이미지 메타데이터 + 추론 결과값 DB에 저장
 async def update_image_result(conn: Connection, image_id: int, analysis: dict,
                               result_msg: str, status: str): 
     
@@ -294,3 +294,45 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
         await conn.rollback()
         raise e
     
+# 이미지 결과 값 가져오기
+async def get_image_result(conn: Connection, 
+                           image_id: int):
+    try:
+        query = text("SELECT * FROM image_result WHERE id = :image_id")
+        result = await conn.execute(query, {"image_id": image_id})
+        
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail=f"요청하신 이미지 분석 결과(ID: {image_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
+        row = result.fetchone()
+        
+        image_data = ImageData_indi(
+            image_id = row.id,
+            user_id = row.user_id,
+            image_loc = row.image_loc,
+            status = row.status,
+            label = row.label,
+            score = row.score,
+            face_conf = row.face_conf,
+            face_ratio = row.face_ratio,
+            face_brightness = row.face_brightness,
+            version_type = row.version_type,
+            model_type = row.model_type,
+            domain_type = row.domain_type,
+            result_msg = row.result_msg,
+            created_at = row.created_at,
+        )
+        
+        result.close()
+        return image_data
+        
+    except SQLAlchemyError as e:
+        print(f"이미지 분석 결과값 가져오기 실패: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail="알수없는 이유로 문제가 발생하였습니다.")
