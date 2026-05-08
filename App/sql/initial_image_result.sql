@@ -2,8 +2,9 @@ drop table if exists image_result;
 
 create table deepfake_db.image_result (
     id integer auto_increment primary key,
-    user_id integer not null,
+    user_id integer null, -- null 허용
     image_loc varchar(300) not null unique,
+    status varchar(20) not null default "PENDING", -- status 추가
     label varchar(10) not null,
     score float not null,
     face_conf float not null,
