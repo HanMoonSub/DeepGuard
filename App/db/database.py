@@ -45,7 +45,7 @@ async def context_get_conn():
             await conn.close()
             
 @asynccontextmanager
-async def background_db_conn():
+async def celery_db_conn():
     conn = await celery_engine.connect()  # celery_engine으로 교체
     try:
         yield conn

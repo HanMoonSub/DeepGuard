@@ -41,3 +41,26 @@ async def get_video_history(
         "status": "success",
         "context": history
     }
+
+# 비디오 히스토리 삭제
+@router.delete("/history/{video_id}", status_code=status.HTTP_200_OK, summary="버튼 삭제")
+async def delete_video_history(
+    video_id: int,
+    conn: Connection = Depends(context_get_conn),
+    session_user = Depends(session_svc.get_session_user_opt)
+):
+    user_id = session_user['id']
+    
+    history = await video_svc.get_user_history(conn, user_id, video_id)
+    
+    if not history:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 비디오 기록을 찾을 수 없습니다.")
+    
+    await video_svc.delete_video_db(conn, video_id)
+    
+    await video_svc.delete_video(history.video_loc)
+    
+    return {
+        "message": "비디오 내역이 성공적으로 삭제되었습니다",
+        "status": "success"
+    }

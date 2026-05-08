@@ -29,9 +29,33 @@ async def get_user_history(
 ):
     
     history = await image_svc.get_user_history(conn, image_id)
+
+    if not history:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 이미지 기록을 찾을 수 없습니다.")
         
     return {
         "message": "개별 내역을 성공적으로 불러왔습니다",
         "status": "success",
         "context": history
+    }
+
+# 이미지 히스토리 삭제
+@router.delete("/history/{image_id}", status_code=status.HTTP_200_OK, summary="버튼 삭제")
+async def delete_image_history(
+    image_id: int,
+    conn: Connection = Depends(context_get_conn),
+    session_user = Depends(session_svc.get_session_user_opt)
+):
+    history = await image_svc.get_user_history(conn, image_id)
+
+    if not history:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 이미지 기록을 찾을 수 없습니다.")
+
+    await image_svc.delete_image_db(conn, image_id)
+    
+    await image_svc.delete_image(history.image_loc)
+    
+    return {
+        "message": "이미지 내역이 성공적으로 삭제되었습니다",
+        "status": "success"
     }

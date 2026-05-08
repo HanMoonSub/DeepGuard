@@ -7,7 +7,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
-from db.database import context_get_conn, background_db_conn, engine
+from db.database import context_get_conn, celery_db_conn, engine
 from celery_app import celery_app
 
 image_cache = {}
@@ -89,7 +89,7 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
             # 이미지 추론, DeepFake 결과값 반환
             result = predict_image(image_loc, version_type, model_type, domain_type)
         
-            async with background_db_conn() as conn:    
+            async with celery_db_conn() as conn:    
                 # 로그인 상관없이 이미지 추론 결과값 DB에 저장하기
                 await image_svc.update_image_result(
                     conn, 
@@ -101,7 +101,7 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
         except SQLAlchemyError as e:
             print(f"[DB Error] Image Result Update Failed: {str(e)}")
             try:
-                async with background_db_conn() as conn:  
+                async with celery_db_conn() as conn:  
                     await image_svc.update_image_result(
                         conn, 
                         image_id, 
@@ -117,12 +117,8 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
         
         finally:
             if not user_id:
-                await image_svc.delete_image(image_loc)
+                image_svc.cleanup_anonymous_image.apply_async(args=[image_id, image_loc], countdown=300)
 
-            # 비로그인 추론 결과값 반환만 하고 서버 내 이미지 파일 삭제
-            # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
-            # if not user_id:
-            #   await image_svc.delete_image_db(image_loc)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -191,7 +187,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
             # 비디오 추론, DeepFake 결과값 반환
             result = predict_video(video_loc, version_type, model_type, domain_type)
         
-            async with background_db_conn() as conn:    
+            async with celery_db_conn() as conn:    
                 # 로그인 상관없이 추론 결과값 DB에 저장하기
                 await video_svc.update_video_result(
                     conn, 
@@ -203,14 +199,14 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
             if result["status"] == "success":
                 if result["analysis"].get("fps") is not None:
                     try:
-                        async with background_db_conn() as conn:
+                        async with celery_db_conn() as conn:
                             await video_svc.save_video_meta_result(conn, video_id, result["analysis"])
                     except Exception as e:
                         print(f"[Video Meta Save Error] video_id={video_id}: {e}")
 
                 if result["analysis"].get("frame_results"):
                     try:
-                        async with background_db_conn() as conn:
+                        async with celery_db_conn() as conn:
                             await video_svc.save_video_frame_results(
                                 conn, video_id, result["analysis"]["frame_results"]
                             )
@@ -220,7 +216,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
         except SQLAlchemyError as e:
             print(f"Video DB Update Error: {e}")
             try:
-                async with background_db_conn() as conn:  
+                async with celery_db_conn() as conn:  
                     await video_svc.update_video_result(
                         conn, 
                         video_id, 
@@ -236,12 +232,10 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
           
         finally:
             if not user_id:
-                await video_svc.delete_video(video_loc)
+                video_svc.cleanup_anonymous_video.apply_async(args=[video_id, video_loc], countdown=60)
 
-            # 비로그인 추론 결과값 반환만 하고 서버 내 비디오 파일 삭제
-            # 다만, 바로 삭제하지 말고 특정 시간 이후에 삭제해야 한다.
-            # if not user_id:
-            #   await video_svc.delete_video_db(video_loc)
+                
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:

@@ -1,4 +1,5 @@
 import os
+import asyncio
 import time
 import aiofiles as aio
 from dotenv import load_dotenv
@@ -9,10 +10,12 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from schemas.video_schema import (
     VideoData, VideoDetailData, VideoFrameData, VideoMetaData )
+from db.database import celery_db_conn
+from celery_app import celery_app
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
-# [1] 사용자 업로드 동영상 서버 내 저장 (회원/비회원 공통)
+# 사용자 업로드 동영상 서버 내 저장 (회원/비회원 공통)
 async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
     try:
         # 1. 사용자별 하위 디렉토리 결정
@@ -63,7 +66,7 @@ async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="비디오 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
 
-# [2] 사용자 업로드 비디오 서버 내 삭제
+# 사용자 업로드 비디오 서버 내 삭제
 async def delete_video(video_loc: str):
     try:
         file_path = "." + video_loc 
@@ -81,7 +84,7 @@ async def delete_video(video_loc: str):
             detail="비디오 파일 삭제 중 오류가 발생했습니다."
         )
 
-# [3] 사용자 전체 비디오 히스토리 조회
+# 사용자 전체 비디오 히스토리 조회
 async def get_user_histories(conn: Connection, user_id: int):
     try:
         query = """
@@ -117,9 +120,9 @@ async def get_user_histories(conn: Connection, user_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
-    
+ 
 
-# [4] 사용자 개별 비디오 히스토리 조회
+# 사용자 개별 비디오 히스토리 조회
 async def get_user_history(conn: Connection, user_id: int, video_id: int):
     try:
         stmt = text("""
@@ -160,8 +163,51 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+    
+# 비회원 데이터 5분 후 자동 삭제 태스크
+@celery_app.task(name="cleanup_anonymous_video")
+def cleanup_anonymous_video(video_id: int, video_loc: str):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        async def _delete():
+            async with celery_db_conn() as conn:
+                await delete_video_db(conn, video_id)
+            await delete_video(video_loc)
+            print(f"[Cleanup] 비회원 비디오 삭제 완료 - video_id: {video_id}, video_loc: {video_loc}")
+        loop.run_until_complete(_delete())
+    except Exception as e:
+        print(f"[Cleanup Error] 비회원 비디오 삭제 실패 - video_id: {video_id}, error: {e}")
+    finally:
+        loop.close()
 
-# [5] 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
+# 비디오 DB 레코드 및 물리 파일 완전 삭제
+async def delete_video_db(conn: Connection, video_id: int):
+    try:
+        delete_query = text("DELETE FROM video_result WHERE id = :video_id")
+        result = await conn.execute(delete_query.bindparams(video_id=video_id))
+
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+            
+        await conn.commit()
+
+    
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+# 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
 async def register_video_result(conn: Connection, user_id: int | None, video_loc: str,
                                 version_type: str, model_type: str, domain_type: str):
     try:
@@ -195,7 +241,7 @@ async def register_video_result(conn: Connection, user_id: int | None, video_loc
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="요청데이터가 제대로 전달되지 않았습니다")
         
-# [6] 비디오 메타데이터 + 추론 결과값 DB에 저장
+# 비디오 메타데이터 + 추론 결과값 DB에 저장
 async def update_video_result(conn: Connection, video_id: int, analysis: dict,
                               result_msg: str, status: str):
     

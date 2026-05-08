@@ -54,7 +54,8 @@ async def get_image_result(
     if image_data.status == "FAILED":
         if session_user:
             await image_svc.delete_image(image_data.image_loc)
-            # await image_svc.delet_image_db # db에서도 삭제
+            await image_svc.delete_image_db(image_data.image_id)
+
         raise HTTPException(
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=image_data.result_msg
@@ -103,9 +104,12 @@ async def get_video_result(
     video_data = await video_svc.get_video_result(conn, video_id)  
     
     if video_data.status == 'FAILED':
+
         if session_user:
-            await video_svc.delete_video(video_data.video_loc) # 서버 내 저장 파일 삭제
-            # await video_svc.detle_video_db # db에서도 삭제 
+            await video_svc.delete_video(video_data.video_loc)
+            await video_svc.delete_video_db(video_data.video_loc)
+
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=video_data.result_msg  
