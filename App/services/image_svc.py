@@ -8,8 +8,7 @@ from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
-from schemas.image_schema import UserHistory
-from schemas.image_schema import UserHistory_indi
+from schemas.image_schema import UserHistory, UserHistory_indi, ImageData_indi
 from db.database import celery_db_conn
 from celery_app import celery_app
 

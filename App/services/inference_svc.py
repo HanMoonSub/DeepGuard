@@ -117,7 +117,7 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
         
         finally:
             if not user_id:
-                image_svc.cleanup_anonymous_image.apply_async(args=[image_id, image_loc], countdown=300)
+                image_svc.cleanup_anonymous_image.apply_async(args=[image_id, image_loc], countdown=60)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

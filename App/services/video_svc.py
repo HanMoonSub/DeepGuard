@@ -387,7 +387,7 @@ async def get_video_meta_result(conn: Connection, video_id: int):
 
         if row is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"비디오 ID: {video_id}의 메타 정보를 찾을 수 없습니다.")
+                                detail=f"요청하신 비디오 메타 정보(ID: {video_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
 
         return VideoMetaData(
             fps=row.fps,
