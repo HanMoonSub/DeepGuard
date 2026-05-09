@@ -58,7 +58,7 @@ class CAMExplainer(BaseExplainer, ABC):
         return (f"{self.__class__.__name__}("
                 f"model={self.model_name}, dataset={self.dataset}, "
                 f"margin_ratio={self.margin_ratio}, conf_thres={self.conf_thres}, "
-                f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, "
+                f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, block_idx={self.block_idx},"
                 f"aug_smooth={self.aug_smooth}, eigen_smooth={self.eigen_smooth}, "
                 f"colormap={self.colormap}, image_weight={self.image_weight}, "
                 f"category={self.category},device={self.device})")

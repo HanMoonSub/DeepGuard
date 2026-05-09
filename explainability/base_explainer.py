@@ -20,7 +20,8 @@ class BaseExplainer:
         conf_thres: float = 0.5,
         category: int = 1, # 0: real | 1: fake
         branch_level: str = "both", # low | high | both
-        l_stage_idx: int = -1 # gcvit low branch stage index (0~3)
+        l_stage_idx: int = -1, # gcvit low branch stage index (0~3)
+        block_idx: int = -1 # vit, gcvit block index 
     ):  
         self._validate_inputs(model_name, dataset, branch_level)
         
@@ -32,6 +33,7 @@ class BaseExplainer:
         self.dataset = dataset
         self.branch_level = branch_level
         self.l_stage_idx = l_stage_idx
+        self.block_idx = block_idx
                 
         # Parse Model Metadata
         self.model_variant = model_name.split("_")[-1] # b0, b5
@@ -60,27 +62,45 @@ class BaseExplainer:
     def _get_reshape_fn(self):
         return reshape_transform_vit if self.transformer_type == "vit" else reshape_transform_gcvit    
     
-    def _resolve_target_layers(self) -> list[torch.nn.Module]:
+    def _resolve_target_layers(self) -> list:
         layers = []
 
         if self.transformer_type == "gcvit":
-            n_stages = len(self.model.l_gcvit.stages)
-            idx = self.l_stage_idx if self.l_stage_idx >= 0 else n_stages + self.l_stage_idx
+            n_stages  = len(self.model.l_gcvit.stages)
+            stage_idx = self.l_stage_idx if self.l_stage_idx >= 0 else n_stages + self.l_stage_idx
 
-            if not (0 <= idx < n_stages):
-                raise IndexError(f"l_stage_idx {self.l_stage_idx} out of range (n={n_stages})")
+            if not (0 <= stage_idx < n_stages):
+                raise ValueError(f"l_stage_idx={self.l_stage_idx} 범위 초과 (stage 수: {n_stages})")
+
             if self.branch_level in ("low", "both"):
-                layers.append(self.model.l_gcvit.stages[idx].blocks[-1].norm2)
+                n_blocks = len(self.model.l_gcvit.stages[stage_idx].blocks)
+                blk      = self._resolve_block_idx(self.block_idx, n_blocks, f"l_gcvit stage[{stage_idx}]")
+                layers.append(self.model.l_gcvit.stages[stage_idx].blocks[blk].norm2)
+
             if self.branch_level in ("high", "both"):
-                layers.append(self.model.h_gcvit.stages[0].blocks[-1].norm2)
+                n_blocks = len(self.model.h_gcvit.stages[0].blocks)
+                blk      = self._resolve_block_idx(self.block_idx, n_blocks, "h_gcvit stage[0]")
+                layers.append(self.model.h_gcvit.stages[0].blocks[blk].norm2)
 
         else:  # vit
             if self.branch_level in ("low", "both"):
-                layers.append(self.model.l_vit.blocks[-1].norm1)
+                n_blocks = len(self.model.l_vit.blocks)
+                blk      = self._resolve_block_idx(self.block_idx, n_blocks, "l_vit")
+                layers.append(self.model.l_vit.blocks[blk].norm1)
+
             if self.branch_level in ("high", "both"):
-                layers.append(self.model.h_vit.blocks[-1].norm1)
+                n_blocks = len(self.model.h_vit.blocks)
+                blk      = self._resolve_block_idx(self.block_idx, n_blocks, "h_vit")
+                layers.append(self.model.h_vit.blocks[blk].norm1)
 
         return layers
+
+    @staticmethod
+    def _resolve_block_idx(block_idx: int, n_blocks: int, name: str) -> int:
+        idx = block_idx if block_idx >= 0 else n_blocks + block_idx
+        if not (0 <= idx < n_blocks):
+            raise ValueError(f"block_idx={block_idx} 범위 초과 ({name} block 수: {n_blocks})")
+        return idx
     
     def _get_face_bbox(self, img: np.ndarray) -> List[float]:
         result = self.face_detector.detect_batch([img], [1.0])
@@ -113,5 +133,5 @@ class BaseExplainer:
         return (f"{self.__class__.__name__}("
                 f"model={self.model_name}, dataset={self.dataset}, "
                 f"margin_ratio={self.margin_ratio}, conf_thres={self.conf_thres}, "
-                f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, "
+                f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, block_idx={self.block_idx},"
                 f"category={self.category},device={self.device})")
