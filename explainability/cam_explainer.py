@@ -42,9 +42,10 @@ class CAMExplainer(BaseExplainer, ABC):
         
         return grayscale_cam[0], tensor, face 
         
-    def display_heatmap(self, img_path: str, colormap: int = cv2.COLORMAP_JET, image_weight: float = 0.5,):
+    def display_heatmap_on_image(self, img_path: str, 
+                                 colormap: int = cv2.COLORMAP_JET, 
+                                 image_weight: float = 0.5,):
         grayscale_cam, tensor, face = self._build_grayscale_cam(img_path)     
-        
         cam_recovered = remove_padding_and_resize(grayscale_cam, face.shape, tensor.shape)   
         
         heatmap = show_cam_on_image(
@@ -55,6 +56,20 @@ class CAMExplainer(BaseExplainer, ABC):
             image_weight= image_weight)
         
         return heatmap # (H,W,3), range(0~255), np.uint8
+    
+    def display_contour_on_image(self, img_path: str,
+                                 threshold: float = 0.5,
+                                 thickness: int = 2,
+                                 ):
+        grayscale_cam, tensor, face = self._build_grayscale_cam(img_path)
+        cam_recovered = remove_padding_and_resize(grayscale_cam, face.shape, tensor.shape)
+        
+        mask = (cam_recovered > threshold).astype(np.uint8) * 255 
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        annotated_img = cv2.drawContours(face.copy(), contours, -1, (255, 0, 0), thickness)
+        
+        return annotated_img
+        
     
     def __repr__(self):
         return (f"{self.__class__.__name__}("
