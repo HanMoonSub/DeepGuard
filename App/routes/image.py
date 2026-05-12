@@ -51,8 +51,9 @@ async def delete_image_history(
     if not history:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 이미지 기록을 찾을 수 없습니다.")
 
+    # DB 레코드 삭제 
     await image_svc.delete_image_db(conn, image_id)
-    
+    # 실제 이미지 삭제
     await image_svc.delete_image(history.image_loc)
     
     return {

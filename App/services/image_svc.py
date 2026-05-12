@@ -96,8 +96,7 @@ async def get_user_histories(conn: Connection, user_id: int):
             ORDER BY created_at DESC;
         """)
         stmt = text(query)
-        bind_stmt = stmt.bindparams(user_id = user_id)
-        result = await conn.execute(bind_stmt)
+        result = await conn.execute(stmt, {"user_id": user_id})
 
         user_histories = [UserHistory(
             image_id = row.id,
@@ -133,8 +132,7 @@ async def get_user_history(conn: Connection, image_id: int):
             WHERE id = :image_id;
         """
         stmt = text(query)
-        bind_stmt = stmt.bindparams(image_id=image_id)
-        result = await conn.execute(bind_stmt)
+        result = await conn.execute(stmt, {"image_id": image_id})
         
         row = result.fetchone()
         if row is None:
@@ -193,7 +191,7 @@ def cleanup_anonymous_image(image_id: int, image_loc: str):
 async def delete_image_db(conn: Connection, image_id: int):
     try:
         delete_query = text("DELETE FROM image_result WHERE id = :image_id")
-        result = await conn.execute(delete_query.bindparams(image_id=image_id))
+        result = await conn.execute(delete_query, {"image_id": image_id})
 
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 이미지 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")

@@ -95,8 +95,7 @@ async def get_user_histories(conn: Connection, user_id: int):
             ORDER BY created_at DESC;
         """
         stmt = text(query)
-        bind_stmt = stmt.bindparams(user_id=user_id)
-        result = await conn.execute(bind_stmt)
+        result = await conn.execute(stmt, {"user_id": user_id})
 
         video_histories = [VideoData(
             id = row.id,
@@ -185,7 +184,7 @@ def cleanup_anonymous_video(video_id: int, video_loc: str):
 async def delete_video_db(conn: Connection, video_id: int):
     try:
         delete_query = text("DELETE FROM video_result WHERE id = :video_id")
-        result = await conn.execute(delete_query.bindparams(video_id=video_id))
+        result = await conn.execute(delete_query, {"video_id": video_id})
 
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")

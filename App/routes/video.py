@@ -56,8 +56,9 @@ async def delete_video_history(
     if not history:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 비디오 기록을 찾을 수 없습니다.")
     
+    # DB삭제
     await video_svc.delete_video_db(conn, video_id)
-    
+    #실제 비디오 삭제
     await video_svc.delete_video(history.video_loc)
     
     return {
