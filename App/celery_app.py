@@ -1,18 +1,10 @@
 import os
-import sys
-from pathlib import Path
 from celery import Celery
 from dotenv import load_dotenv
 
-current_file = Path(__file__).resolve()
-project_root = current_file.parent.parent
-
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
+# ------ .env 파일 가져오기 ------
 load_dotenv()
 
-# 기본값 설정
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = os.getenv("REDIS_PORT", 6379)
 

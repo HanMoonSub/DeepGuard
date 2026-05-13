@@ -347,7 +347,7 @@ async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict
     
 # 비디오 상세 결과 값 저장하기 
 # 비디오 프레임 별 딥페이크 점수, 얼굴 신뢰도, 얼굴 비율, 얼굴 조도 반환
-async def save_video_frame_results(conn: Connection, video_id: int, frame_results: list):
+async def save_video_frame_result(conn: Connection, video_id: int, frame_results: list):
     try:
         query = """
             INSERT INTO video_frame_result

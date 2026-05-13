@@ -207,7 +207,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                 if result["analysis"].get("frame_results"):
                     try:
                         async with celery_db_conn() as conn:
-                            await video_svc.save_video_frame_results(
+                            await video_svc.save_video_frame_result(
                                 conn, video_id, result["analysis"]["frame_results"]
                             )
                     except Exception as e:

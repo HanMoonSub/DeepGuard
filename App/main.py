@@ -1,20 +1,5 @@
 import os
-import sys
-import warnings
-import logging
-from pathlib import Path
 from dotenv import load_dotenv
-
-# ------ 상위 폴더 경로 설정 --------
-REQUIRED_PACKAGES = ["deepguard", "inference", "explainability", "preprocess"]
-
-current_file = Path(__file__).resolve()
-project_root = current_file.parent.parent 
-
-for pkg in REQUIRED_PACKAGES:
-    pkg_path = str(project_root / pkg)
-    if pkg_path not in sys.path:
-        sys.path.insert(0, pkg_path)
 
 # ------ .env 파일 가져오기 ------
 load_dotenv()
