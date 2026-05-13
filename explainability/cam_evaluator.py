@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from typing import List, Dict, Literal
 from explainability.utils.model_targets import BinaryClassifierOutputSigmoidTarget
-from explainability.cam_explainer import CAMExplainer
+from explainability.explainer.cam_explainer import CAMExplainer
 from explainability.metrics.road import (
     ROADLeastRelevantFirstAverage, ROADMostRelevantFirstAverage,
     ROADCombined

@@ -1,5 +1,5 @@
 from pytorch_grad_cam import EigenCAM, EigenGradCAM, KPCA_CAM
-from explainability.cam_explainer import CAMExplainer
+from explainability.explainer.cam_explainer import CAMExplainer
 
 class EigenCAMExplainer(CAMExplainer):
     """

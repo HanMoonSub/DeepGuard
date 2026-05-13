@@ -2,7 +2,7 @@ from pytorch_grad_cam import (
     GradCAM, GradCAMPlusPlus, GradCAMElementWise,
     XGradCAM, HiResCAM
 )
-from explainability.cam_explainer import CAMExplainer
+from explainability.explainer.cam_explainer import CAMExplainer
 
 
 class GradCAMExplainer(CAMExplainer):

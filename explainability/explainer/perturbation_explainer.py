@@ -1,5 +1,5 @@
 from pytorch_grad_cam import ScoreCAM, FEM
-from explainability.cam_explainer import CAMExplainer
+from explainability.explainer.cam_explainer import CAMExplainer
 class ScoreCAMExplainer(CAMExplainer):
     """
     Perbutate the image by the scaled activation

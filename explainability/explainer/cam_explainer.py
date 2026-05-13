@@ -4,7 +4,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from explainability.utils.model_targets import BinaryClassifierOutputTarget
 from explainability.utils.image import show_cam_on_image, deprocess_image, remove_padding_and_resize
-from .base_explainer import BaseExplainer
+from explainability.explainer.base_explainer import BaseExplainer
 
 
 def _draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 1.0):

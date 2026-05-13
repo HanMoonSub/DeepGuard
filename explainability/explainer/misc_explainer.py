@@ -1,5 +1,5 @@
 from pytorch_grad_cam import LayerCAM, RandomCAM
-from explainability.cam_explainer import CAMExplainer
+from explainability.explainer.cam_explainer import CAMExplainer
 
 
 class LayerCAMExplainer(CAMExplainer):
