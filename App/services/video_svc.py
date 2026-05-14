@@ -324,6 +324,8 @@ async def get_video_result(conn: Connection,
                             detail="알수없는 이유로 문제가 발생하였습니다.")
 
 # 비디오 메타 데이터 정보 저장하기
+# 비디오 1개에 대한 프레임 요약 통계를 video_meta_result 테이블에 삽입
+# 호출 위치: services/inference_svc.py - process_video_task() → run_inference()
 async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict):
     try:
         query = """
@@ -346,6 +348,8 @@ async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict
     
 # 비디오 상세 결과 값 저장하기 
 # 비디오 프레임 별 딥페이크 점수, 얼굴 신뢰도, 얼굴 비율, 얼굴 조도 반환
+# 비디오 1개에 속한 여러 프레임의 분석 결과를 한 번에 INSERT.
+# 호출 위치: services/inference_svc.py - process_video_task() → run_inference()
 async def save_video_frame_results(conn: Connection, video_id: int, frame_results: list):
     try:
         query = """
@@ -374,6 +378,8 @@ async def save_video_frame_results(conn: Connection, video_id: int, frame_result
         raise e
         
 # 비디오 메타 데이터 정보 가져오기
+# 호출 위치: routers/inference.py - get_video_detail()
+# 초당프레임수, 영상 전체 프레임 수, 샘플링한 프레임 수, 얼굴 추출에 성공한 프레임 수, score산출 성공 프레임 수
 async def get_video_meta_result(conn: Connection, video_id: int):         
     try:
         query = text("""
@@ -405,7 +411,9 @@ async def get_video_meta_result(conn: Connection, video_id: int):
         print(e)
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
  
-# 비디오 상세 결과 값 가져오기
+# 비디오 프레임별 상세 결과 조회
+# 호출 위치: routers/inference.py - get_video_detail()
+# video_id에 속한 모든 프레임 결과를 frame_index 반환 하여, 프레임별 점수 그래프, 의심 구간 표시 등 시각화에 활용.
 async def get_video_frame_results(conn: Connection, video_id: int):
     try:
         query = text("""
