@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status
+from fastapi.exceptions import HTTPException
+from fastapi.responses import JSONResponse
 from services import session_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn 
@@ -43,7 +45,8 @@ async def get_video_history(
     }
 
 # 비디오 히스토리 삭제
-@router.delete("/history/{video_id}", status_code=status.HTTP_200_OK, summary="비디오 버튼 히스토리 삭제")
+@router.delete("/history/{video_id}", status_code=status.HTTP_200_OK,
+                response_class=JSONResponse, summary="비디오 버튼 히스토리 삭제")
 async def delete_video_history(
     video_id: int,
     conn: Connection = Depends(context_get_conn),
@@ -56,9 +59,11 @@ async def delete_video_history(
     if not history:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 비디오 기록을 찾을 수 없습니다.")
     
-    # DB삭제
+    if history.status == "SUCCESS":
+        await video_svc.delete_video_meta_result(conn, video_id)
+        await video_svc.delete_video_frame_result(conn, video_id)
+
     await video_svc.delete_video_db(conn, video_id)
-    #실제 비디오 삭제
     await video_svc.delete_video(history.video_loc)
     
     return {

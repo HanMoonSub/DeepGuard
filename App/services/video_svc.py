@@ -163,20 +163,42 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
-# 비회원 데이터 5분 후 자동 삭제 태스크
+# 비회원 데이터 1분 후 자동 삭제 태스크
 @celery_app.task(name="cleanup_anonymous_video")
-def cleanup_anonymous_video(video_id: int, video_loc: str):
+def cleanup_anonymous_video(video_id: int, video_loc: str, is_success: bool):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         async def _delete():
+            success = True
             async with celery_db_conn() as conn:
-                await delete_video_db(conn, video_id)
-            await delete_video(video_loc)
-            print(f"[Cleanup] 비회원 비디오 삭제 완료 - video_id: {video_id}, video_loc: {video_loc}")
+                if is_success:
+                    try:
+                        await delete_video_meta_result(conn, video_id)
+                    except Exception as e :
+                        print(f"[Cleanup] frame 삭제 실패 - video_id: {video_id}, error: {e}")
+                        success=False
+
+                    try:  
+                        await delete_video_frame_result(conn, video_id)   
+                    except Exception as e :
+                        print (f"[Cleanup] meta 삭제 실패 - video_id: {video_id}, error: {e}")
+                        success=False
+                try:
+                    await delete_video_db(conn, video_id)
+                except Exception as e:
+                    print(f"[Cleanup] video_result 삭제 실패 - video_id: {video_id}, error:{e}")
+                    success=False
+            try:
+                await delete_video(video_loc)
+            except Exception as e:
+                print(f"[Cleanup] 파일 삭제 실패 - video_loc: {video_loc}, error: {e}")
+                success=False
+
+            if success:        
+                print(f"[Cleanup] 비회원 비디오 삭제 완료 - video_id: {video_id}, video_loc: {video_loc}")
+
         loop.run_until_complete(_delete())
-    except Exception as e:
-        print(f"[Cleanup Error] 비회원 비디오 삭제 실패 - video_id: {video_id}, error: {e}")
     finally:
         loop.close()
 
@@ -187,7 +209,7 @@ async def delete_video_db(conn: Connection, video_id: int):
         result = await conn.execute(delete_query, {"video_id": video_id})
 
         if result.rowcount == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {video_id}는(은) 존재하지 않아 삭제할 수 없습니다.")
             
         await conn.commit()
 
@@ -350,7 +372,7 @@ async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict
 # 비디오 프레임 별 딥페이크 점수, 얼굴 신뢰도, 얼굴 비율, 얼굴 조도 반환
 # 비디오 1개에 속한 여러 프레임의 분석 결과를 한 번에 INSERT.
 # 호출 위치: services/inference_svc.py - process_video_task() → run_inference()
-async def save_video_frame_results(conn: Connection, video_id: int, frame_results: list):
+async def save_video_frame_result(conn: Connection, video_id: int, frame_results: list):
     try:
         query = """
             INSERT INTO video_frame_result
@@ -377,6 +399,60 @@ async def save_video_frame_results(conn: Connection, video_id: int, frame_result
         await conn.rollback()
         raise e
         
+async def delete_video_meta_result(conn: Connection, video_id: int):
+    try:
+        delete_query = text("""
+            DELETE FROM video_meta_result
+            WHERE video_id = :video_id
+        """)
+        result = await conn.execute(delete_query, {"video_id": video_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {video_id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+            
+        await conn.commit()
+
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+async def delete_video_frame_result(conn: Connection, video_id: int):
+    try:
+        delete_query = text("""
+            DELETE FROM video_frame_result
+            WHERE video_id = :video_id
+        """)
+        result = await conn.execute(delete_query, {"video_id": video_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {video_id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+        
+        await conn.commit()
+
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+
+
 # 비디오 메타 데이터 정보 가져오기
 # 호출 위치: routers/inference.py - get_video_detail()
 # 초당프레임수, 영상 전체 프레임 수, 샘플링한 프레임 수, 얼굴 추출에 성공한 프레임 수, score산출 성공 프레임 수
@@ -444,3 +520,6 @@ async def get_video_frame_results(conn: Connection, video_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
+    
+
+    
