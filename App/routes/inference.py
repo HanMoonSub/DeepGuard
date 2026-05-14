@@ -1,17 +1,19 @@
 from fastapi import (
-    APIRouter, Depends, status, Form,
-    File, UploadFile
-)
+    APIRouter, UploadFile, status,
+    Depends, Form, File)
+from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from services import image_svc, session_svc, inference_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
-from schemas.video_schema import VideoDetailResponse
+from schemas.video_schema import VideoDetailResponse, VideoDetailData
+from schemas.image_schema import ImageData_indi
 
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
-@router.post("/image", status_code=status.HTTP_202_ACCEPTED, summary="딥페이크 비동기 이미지 추론 접수") 
+@router.post("/image", status_code=status.HTTP_202_ACCEPTED,
+             response_class=JSONResponse, summary="딥페이크 비동기 이미지 추론 접수") 
 async def predict_image(
                         imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
                         version_type: str = Form(...), # deepguard1, deepguard2
@@ -43,7 +45,8 @@ async def predict_image(
         "status": "success",
     }
 
-@router.get("/image/{image_id}", status_code=status.HTTP_200_OK, summary="딥페이크 비동기 이미지 추론 결과값 가져오기")
+@router.get("/image/{image_id}", status_code=status.HTTP_200_OK,
+            response_model=ImageData_indi, summary="딥페이크 비동기 이미지 추론 결과값 가져오기")
 async def get_image_result(
                             image_id: int,
                             conn: Connection = Depends(context_get_conn),
@@ -62,7 +65,8 @@ async def get_image_result(
         )
     return image_data
 
-@router.post("/video", status_code=status.HTTP_202_ACCEPTED, summary="딥페이크 비동기 비디오 추론 접수")
+@router.post("/video", status_code=status.HTTP_202_ACCEPTED, 
+             response_class=JSONResponse, summary="딥페이크 비동기 비디오 추론 접수")
 async def predict_video(
                         videofile: UploadFile = File(...), # 사용자가 업로드한 비디오 객체
                         version_type: str = Form(...), # deepguard1, deepguard2
@@ -94,7 +98,8 @@ async def predict_video(
         "status": "success",
     }
 
-@router.get("/video/{video_id}", status_code=status.HTTP_200_OK, summary="딥페이크 비디오 비디오 추론 결과값 가져오기")
+@router.get("/video/{video_id}", status_code=status.HTTP_200_OK, 
+            response_model=VideoDetailData, summary="딥페이크 비디오 비디오 추론 결과값 가져오기")
 async def get_video_result(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
@@ -117,7 +122,8 @@ async def get_video_result(
     
     return video_data
 
-@router.get("/video/{video_id}/detail", status_code=status.HTTP_200_OK, summary="딥페이크 상세 분석 결과값 가져오기")
+@router.get("/video/{video_id}/detail", status_code=status.HTTP_200_OK, 
+            response_model=VideoDetailResponse ,summary="딥페이크 상세 분석 결과값 가져오기")
 async def get_video_detail(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
