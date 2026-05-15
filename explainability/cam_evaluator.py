@@ -32,7 +32,7 @@ class CAMEvaluator:
         np.random.seed(self.seed)
         
         grayscale_cam, tensor, _ = self.cam_explainer._build_grayscale_cam(img_path)
-        targets = [BinaryClassifierOutputSigmoidTarget(self.cam_explainer.category)]
+        targets = [BinaryClassifierOutputSigmoidTarget()]
         
         return self.cam_metric(
             input_tensor = tensor, # (1,C,H,W)
