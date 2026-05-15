@@ -8,7 +8,7 @@ from sqlalchemy import Connection
 from db.database import context_get_conn
 from schemas.video_schema import VideoDetailResponse, VideoDetailData
 from schemas.image_schema import ImageData_indi
-
+from typing import Literal
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
@@ -16,9 +16,9 @@ router = APIRouter(prefix="/inference", tags=["inference"])
              response_class=JSONResponse, summary="딥페이크 비동기 이미지 추론 접수") 
 async def predict_image(
                         imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
-                        version_type: str = Form(...), # deepguard1, deepguard2
-                        model_type: str = Form(...), # fast model, pro moel 
-                        domain_type: str = Form(...), # model 학습시 사용한 dataset 종류
+                        version_type: Literal["v1","v2"] = Form("v2", description="모델 엔진 버전"),
+                        model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
+                        domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
                         conn: Connection = Depends(context_get_conn), # 이미지 File 저장
                         session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
                         ):
@@ -69,9 +69,9 @@ async def get_image_result(
              response_class=JSONResponse, summary="딥페이크 비동기 비디오 추론 접수")
 async def predict_video(
                         videofile: UploadFile = File(...), # 사용자가 업로드한 비디오 객체
-                        version_type: str = Form(...), # deepguard1, deepguard2
-                        model_type: str = Form(...), # fast model, pro moel 
-                        domain_type: str = Form(...), # model 학습시 사용한 dataset 종류
+                        version_type: Literal["v1","v2"] = Form("v2", description="모델 엔진 버전"),
+                        model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
+                        domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
                         conn: Connection = Depends(context_get_conn), # 비디오 File 저장
                         session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
                         ):
