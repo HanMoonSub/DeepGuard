@@ -53,8 +53,6 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
                 detail="이미지 파일을 저장하는 중 오류가 발생했습니다."
             )
 
-        print(f"Upload Succeeded: {upload_image_loc}")
-
         # 6. DB 저장용 경로 반환
         return upload_image_loc[1:].replace("\\", "/")
     
@@ -75,7 +73,6 @@ async def delete_image(image_loc: str):
 
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"File removed: {file_path}")
         else:
             print(f"File not found: {file_path}")
 
