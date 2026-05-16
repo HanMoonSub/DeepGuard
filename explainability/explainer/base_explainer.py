@@ -18,7 +18,6 @@ class BaseExplainer:
         dataset: str,  # celeb_df_v2 | ff++ | both
         margin_ratio: float = 0.2,
         conf_thres: float = 0.5,
-        category: int = 1, # 0: real | 1: fake
         branch_level: str = "both", # low | high | both
         l_stage_idx: int = -1, # gcvit low branch stage index (0~3)
         block_idx: int = -1 # vit, gcvit block index 
@@ -28,7 +27,6 @@ class BaseExplainer:
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
         self.margin_ratio = margin_ratio
         self.conf_thres = conf_thres
-        self.category = category
         self.model_name = model_name
         self.dataset = dataset
         self.branch_level = branch_level

@@ -33,35 +33,36 @@ def _draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 
 
 
 class CAMExplainer(BaseExplainer, ABC):
-    def __init__(self, 
-                 aug_smooth: bool = False,
-                 eigen_smooth: bool = False,
-                 **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.aug_smooth = aug_smooth
-        self.eigen_smooth = eigen_smooth
         self.cam = self._build_cam()
     
     @abstractmethod
     def _build_cam(self):
         ...
 
-    def _build_grayscale_cam(self, img_path: str):
+    def _build_grayscale_cam(self, img_path: str,
+                             category: int = 1,
+                             aug_smooth: bool = False,
+                             eigen_smooth: bool = False):
         face, tensor = self._get_transform(img_path)
         tensor = tensor.to(self.device)
-        targets = [BinaryClassifierOutputTarget(self.category)]
+        targets = [BinaryClassifierOutputTarget(category)]
         
         grayscale_cam = self.cam(
             input_tensor=tensor,
             targets=targets,
-            aug_smooth=self.aug_smooth,
-            eigen_smooth=self.eigen_smooth,
+            aug_smooth=aug_smooth,
+            eigen_smooth=eigen_smooth,
         )
         return grayscale_cam[0], tensor, face
 
-    def _prepare_cam(self, img_path: str):
+    def _prepare_cam(self, img_path: str,
+                     category: int = 1,
+                     aug_smooth: bool = False,
+                     eigen_smooth: bool = False):
         """Build grayscale CAM and recover it to original face resolution."""
-        grayscale_cam, tensor, face = self._build_grayscale_cam(img_path)
+        grayscale_cam, tensor, face = self._build_grayscale_cam(img_path, category, aug_smooth, eigen_smooth)
         cam_recovered = remove_padding_and_resize(grayscale_cam, face.shape, tensor.shape)
         return cam_recovered, face
     
@@ -75,31 +76,29 @@ class CAMExplainer(BaseExplainer, ABC):
             )
         return binary_mask
 
-    def display_heatmap_on_image(self, 
-                                 img_path: str, 
-                                 colormap: int = cv2.COLORMAP_JET, 
-                                 image_weight: float = 0.5,
-                                 threshold: float | str = "auto"
+    def display_heatmap_on_image(self, img_path: str, colormap: int = cv2.COLORMAP_JET, 
+                                 image_weight: float = 0.5, threshold: float | str = "auto",
+                                 category: int = 1,
+                                 aug_smooth: bool = False, eigen_smooth: bool = False,
                                  ):
-        cam_recovered, face = self._prepare_cam(img_path)
+        cam_recovered, face = self._prepare_cam(img_path, category, aug_smooth, eigen_smooth)
         
         binary_mask = self._get_binary_mask(cam_recovered, threshold)
         cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
                 
-        heatmap = show_cam_on_image(
+        # (H,W,3), range(0~255), np.uint8
+        return show_cam_on_image(
             np.float32(face) / 255.0,
             cam_recovered,
             use_rgb=True,
             colormap=colormap,
             image_weight=image_weight,
-        )
-        return heatmap  # (H,W,3), range(0~255), np.uint8
+        )  
     
-    def display_contour_on_image(self, 
-                                 img_path: str,
-                                 threshold: float | str = 'auto',
-                                 thickness: int = 2):
-        cam_recovered, face = self._prepare_cam(img_path)
+    def display_contour_on_image(self, img_path: str, threshold: float | str = 'auto', thickness: int = 2,
+                                 category: int = 1,
+                                 aug_smooth: bool = False, eigen_smooth: bool = False):
+        cam_recovered, face = self._prepare_cam(img_path, category, aug_smooth, eigen_smooth)
         
         binary_mask = self._get_binary_mask(cam_recovered, threshold)
             
@@ -107,11 +106,10 @@ class CAMExplainer(BaseExplainer, ABC):
         annotated_img = cv2.drawContours(face.copy(), contours, -1, (255, 0, 0), thickness)
         return annotated_img
     
-    def display_bbox_on_image(self, 
-                              img_path: str,
-                              threshold: float | str = 'auto',
-                              thickness: int = 2):
-        cam_recovered, face = self._prepare_cam(img_path)
+    def display_bbox_on_image(self, img_path: str, threshold: float | str = 'auto', thickness: int = 2,
+                              category: int = 1,
+                              aug_smooth: bool = False, eigen_smooth: bool = False):
+        cam_recovered, face = self._prepare_cam(img_path, category, aug_smooth, eigen_smooth)
         
         binary_mask = self._get_binary_mask(cam_recovered, threshold)
         
@@ -127,6 +125,7 @@ class CAMExplainer(BaseExplainer, ABC):
             box_color = (r, g, 30)  # RGB
 
             cv2.rectangle(annotated_img, (x, y), (x + w, y + h), box_color, thickness)
+            
             _draw_label(
                 annotated_img,
                 text=f"{roi_prob * 100:.1f}%",

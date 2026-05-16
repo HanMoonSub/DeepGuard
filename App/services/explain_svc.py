@@ -26,29 +26,26 @@ EXPLAINER_REGISTRY = {
 _explainer_cache: dict = {}
 
 def _get_or_create_explainer(model_name: str, dataset: str, explain_req: ExplainRequest):
-    cache_key = (model_name, dataset,
-                 explain_req.explainer_type, explain_req.branch_level,
-                 explain_req.category, explain_req.aug_smooth, explain_req.eigen_smooth)
+    cache_key = (model_name, dataset, explain_req.explainer_type, explain_req.branch_level)
     
     if cache_key not in _explainer_cache:
         _explainer_cache[cache_key] = EXPLAINER_REGISTRY[explain_req.explainer_type](
             model_name = model_name,
             dataset = dataset,
             branch_level = explain_req.branch_level,
-            category = explain_req.category,
-            aug_smooth = explain_req.aug_smooth,
-            eigen_smooth = explain_req.eigen_smooth,
         )
     return _explainer_cache[cache_key]
         
 def _run_visualization(explainer, image_path: str, explain_req: ExplainRequest) -> bytes:
     if explain_req.display_type == "heatmap":
-        img = explainer.display_heatmap_on_image(image_path, image_weight=explain_req.overlay_ratio, threshold=explain_req.threshold)
+        img = explainer.display_heatmap_on_image(image_path, image_weight=explain_req.overlay_ratio, threshold=explain_req.threshold,
+                                                 category=explain_req.category, aug_smooth=explain_req.aug_smooth, eigen_smooth=explain_req.eigen_smooth)
     elif explain_req.display_type == "contour":
-        img = explainer.display_contour_on_image(image_path, threshold=explain_req.threshold)
+        img = explainer.display_contour_on_image(image_path, threshold=explain_req.threshold,
+                                                 category=explain_req.category, aug_smooth=explain_req.aug_smooth, eigen_smooth=explain_req.eigen_smooth)
     else:  
-        img = explainer.display_bbox_on_image(image_path, threshold=explain_req.threshold)
- 
+        img = explainer.display_bbox_on_image(image_path, threshold=explain_req.threshold,
+                                              category=explain_req.category, aug_smooth=explain_req.aug_smooth, eigen_smooth=explain_req.eigen_smooth) 
     img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     _, buf = cv2.imencode(".png", img_bgr)
     return buf.tobytes()
