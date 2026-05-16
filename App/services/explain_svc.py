@@ -5,6 +5,7 @@ from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import Connection
 from schemas.explain_schema import ExplainRequest
+from schemas.image_schema import ImageData_indi
 from services import image_svc, inference_svc
 from explainability import (
     HiResCAMExplainer, GradCAMElementWiseExplainer, LayerCAMExplainer,
@@ -42,24 +43,17 @@ def _get_or_create_explainer(model_name: str, dataset: str, explain_req: Explain
         
 def _run_visualization(explainer, image_path: str, explain_req: ExplainRequest) -> bytes:
     if explain_req.display_type == "heatmap":
-        img = explainer.display_heatmap_on_image(image_path, image_weight=explain_req.overlay_ratio)
+        img = explainer.display_heatmap_on_image(image_path, image_weight=explain_req.overlay_ratio, threshold=explain_req.threshold)
     elif explain_req.display_type == "contour":
-        img = explainer.display_contour_on_image(image_path)
+        img = explainer.display_contour_on_image(image_path, threshold=explain_req.threshold)
     else:  
-        img = explainer.display_bbox_on_image(image_path)
+        img = explainer.display_bbox_on_image(image_path, threshold=explain_req.threshold)
  
     img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     _, buf = cv2.imencode(".png", img_bgr)
     return buf.tobytes()
 
-async def explain_image(conn: Connection, image_id: int, explain_req: ExplainRequest):
-    result = await image_svc.get_image_result(conn, image_id)
-    
-    if result.status != "SUCCESS":
-        raise HTTPException(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            detail = "이미지 위조 흔적 분석은 추론이 성공한 이미지만 가능합니다"
-        )
+async def explain_image(conn: Connection, result: ImageData_indi, explain_req: ExplainRequest):
     
     model_name, dataset = inference_svc.MODEL_CONFIG[result.version_type][result.model_type][result.domain_type]
     

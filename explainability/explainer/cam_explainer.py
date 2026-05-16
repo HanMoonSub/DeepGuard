@@ -78,9 +78,14 @@ class CAMExplainer(BaseExplainer, ABC):
     def display_heatmap_on_image(self, 
                                  img_path: str, 
                                  colormap: int = cv2.COLORMAP_JET, 
-                                 image_weight: float = 0.5):
+                                 image_weight: float = 0.5,
+                                 threshold: float | str = "auto"
+                                 ):
         cam_recovered, face = self._prepare_cam(img_path)
         
+        binary_mask = self._get_binary_mask(cam_recovered, threshold)
+        cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
+                
         heatmap = show_cam_on_image(
             np.float32(face) / 255.0,
             cam_recovered,
