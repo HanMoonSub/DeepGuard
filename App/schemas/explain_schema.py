@@ -21,30 +21,13 @@ _LOW_ALLOWED  = {"hirescam", "gradcamelementwise", "layercam"}
 _HIGH_ALLOWED = {"eigengradcam", "gradcamplusplus", "xgradcam"}
 
 class ExplainRequest(BaseModel):
-    branch_level: Literal["low","high"] = Field("high", 
-                                                description="브랜치 레벨. low: 국소 위조 흔적 포착, high: 전역적 위조 흔적 포착")
-    explainer_type: str = Field("eigengradcam",
-                                description = (
-                                    "선택 가능한 XAI 기법. "
-                                    "low: [hirescam, gradcamelementwise, layercam], "
-                                    "high: [eigengradcam, gradcamplusplus, xgradcam]"
-                                ))
-    display_type: Literal["heatmap", "contour", "bbox"] = Field("heatmap", 
-                                                                description="시각화 형태. heatmap: 전체 분포, contour: 외곽선, bbox: 위조 의심 영역 사각형")
-    category: Literal[0, 1] = Field(1, 
-                                    description="판단 클래스 인덱스 (0: Real / 1: Fake)")
-    overlay_ratio: float = Field(
-        0.5, ge=0.0, le=1.0,
-        description = "Heatmap 투명도 (0: 히트맵만 강조, 1: 원본 이미지 위주)"
-    )
-    aug_smooth: bool = Field(
-        False,
-        description = "TTA(Test Time Augmentation) 적용 여부. 히트맵을 더 객체 중심적으로 정렬"
-    )
-    eigen_smooth: bool = Field(
-        False,
-        description = "PCA 기반 노이즈 제거. 지배적인 패턴만 남김"
-    )
+    branch_level: Literal["low","high"] = Field("high", description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역적 위조 흔적 포착")
+    explainer_type: str = Field("eigengradcam", description = ("선택 가능한 XAI 기법. low: [hirescam, gradcamelementwise, layercam], ""high: [eigengradcam, gradcamplusplus, xgradcam]"))
+    display_type: Literal["heatmap", "contour", "bbox"] = Field("heatmap", description="시각화 형태. heatmap: 전체 분포, contour: 외곽선, bbox: 위조 의심 영역 사각형")
+    category: Literal[0, 1] = Field(1, description="판단 클래스 인덱스 (0: Real / 1: Fake)")
+    overlay_ratio: float = Field(0.5, ge=0.0, le=1.0, description = "Heatmap 투명도 (0: 히트맵만 강조, 1: 원본 이미지 위주)")
+    aug_smooth: bool = Field(False, description = "TTA(Test Time Augmentation) 적용 여부. 히트맵을 더 객체 중심적으로 정렬")
+    eigen_smooth: bool = Field(False, description = "PCA 기반 노이즈 제거. 지배적인 패턴만 남김")
     
     @model_validator(mode="after")
     def validate_explainer_for_branch(self) -> "ExplainRequest":

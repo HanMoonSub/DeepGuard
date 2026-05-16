@@ -127,8 +127,15 @@ async def get_video_result(
 async def get_video_detail(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
-                           session_user = Depends(session_svc.get_session_user_prt) # 로그인 유저만 가능
+                           session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
                            ):
+    video_data = await video_svc.get_video_result(conn, video_id)
+    if video_data.status != "SUCCESS":
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail = f"비디오 상세 분석은 추론이 성공한 비디오만 가능합니다"
+        )
+    
     meta = await video_svc.get_video_meta_result(conn, video_id)
     frames = await video_svc.get_video_frame_results(conn, video_id)
 
