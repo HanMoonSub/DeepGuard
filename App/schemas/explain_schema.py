@@ -19,6 +19,8 @@ from pydantic import BaseModel, Field, model_validator
 
 _LOW_ALLOWED  = {"hirescam", "gradcamelementwise", "layercam"}
 _HIGH_ALLOWED = {"eigengradcam", "gradcamplusplus", "xgradcam"}
+_EIGEN_ALLOWED = {"gradcamelementwise", "layercam", "xgradcam"}
+
 
 class ExplainRequest(BaseModel):
     branch_level: Literal["low","high"] = Field("high", description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역적 위조 흔적 포착")
@@ -32,11 +34,21 @@ class ExplainRequest(BaseModel):
     
     @model_validator(mode="after")
     def validate_explainer_for_branch(self) -> "ExplainRequest":
-        allowed = {"low": _LOW_ALLOWED, "high": _HIGH_ALLOWED}
-        if self.explainer_type not in allowed[self.branch_level]:
+        branch_allowed = {"low": _LOW_ALLOWED, "high": _HIGH_ALLOWED}
+        if self.explainer_type not in branch_allowed[self.branch_level]:
             raise ValueError(
                 f"branch_level='{self.branch_level}'에서 허용된 기법: "
-                f"{sorted(allowed[self.branch_level])} "
+                f"{sorted(branch_allowed[self.branch_level])} "
+                f"(입력값: '{self.explainer_type}')"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_explainer_for_eigen_smooth(self) -> "ExplainRequest":
+        if self.eigen_smooth and self.explainer_type not in _EIGEN_ALLOWED:
+            raise ValueError(
+                f"eigen_smooth가 허용된 기법: "
+                f"{sorted(_EIGEN_ALLOWED)} "
                 f"(입력값: '{self.explainer_type}')"
             )
         return self
