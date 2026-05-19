@@ -4,11 +4,12 @@ from fastapi.responses import JSONResponse
 from services import session_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn 
+from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/video", tags=["video"])
 
 # 사용자 전체 비디오 업로드 히스토리 조회 
-@router.get("/history", status_code=status.HTTP_200_OK, summary="비디오 히스토리 전체 조회")
+@router.get("/history", status_code=status.HTTP_200_OK, responses_class=JSONResponse,summary="비디오 히스토리 전체 조회")
 async def get_video_histories(
     conn: Connection = Depends(context_get_conn),
     session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
@@ -24,7 +25,7 @@ async def get_video_histories(
     }
 
 # 특정 비디오의 상세 내역 조회
-@router.get("/history/{video_id}", status_code=status.HTTP_200_OK, summary="비디오 개별 상세 조회")
+@router.get("/history/{video_id}", status_code=status.HTTP_200_OK,responses_class=JSONResponse, summary="비디오 개별 상세 조회")
 async def get_video_history(
     video_id: int,
     conn: Connection = Depends(context_get_conn),
