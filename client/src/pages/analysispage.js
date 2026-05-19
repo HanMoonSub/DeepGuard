@@ -27,6 +27,13 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const pollingTimer = useRef(null);
   const isMounted = useRef(true);
 
+  // 스타일 상수
+  const sideBarStyle = { width: '280px', backgroundColor: '#050505', borderRight: '1px solid #222', display: 'flex', flexDirection: 'column', padding: '25px' };
+  const centerZoneStyle = { flex: 1, padding: '40px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' };
+  const rightPanelStyle = { width: '340px', backgroundColor: '#0D0D0D', borderLeft: '1px solid #222', padding: '30px', display: 'flex', flexDirection: 'column' };
+  const innerBoxStyle = { flex: 1, border: '2px dashed #333', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a', cursor: 'pointer', position: 'relative', transition: 'all 0.3s' };
+  const plusBtnStyle = { width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#1A2C50', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '30px', color: '#39FF14', marginBottom: '20px', boxShadow: '0 0 15px rgba(57, 255, 20, 0.2)' };
+
   const fetchHistory = useCallback(async () => {
     if (!sessionUser) return;
     try {
@@ -68,7 +75,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       try {
         const response = await axios.get(`/inference/image/${imageId}`);
         const data = response.data;
-
         if (data.status === 'SUCCESS' || data.prob !== undefined || data.analysis !== undefined) {
           clearInterval(pollingTimer.current);
           pollingTimer.current = null;
@@ -110,15 +116,9 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     try {
       const response = await axios.post('/inference/image', formData);
       const imageId = response.data?.image_id || response.data; 
-
-      if (imageId) {
-        startPolling(imageId);
-      } else {
-        alert("분석 ID 발급 실패");
-        setIsAnalyzing(false);
-      }
+      if (imageId) startPolling(imageId);
+      else setIsAnalyzing(false);
     } catch (err) {
-      alert("서버 통신 오류");
       setIsAnalyzing(false);
       setStatusMessage('');
     }
@@ -135,9 +135,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   };
 
   const toggleSelect = (id) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
   const handleDeleteSelected = async () => {
@@ -146,7 +144,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setHistory(history.filter(item => !selectedIds.includes(item.id)));
     setSelectedIds([]);
     setIsEditMode(false);
-    alert("삭제되었습니다.");
   };
 
   const handleLogoutClick = async () => {
@@ -158,13 +155,9 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     } catch (error) { alert("로그아웃 실패"); }
   };
 
-  // 스타일 상수 (UI 일관성 유지)
-  const innerBoxStyle = { flex: 1, border: '2px dashed #333', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a', cursor: 'pointer', position: 'relative', transition: 'all 0.3s' };
-  const plusBtnStyle = { width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#1A2C50', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '30px', color: '#39FF14', marginBottom: '20px', boxShadow: '0 0 15px rgba(57, 255, 20, 0.2)' };
-
   return (
     <div style={{ display: 'flex', backgroundColor: '#000', height: '100vh', width: '100vw', color: 'white', fontFamily: 'sans-serif', overflow: 'hidden' }}>
-      <aside style={{ width: '280px', backgroundColor: '#050505', borderRight: '1px solid #222', display: 'flex', flexDirection: 'column', padding: '25px' }}>
+      <aside style={sideBarStyle}>
         <button onClick={() => { setFile(null); setPreviewUrl(null); setResult(null); setStatusMessage(''); setShowOptions(false); if (pollingTimer.current) clearInterval(pollingTimer.current); }} style={{ backgroundColor: '#1A2C50', color: 'white', padding: '14px', borderRadius: '10px', border: 'none', marginBottom: '35px', cursor: 'pointer', fontWeight: 'bold' }}>+ 새 분석 시작</button>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -181,16 +174,19 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
             history.map((item, index) => {
               const p = item.prob ?? item.score ?? -1;
               const isSelected = selectedIds.includes(item.id);
+              const vType = item.version_type ? item.version_type.toUpperCase() : 'V1';
+              const dType = item.domain_type || '서양인';
+              const mType = item.model_type ? item.model_type.toUpperCase() : 'FAST';
+
               return (
                 <div key={item.id || index} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                  {isEditMode && (
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)} style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} />
-                  )}
+                  {isEditMode && <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)} style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} />}
                   <div onClick={() => !isEditMode && navigate('/analysis-detail', { state: { ...item, prob: p } })} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '12px', border: isSelected ? '1px solid #39FF14' : '1px solid #222', cursor: isEditMode ? 'default' : 'pointer' }}>
                     <div style={{ width: '45px', height: '45px', backgroundColor: '#222', borderRadius: '8px', overflow: 'hidden' }}>
                       {item.image_loc ? <img src={`${apiUrl}${item.image_loc}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🖼️'}
                     </div>
                     <div>
+                      <div style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold', marginBottom: '2px' }}>{vType} | {dType} | {mType}</div>
                       <div style={{ fontSize: '11px', color: '#555' }}>{item.created_at?.split('T')[0]}</div>
                       <div style={{ fontSize: '13px', color: '#fff' }}>{item.label || (p > 0.5 ? 'FAKE' : 'REAL')}</div>
                     </div>
@@ -201,9 +197,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           ) : <p style={{ color: '#444', textAlign: 'center' }}>로그인 필요</p>}
         </div>
 
-        {isEditMode && (
-          <button onClick={handleDeleteSelected} disabled={selectedIds.length === 0} style={{ width: '100%', padding: '12px', backgroundColor: selectedIds.length > 0 ? '#FF4B4B' : '#222', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}>선택 삭제</button>
-        )}
+        {isEditMode && <button onClick={handleDeleteSelected} disabled={selectedIds.length === 0} style={{ width: '100%', padding: '12px', backgroundColor: selectedIds.length > 0 ? '#FF4B4B' : '#222', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}>선택 삭제</button>}
 
         <div style={{ borderTop: '1px solid #222', paddingTop: '20px', marginTop: '20px' }}>
           <button onClick={() => navigate('/main')} style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', color: '#fff', border: '1px solid #444', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '15px' }}>메인 화면</button>
@@ -212,22 +206,14 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
               <p style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>{sessionUser.name}님 접속 중</p>
               <button onClick={handleLogoutClick} style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', color: '#FF4B4B', border: '1px solid #FF4B4B', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>로그아웃</button>
             </div>
-          ) : (
-            <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '12px', backgroundColor: '#1A2C50', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>로그인</button>
-          )}
+          ) : <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '12px', backgroundColor: '#1A2C50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>로그인</button>}
         </div>
       </aside>
 
-      <main style={{ flex: 1, padding: '40px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
+      <main style={centerZoneStyle}>
         <h2 style={{ fontSize: '28px', fontWeight: 'bold' }}>Deep Guard AI</h2>
         <div style={{ display: 'flex', flex: 1, gap: '20px' }}>
-          {/* 업로드 섹션: 비디오 페이지와 동일하게 수정 */}
-          <div 
-            style={{...innerBoxStyle, border: showOptions ? '2px solid #39FF14' : '2px dashed #333'}} 
-            onClick={() => { if(!previewUrl) setShowOptions(!showOptions); }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); handleFileSelect(e.dataTransfer.files[0]); }}
-          >
+          <div style={{...innerBoxStyle, border: showOptions ? '2px solid #39FF14' : '2px dashed #333'}} onClick={() => { if(!previewUrl) setShowOptions(!showOptions); }}>
             {previewUrl ? <img src={previewUrl} alt="preview" style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain' }} /> : (
                <div style={{textAlign:'center', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                  <div style={plusBtnStyle}>+</div>
@@ -244,27 +230,50 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
             <input id="fIn" type="file" hidden onChange={(e) => handleFileSelect(e.target.files[0])} />
           </div>
 
-          {/* 결과 섹션: 추론 중일 때 디자인 강화 */}
-          <div style={{...innerBoxStyle, border: isAnalyzing ? '2px solid #39FF14' : '2px dashed #333', cursor: 'default'}}>
+          <div style={{...innerBoxStyle, border: isAnalyzing ? 'none' : '2px dashed #333', cursor: 'default', position: 'relative', overflow: 'hidden'}}>
             {isAnalyzing ? (
-              <div style={{textAlign:'center'}}>
-                <div style={{ fontSize: '40px', marginBottom: '15px', animation: 'imagePulse 1.5s infinite' }}>🖼️</div>
-                <p style={{ color: '#39FF14', fontWeight: 'bold' }}>{statusMessage || "분석 중..."}</p>
-                <style>{`@keyframes imagePulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }`}</style>
+              <div style={{ textAlign: 'center', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2, backgroundColor: '#050505' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '20px', padding: '2px', background: 'linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000)', backgroundSize: '400%', zIndex: -1, animation: 'rainbow 15s linear infinite' }} />
+                
+                <div style={{ position: 'absolute', top: '2px', left: '2px', right: '2px', bottom: '2px', backgroundColor: '#0a0a0a', borderRadius: '18px', zIndex: -1, overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', width: '100%', height: '2px', background: 'linear-gradient(90deg, transparent, #39FF14, transparent)', boxShadow: '0 0 15px #39FF14', top: '-10%', animation: 'scanLine 3s ease-in-out infinite' }} />
+                </div>
+
+                <div style={{ marginBottom: '40px' }}>
+                  <p style={{ fontSize: '11px', letterSpacing: '4px', color: '#39FF14', opacity: 0.8, marginBottom: '5px', fontWeight: 'bold' }}>SYSTEM ENGINE</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '1px' }}>AI SCANNING...</h3>
+                </div>
+                
+                <div style={{ width: '65%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '11px', color: '#555', fontWeight: 'bold' }}>{statusMessage || "ANALYZING DATA..."}</span>
+                    <span style={{ fontSize: '11px', color: '#39FF14', fontWeight: 'bold', animation: 'blink 1s step-end infinite' }}>LIVE_CORE</span>
+                  </div>
+                  <div style={{ width: '100%', height: '3px', backgroundColor: '#111', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, #1A2C50, #39FF14, #1A2C50)', backgroundSize: '200% 100%', animation: 'loadingBar 1.5s linear infinite' }} />
+                  </div>
+                </div>
+
+                <style>{`
+                  @keyframes rainbow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+                  @keyframes loadingBar { 0% { background-position: 100% 0%; } 100% { background-position: -100% 0%; } }
+                  @keyframes scanLine { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+                  @keyframes blink { 50% { opacity: 0; } }
+                `}</style>
               </div>
             ) : result ? (
               <div style={{ textAlign: 'center' }}>
                 <p style={{ fontSize: '48px', fontWeight: 'bold', color: (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? '#FF4B4B' : '#39FF14' }}>
                   {(result.label || ( (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? 'FAKE' : 'REAL' ))}
                 </p>
-                <button onClick={() => navigate('/analysis-detail', { state: { ...result, ...result.analysis, image_loc: previewUrl } })} style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer' }}>상세 보기</button>
+                <button onClick={() => navigate('/analysis-detail', { state: { ...result, ...result.analysis, image_loc: previewUrl } })} style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer' }}>상세 결과 보기</button>
               </div>
             ) : <p style={{ color: '#222' }}>WAITING...</p>}
           </div>
         </div>
       </main>
 
-      <aside style={{ width: '340px', backgroundColor: '#0D0D0D', padding: '30px', display: 'flex', flexDirection: 'column' }}>
+      <aside style={rightPanelStyle}>
         <h3 style={{ fontSize: '22px', marginBottom: '30px', borderBottom: '1px solid #222', paddingBottom: '15px' }}>분석 설정</h3>
         <div style={{ marginBottom: '25px' }}>
           <p style={{ color: '#39FF14', fontSize: '14px', marginBottom: '10px', fontWeight: 'bold' }}>버전 선택</p>

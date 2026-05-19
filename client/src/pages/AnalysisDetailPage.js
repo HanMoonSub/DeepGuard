@@ -1,22 +1,26 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-const apiUrl = process.env.REACT_APP_API_URL;
 
-const AnalysisDetailPage = ({ sessionUser }) => {
+const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
+const VideoAnalysisDetailPage = ({ sessionUser }) => {
   const { state: data } = useLocation();
   const navigate = useNavigate();
 
-  if (!data) return <div style={{ color: 'white', padding: '50px', textAlign: 'center' }}>데이터를 찾을 수 없습니다.</div>;
+  if (!data) {
+    return (
+      <div style={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
+        <p style={{ fontSize: '18px', marginBottom: '20px' }}>분석 데이터를 찾을 수 없거나 비정상적인 접근입니다.</p>
+        <button onClick={() => navigate(-1)} style={{ padding: '10px 20px', backgroundColor: '#1A2C50', color: '#39FF14', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>돌아가기</button>
+      </div>
+    );
+  }
 
-  /* 수치 추출 로직(백엔드 DB에서 사용하는 컬럼명과 API 응답 객체 이름을 모두 매핑하기) */
-  const prob = data.prob ?? data.score ?? data.analysis?.prob ?? -1;
-  
-  // 백엔드 DB 컬럼명인 face_conf, face_ratio, face_brightness 최우선으로 체크
+  const prob = data.prob ?? data.score ?? data.analysis?.prob ?? data.result_prob ?? -1;
   const face_conf = data.face_conf ?? data.face_confidence ?? data.conf ?? data.analysis?.face_conf ?? 0;
   const face_ratio = data.face_ratio ?? data.ratio ?? data.analysis?.face_ratio ?? 0;
   const face_brightness = data.face_brightness ?? data.brightness ?? data.analysis?.face_brightness ?? 0;
   
-  // 라벨 결정 로직
   let label = 'UNKNOWN';
   if (data.label && data.label !== 'UNKNOWN') {
     label = data.label.toUpperCase();
@@ -24,83 +28,139 @@ const AnalysisDetailPage = ({ sessionUser }) => {
     label = prob > 0.5 ? 'FAKE' : 'REAL';
   }
   
-  // 확률이 -1인 경우 (데이터 로드 실패) N/A 표시를 위해 isInvalid 설정
   const isInvalid = prob === -1;
   const displayProb = isInvalid ? 'N/A' : (Number(prob) * 100).toFixed(1) + '%';
 
   const brightnessColor = face_brightness < 20 ? '#FF4B4B' : '#39FF14';
   const ratioColor = face_ratio >= 3 ? '#39FF14' : '#FF4B4B';
 
-  const mediaLoc = data.video_loc || data.image_loc || '';
-  const isVideo = !!data.video_loc || (data.score !== undefined && !data.image_loc);
+  const mediaLoc = data.video_loc || data.media_loc || '';
+  const videoSrc = mediaLoc.startsWith('blob') ? mediaLoc : `${apiUrl}${mediaLoc}`;
 
   return (
-    <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', padding: '40px 80px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <button onClick={() => navigate(-1)} style={{ color: '#888', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '20px' }}>
-            <span style={{ fontSize: '20px' }}>←</span> 뒤로가기
+    <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', padding: '40px 120px', boxSizing: 'border-box', fontFamily: 'sans-serif', overflowX: 'hidden' }}>
+      
+      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button onClick={() => navigate(-1)} style={{ color: '#888', background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '15px' }}>
+            <span style={{ fontSize: '18px' }}>←</span> 뒤로가기
           </button>
-          <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '20px', fontSize: '12px', color: '#39FF14', border: '1px solid #333', fontWeight: 'bold' }}>
-            {data.version_type?.toUpperCase() || 'V1'}
-          </span>
-          <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '20px', fontSize: '12px', color: '#39FF14', border: '1px solid #333', fontWeight: 'bold', marginLeft: '8px' }}>
-            {data.domain_type || '서양인'}
-          </span>
+          <span style={{ padding: '5px 12px', backgroundColor: '#111', borderRadius: '20px', fontSize: '11px', color: '#39FF14', border: '1px solid #222', fontWeight: 'bold' }}>{data.version_type?.toUpperCase() || 'V1'}</span>
+          <span style={{ padding: '5px 12px', backgroundColor: '#111', borderRadius: '20px', fontSize: '11px', color: '#39FF14', border: '1px solid #222', fontWeight: 'bold' }}>{data.domain_type || '서양인'}</span>
+          <span style={{ padding: '5px 12px', backgroundColor: '#111', borderRadius: '20px', fontSize: '11px', color: '#39FF14', border: '1px solid #222', fontWeight: 'bold' }}>{data.model_type?.toUpperCase() || 'FAST'}</span>
         </div>
         {sessionUser && (
-          <div style={{ backgroundColor: '#111', padding: '8px 16px', borderRadius: '12px', border: '1px solid #222' }}>
+          <div style={{ backgroundColor: '#111', padding: '6px 14px', borderRadius: '10px', border: '1px solid #222', fontSize: '13px' }}>
             <span style={{ color: '#39FF14', fontWeight: 'bold' }}>분석 담당: {sessionUser.name}</span>
           </div>
         )}
       </header>
 
-      <div style={{ display: 'flex', gap: '40px', maxWidth: '1400px', margin: '0 auto', alignItems: 'stretch' }}>
-        <div style={{ flex: 1.2, backgroundColor: '#050505', borderRadius: '28px', border: '1px solid #1A1A1A', height: '600px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-          {/* 비디오 결과이면서 video_loc가 있을 경우 비디오 태그, 그 외엔 이미지 태그 */}
-          {data.score !== undefined && data.image_loc ? (
-             <video src={data.image_loc.startsWith('blob') ? data.image_loc : `${apiUrl}${data.image_loc}`} controls style={{ maxWidth: '90%', maxHeight: '95%', borderRadius: '12px' }} />
-          ) : (
-            <img 
-              src={data.image_loc?.startsWith('blob') ? data.image_loc : `${apiUrl}${data.image_loc}`} 
-              alt="Analyzed media" 
-              style={{ maxWidth: '90%', maxHeight: '95%', objectFit: 'contain', borderRadius: '12px' }} 
-              onError={(e) => { e.target.src = 'https://via.placeholder.com/600x400?text=No+Image'; }}
+      <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '30px' }}>
+        
+        <div style={{ 
+          padding: '30px 40px', 
+          backgroundColor: '#0A0A0A', 
+          borderRadius: '24px', 
+          border: '1px solid #161616', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ textAlign: 'left' }}>
+            <p style={{ color: '#444', fontSize: '12px', letterSpacing: '3px', margin: '0 0 5px 0', fontWeight: 'bold' }}>FINAL ANALYSIS REPORT</p>
+            <h1 style={{ fontSize: '56px', fontWeight: '900', color: label === 'FAKE' ? '#FF4B4B' : (isInvalid ? '#444' : '#39FF14'), margin: 0, letterSpacing: '1px' }}>
+              {label}
+            </h1>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ color: '#444', fontSize: '12px', margin: '0 0 5px 0', fontWeight: 'bold' }}>변조 신뢰 확률</p>
+            <p style={{ fontSize: '42px', fontWeight: '900', margin: 0, color: isInvalid ? '#444' : '#fff' }}>{displayProb}</p>
+          </div>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#050505', 
+          borderRadius: '24px', 
+          border: '1px solid #161616', 
+          width: '100%',
+          height: '520px', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          overflow: 'hidden', 
+          boxShadow: '0 15px 40px rgba(0,0,0,0.6)' 
+        }}>
+          {mediaLoc ? (
+            <video 
+              src={videoSrc} 
+              controls 
+              autoPlay
+              muted
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
             />
+          ) : (
+            <div style={{ color: '#444', textAlign: 'center' }}>
+              <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>📹</span>
+              동영상 원본 스트림을 재생할 수 없습니다.
+            </div>
           )}
         </div>
 
-        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ padding: '40px', backgroundColor: '#0D0D0D', borderRadius: '28px', border: '1px solid #1A1A1A', textAlign: 'center' }}>
-            <p style={{ color: '#555', fontSize: '14px', letterSpacing: '2px' }}>FINAL ANALYSIS</p>
-            <h1 style={{ fontSize: '72px', fontWeight: '900', color: label === 'FAKE' ? '#FF4B4B' : (isInvalid ? '#444' : '#39FF14'), margin: '10px 0' }}>{label}</h1>
-            <p style={{ fontSize: '28px', fontWeight: 'bold' }}>{displayProb}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          
+          <div style={{ padding: '24px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ color: '#555', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px', margin: '0 0 10px 0' }}>FACE BRIGHTNESS (밝기 데이터)</p>
+              <h2 style={{ fontSize: '36px', color: brightnessColor, margin: '0', fontWeight: 'bold' }}>
+                {Number(face_brightness).toFixed(1)}%
+              </h2>
+            </div>
+            <div>
+              <div style={{ width: '100%', height: '3px', backgroundColor: '#1A1A1A', marginTop: '15px', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: `${face_brightness}%`, height: '100%', backgroundColor: brightnessColor }} />
+              </div>
+              <p style={{ fontSize: '11px', color: '#444', margin: '8px 0 0 0' }}>기준치 20% 미만일 때 저조도 분석 경고등 점등</p>
+            </div>
+          </div>
+          
+          <div style={{ padding: '24px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ color: '#555', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px', margin: '0 0 10px 0' }}>FACE RATIO (화면 내 안면 비중)</p>
+              <h2 style={{ fontSize: '36px', color: ratioColor, margin: '0', fontWeight: 'bold' }}>
+                {Number(face_ratio).toFixed(1)}%
+              </h2>
+            </div>
+            <div>
+              <div style={{ width: '100%', height: '3px', backgroundColor: '#1A1A1A', marginTop: '15px', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(face_ratio * 10, 100)}%`, height: '100%', backgroundColor: ratioColor }} />
+              </div>
+              <p style={{ fontSize: '11px', color: '#444', margin: '8px 0 0 0' }}>안면 식별 기준치 3% 이상일 때 유효 분석 범위 인정</p>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div style={{ padding: '24px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A' }}>
-              <p style={{ color: '#555', fontSize: '12px', fontWeight: 'bold' }}>BRIGHTNESS</p>
-              <h2 style={{ fontSize: '32px', color: brightnessColor, margin: '0' }}>{Number(face_brightness).toFixed(1)}%</h2>
-              <div style={{ width: '40px', height: '3px', backgroundColor: brightnessColor, marginTop: '12px', borderRadius: '2px' }} />
+          <div style={{ gridColumn: 'span 2', padding: '26px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+              <p style={{ color: '#555', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px', margin: 0 }}>INTELLIGENT MODEL CONFIDENCE (엔진 신뢰 수준)</p>
+              <h2 style={{ fontSize: '28px', color: isInvalid ? '#444' : '#39FF14', margin: '0', fontWeight: 'bold' }}>
+                {Number(face_conf).toFixed(1)}%
+              </h2>
             </div>
-            <div style={{ padding: '24px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A' }}>
-              <p style={{ color: '#555', fontSize: '12px', fontWeight: 'bold' }}>FACE RATIO</p>
-              <h2 style={{ fontSize: '32px', color: ratioColor, margin: '0' }}>{Number(face_ratio).toFixed(1)}%</h2>
-              <div style={{ width: '40px', height: '3px', backgroundColor: ratioColor, marginTop: '12px', borderRadius: '2px' }} />
+            
+            <div style={{ width: '100%', height: '8px', backgroundColor: '#151515', borderRadius: '4px', overflow: 'hidden', border: '1px solid #222' }}>
+              <div style={{ width: `${isInvalid ? 0 : face_conf}%`, height: '100%', background: 'linear-gradient(90deg, #1A2C50, #39FF14)', transition: 'width 1.2s cubic-bezier(0.1, 1, 0.1, 1)' }} />
             </div>
-            <div style={{ gridColumn: 'span 2', padding: '24px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A' }}>
-              <p style={{ color: '#555', fontSize: '12px', fontWeight: 'bold' }}>MODEL CONFIDENCE</p>
-              <h2 style={{ fontSize: '32px', color: '#39FF14', margin: '0' }}>{Number(face_conf).toFixed(1)}%</h2>
-              <div style={{ width: '100%', height: '6px', backgroundColor: '#1A1A1A', borderRadius: '3px', marginTop: '15px', overflow: 'hidden' }}>
-                <div style={{ width: `${face_conf}%`, height: '100%', backgroundColor: '#39FF14', transition: 'width 1s' }} />
-              </div>
-              <p style={{ fontSize: '14px', color: '#888', marginTop: '20px' }}>{data.message || (isInvalid ? "분석 데이터를 불러오지 못했습니다." : "정상 분석 리포트입니다.")}</p>
-            </div>
+            
+            <p style={{ fontSize: '13px', color: '#777', margin: '15px 0 0 0', lineHeight: '1.4' }}>
+              {data.message || (isInvalid ? "영상 분석 메타데이터 아카이브 쿼리 실패 또는 분석이 중단된 인스턴스입니다." : "본 리포트는 Deep Guard 고성능 인공지능 신경망 커널 검증 레이어를 거쳐 연산된 신뢰도 지표입니다.")}
+            </p>
           </div>
+
         </div>
       </div>
     </div>
   );
 };
 
-export default AnalysisDetailPage;
+export default VideoAnalysisDetailPage;

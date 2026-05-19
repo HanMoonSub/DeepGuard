@@ -8,6 +8,7 @@ import RegisterPage from './pages/signuppage';
 import AnalysisPage from './pages/analysispage';
 import AnalysisDetailPage from './pages/AnalysisDetailPage';
 import VideoAnalysisPage from './pages/VideoAnalysisPage';
+import VideoAnalysisDetailPage from './pages/AnalysisDetailPage';
 
 axios.defaults.withCredentials = true;
 
@@ -44,14 +45,16 @@ function App() {
         <Route path="/" element={<Navigate to="/main" />} />
         <Route path="/main" element={<MainPage sessionUser={sessionUser} onLogout={handleLogout} />} />
         
-        <Route path="/analysis" element={<AnalysisPage sessionUser={sessionUser} onLogout={handleLogout} setSessionUser={setSessionUser} />} />
+        <Route path="/analysis" element={<analysispage sessionUser={sessionUser} onLogout={handleLogout} setSessionUser={setSessionUser} />} />
         
         <Route path="/video-analysis" element={<VideoAnalysisPage sessionUser={sessionUser} onLogout={handleLogout} setSessionUser={setSessionUser} />} />
         
-        <Route path="/analysis-detail" element={<AnalysisDetailPage sessionUser={sessionUser} />} />
+        <Route path="/analysis-detail" element={<analysisdetailpage sessionUser={sessionUser} />} />
         
-        <Route path="/login" element={<LoginPage setSessionUser={setSessionUser} />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/video-detail" element={<AnalysisDetailPage sessionUser={sessionUser} />} />
+        
+        <Route path="/login" element={<loginPage setSessionUser={setSessionUser} />} />
+        <Route path="/register" element={<registerPage />} />
         <Route path="*" element={<Navigate to="/main" />} />
       </Routes>
     </Router>
