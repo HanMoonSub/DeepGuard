@@ -15,7 +15,11 @@ celery_app = Celery(
     "deepguard",
     broker=REDIS_URL, # 메세지를 전달할 브로커
     backend=REDIS_URL, # 작업 결과를 저장할 백엔드
-    include=["services.inference_svc"] # 비동기 추론 작업 파일
+    # 비동기 추론 작업 파일
+    include=["services.inference_svc", # process_image_task, process_video_task 
+             "services.explain_svc", # process_explain_image_task
+             "services.image_svc", # cleanup_anonymous_image, cleanup_image_cam
+             "services.video_svc"] # cleanup_anonymous_video
 )
 
 # Celery Instance 상세 설정
