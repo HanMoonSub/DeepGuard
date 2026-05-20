@@ -20,7 +20,8 @@ async def explain_image(
     explain_req: ExplainRequest,
     conn: Connection = Depends(context_get_conn),
     session_user = Depends(session_svc.get_session_user_prt), # 로그인 필수 
-):
+):  
+    # 딥페이크 이미지 추론 결과 가져오기 
     result = await image_svc.get_image_result(conn, image_id)
       
     if result.status != "SUCCESS":
@@ -43,11 +44,11 @@ async def explain_image(
             detail="Pro 모델은 aug_smooth 기능을 지원하지 않습니다",
         )
         
-    # Celery Task 호출(Redis 브로커로 작업 전달)
+    # Celery Task 호출(Redis Broker 활용)
     task = explain_svc.process_explain_image_task.delay(
                                 user_email = session_user["email"],
-                                result_dict = result.model_dump(), # 직렬화 (Pydantic 불가)
-                                explain_req_dict = explain_req.model_dump()) # 직렬화 (Pydantic 불가)
+                                result_dict = result.model_dump(mode='json'),
+                                explain_req_dict = explain_req.model_dump())
     return {
         "message": "딥페이크 이미지 위조 흔적 시각화 접수 완료. 시각화 분석 시작 ...",
         "task_id": task.id, 
@@ -61,10 +62,10 @@ async def get_explain_image_result(
         session_user = Depends(session_svc.get_session_user_prt), # 로그인 필수
         ):
     
-    # celery_app에서 해당 task 가져오기
+    # Redis Broker에서 Task ID에 해당하는 비동기 작업 상태 가져오기
     task = AsyncResult(task_id, app=celery_app)
     
-    if task.state == "PENDING":
+    if task.state in ("PENDING", "STARTED", "RETRY"):
         return {
             "status": "PENDING", 
             "message": "딥페이크 이미지 위조 흔적 시각화 분석 중 ..."
@@ -75,7 +76,7 @@ async def get_explain_image_result(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="딥페이크 이미지 위조 흔적 시각화 중 알 수 없는 오류가 발생하였습니다")
     
-    # Celery Task 성공 시
+    # Celery Task 결과 가져오기
     result = task.result
     
     if result["status"] == "FAILED":
