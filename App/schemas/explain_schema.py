@@ -22,7 +22,7 @@ _HIGH_ALLOWED = {"eigengradcam", "gradcamplusplus", "xgradcam"}
 _EIGEN_ALLOWED = {"gradcamelementwise", "layercam", "xgradcam"}
 
 
-class ExplainRequest(BaseModel):
+class ExplainImageRequest(BaseModel):
     branch_level: Literal["low","high"] = Field("high", description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역적 위조 흔적 포착")
     explainer_type: str = Field("eigengradcam", description = ("선택 가능한 XAI 기법. low: [hirescam, gradcamelementwise, layercam], ""high: [eigengradcam, gradcamplusplus, xgradcam]"))
     display_type: Literal["heatmap", "contour", "bbox"] = Field("heatmap", description="시각화 형태. heatmap: 전체 분포, contour: 외곽선, bbox: 위조 의심 영역 사각형")
@@ -33,7 +33,7 @@ class ExplainRequest(BaseModel):
     eigen_smooth: bool = Field(False, description = "PCA 기반 노이즈 제거. 지배적인 패턴만 남김")
     
     @model_validator(mode="after")
-    def validate_explainer_for_branch(self) -> "ExplainRequest":
+    def validate_explainer_for_branch(self) -> "ExplainImageRequest":
         branch_allowed = {"low": _LOW_ALLOWED, "high": _HIGH_ALLOWED}
         if self.explainer_type not in branch_allowed[self.branch_level]:
             raise ValueError(
@@ -44,7 +44,7 @@ class ExplainRequest(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_explainer_for_eigen_smooth(self) -> "ExplainRequest":
+    def validate_explainer_for_eigen_smooth(self) -> "ExplainImageRequest":
         if self.eigen_smooth and self.explainer_type not in _EIGEN_ALLOWED:
             raise ValueError(
                 f"eigen_smooth가 허용된 기법: "

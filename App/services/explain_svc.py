@@ -5,8 +5,6 @@ from functools import partial
 from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import Connection
-from schemas.explain_schema import ExplainRequest
-from schemas.image_schema import ImageData_indi
 from services import image_svc, inference_svc
 from explainability import (
     CAMExplainer, 

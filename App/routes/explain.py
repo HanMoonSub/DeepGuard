@@ -6,7 +6,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import Connection
 from db.database import context_get_conn
-from schemas.explain_schema import ExplainRequest
+from schemas.explain_schema import ExplainImageRequest
 from services import session_svc, explain_svc, image_svc
 from celery_app import celery_app
 from celery.result import AsyncResult
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/explain", tags=["explain"])
              response_class=JSONResponse, summary="딥페이크 이미지 위조 흔적 시각화 비동기 접수")
 async def explain_image(
     image_id: int,
-    explain_req: ExplainRequest,
+    explain_req: ExplainImageRequest,
     conn: Connection = Depends(context_get_conn),
     session_user = Depends(session_svc.get_session_user_prt), # 로그인 필수 
 ):  
