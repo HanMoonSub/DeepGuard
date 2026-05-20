@@ -1,15 +1,14 @@
 import os
-import asyncio
 import time
 import cv2
 import numpy as np
 import aiofiles as aio
+import asyncio
 from dotenv import load_dotenv
-
 from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
-from sqlalchemy.exc import SQLAlchemyError, DBAPIError
+from sqlalchemy.exc import SQLAlchemyError
 from schemas.image_schema import UserHistory, UserHistory_indi, ImageData_indi
 from db.database import celery_db_conn
 from celery_app import celery_app
@@ -207,15 +206,11 @@ def cleanup_image_cam(cam_loc: str):
     asyncio.set_event_loop(loop)
     try:
         async def _delete():
-            is_deleted = True
             try:
                 await delete_image(cam_loc)
+                print(f"[Cleanup] 이미지 시각화 파일 삭제 완료 - cam_loc: {cam_loc}")
             except Exception as e:
-                is_deleted = False
                 print(f"[Cleanup] 이미지 시각화 파일 삭제 실패 - cam_loc: {cam_loc}, error: {e}")
-            
-            if is_deleted:
-                print(f"[Cleanup] 이미지 시각화 파일 삭제 프로세스 완료 - cam_loc: {cam_loc}")
         
         loop.run_until_complete(_delete())
     
@@ -233,9 +228,7 @@ async def delete_image_db(conn: Connection, image_id: int):
             
         await conn.commit()
 
-    
     except SQLAlchemyError as e:
-        print(e)
         await conn.rollback()
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
 
