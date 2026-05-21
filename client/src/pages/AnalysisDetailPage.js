@@ -34,8 +34,18 @@ const VideoAnalysisDetailPage = ({ sessionUser }) => {
   const brightnessColor = face_brightness < 20 ? '#FF4B4B' : '#39FF14';
   const ratioColor = face_ratio >= 3 ? '#39FF14' : '#FF4B4B';
 
-  const mediaLoc = data.video_loc || data.media_loc || '';
-  const videoSrc = mediaLoc.startsWith('blob') ? mediaLoc : `${apiUrl}${mediaLoc}`;
+  // ────────────────────────────────────────────────────────────────────────
+  // 🎯 [핵심 교정 파트] 비디오 스트림 분기 및 이미지 소스 연동 로직
+  // ────────────────────────────────────────────────────────────────────────
+  const mediaLoc = data.video_loc || data.media_loc || data.image_loc || '';
+  
+  // URL 주소가 Blob 가상 객체 주소인지, 서버의 static 정적 파일 경로인지 판별하여 매핑
+  const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : `${apiUrl}${mediaLoc}`;
+
+  // 현재 유입된 경로가 비디오 분석 결과인지 이미지 분석 결과인지 분기 검사
+  // 데이터 내부에 video_loc가 있거나 라우터 경로(pathname)에 video가 포함되어 있다면 비디오로 처리
+  const isVideoContent = !!data.video_loc || window.location.pathname.includes('video');
+  // ────────────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', padding: '40px 120px', boxSizing: 'border-box', fontFamily: 'sans-serif', overflowX: 'hidden' }}>
@@ -92,20 +102,34 @@ const VideoAnalysisDetailPage = ({ sessionUser }) => {
           overflow: 'hidden', 
           boxShadow: '0 15px 40px rgba(0,0,0,0.6)' 
         }}>
+          {/* ──────────────────────────────────────────────────────────────────────── */}
+          {/* 🛠️ [조건부 렌더링 스위칭 적용] 캠코더 에러 이모티콘 구역 타겟 교정 */}
+          {/* ──────────────────────────────────────────────────────────────────────── */}
           {mediaLoc ? (
-            <video 
-              src={videoSrc} 
-              controls 
-              autoPlay
-              muted
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
-            />
+            isVideoContent ? (
+              // 🎥 비디오 결과창으로 진입했을 때: 원본 동영상 스트림 출력
+              <video 
+                src={mediaSrc} 
+                controls 
+                autoPlay
+                muted
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+              />
+            ) : (
+              // 🖼️ 이미지 결과창으로 진입했을 때: 캠코더 대신 사용자가 올린 정지 이미지 출력
+              <img 
+                src={mediaSrc} 
+                alt="Analyzed Original Content" 
+                style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', borderRadius: '12px' }} 
+              />
+            )
           ) : (
             <div style={{ color: '#444', textAlign: 'center' }}>
-              <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>📹</span>
-              동영상 원본 스트림을 재생할 수 없습니다.
+              <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>⚠️</span>
+              분석 대상 원본 미디어 스트림을 불러올 수 없습니다.
             </div>
           )}
+          {/* ──────────────────────────────────────────────────────────────────────── */}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
