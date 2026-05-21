@@ -54,8 +54,6 @@ async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
                 detail="비디오 파일을 저장하는 중 오류가 발생했습니다."
             )
 
-        print(f"Upload Succeeded: {upload_video_loc}")
-
         # 6. DB 저장용 경로 반환
         return upload_video_loc[1:].replace("\\", "/")
     
@@ -76,7 +74,6 @@ async def delete_video(video_loc: str):
 
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"Video file removed: {file_path}")
         else:
             print(f"Video file not found: {file_path}")
 

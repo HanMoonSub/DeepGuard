@@ -1,49 +1,46 @@
 import os
-import asyncio
 import time
+import cv2
+import numpy as np
 import aiofiles as aio
+import asyncio
 from dotenv import load_dotenv
-
 from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
-from sqlalchemy.exc import SQLAlchemyError, DBAPIError
+from sqlalchemy.exc import SQLAlchemyError
 from schemas.image_schema import UserHistory, UserHistory_indi, ImageData_indi
 from db.database import celery_db_conn
 from celery_app import celery_app
 
 
 load_dotenv()
-UPLOAD_DIR = os.getenv("UPLOAD_DIR")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./static/uploads")
+EXPLAIN_UPLOAD_DIR = os.getenv("EXPLAIN_UPLOAD_DIR", "./static/explain")
+
+os.makedirs(EXPLAIN_UPLOAD_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # 사용자 업로드 이미지 서버 내 저장 (회원/비회원 공통)
 # 호출 : inference.py 
 # image_loc = await image_svc.upload_image(user_email, imagefile) -> 이미지 업로드 이후, 이미지 저장 경로 반환
 async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
     try:
-        # 1. 사용자별 하위 디렉토리 결정
+        # 사용자별 하위 디렉토리 결정
         sub_dir = user_email if user_email else "anonymous"
         
         user_dir = os.path.join(UPLOAD_DIR, sub_dir)
 
-        # 3. 디렉토리 존재 확인 및 생성
-        if not os.path.exists(user_dir):
-            try:
-                os.makedirs(user_dir, exist_ok=True)
-            except OSError as e:
-                print(f"[Storage Error] 디렉토리 생성 실패: {e}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="서버 내 저장 공간을 준비하지 못했습니다."
-                )
-
-        # 4. 파일명 중복 방지 (파일명_타임스탬프.확장자)
+        # 디렉토리 존재 확인 및 생성
+        os.makedirs(user_dir, exist_ok=True)
+    
+        # 파일명 중복 방지 (파일명_타임스탬프.확장자)
         filename_only, ext = os.path.splitext(imagefile.filename)
         
         upload_filename = f"{filename_only}_{int(time.time())}{ext}"
         upload_image_loc = os.path.join(user_dir, upload_filename)
 
-        # 5. 비동기 이미지 저장 (Chunk 단위 읽기)
+        # 비동기 이미지 저장 (Chunk 단위 읽기)
         try:
             async with aio.open(upload_image_loc, "wb") as outfile:
                 while content := await imagefile.read(1024 * 1024):
@@ -54,8 +51,6 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="이미지 파일을 저장하는 중 오류가 발생했습니다."
             )
-
-        print(f"Upload Succeeded: {upload_image_loc}")
 
         # 6. DB 저장용 경로 반환
         return upload_image_loc[1:].replace("\\", "/")
@@ -69,6 +64,25 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="이미지 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
 
+# 딥페이크 이미지 위조 흔적 시각화 파일 서버 내 저장 (회원 전용)
+async def upload_image_cam(user_email: str, image_id: int, image: np.ndarray) -> str:
+    user_dir = os.path.join(EXPLAIN_UPLOAD_DIR, user_email)
+    os.makedirs(user_dir, exist_ok=True)
+    
+    cam_filename = f"{image_id}_{int(time.time())}.png"
+    cam_loc = os.path.join(user_dir, cam_filename)
+            
+    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    _, buf = cv2.imencode(".png", image_bgr)
+
+    try:
+        async with aio.open(cam_loc, "wb") as outfile:
+            await outfile.write(buf.tobytes())
+    except Exception as e:
+        raise e
+
+    return cam_loc[1:].replace("\\", "/")
+
 # 사용자 업로드 이미지 서버 내 삭제
 # 호출 : image.py : history 삭제 할 때 db 와 실제 파일 삭제
 # 호출 : inference.py : 추론 FAIL일 때 delete_video and delete_video_db 실행
@@ -79,12 +93,10 @@ async def delete_image(image_loc: str):
 
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"File removed: {file_path}")
         else:
             print(f"File not found: {file_path}")
 
-    except Exception as e:
-        print(f"{e}")
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="알수없는 이유로 문제가 발생하였습니다."
@@ -206,7 +218,23 @@ def cleanup_anonymous_image(image_id: int, image_loc: str):
     finally:
         loop.close()
 
-
+@celery_app.task(name="cleanup_image_cam")
+def cleanup_image_cam(cam_loc: str):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        async def _delete():
+            try:
+                await delete_image(cam_loc)
+                print(f"[Cleanup] 이미지 시각화 파일 삭제 완료 - cam_loc: {cam_loc}")
+            except Exception as e:
+                print(f"[Cleanup] 이미지 시각화 파일 삭제 실패 - cam_loc: {cam_loc}, error: {e}")
+        
+        loop.run_until_complete(_delete())
+    
+    finally:
+        loop.close()
+        
 # 이미지 DB 레코드 및 물리 파일 완전 삭제
 # 호출 : image.py : history 삭제 시
 # 호출 : inference.py : get_image_result 에서 FALIED일 시
@@ -220,7 +248,6 @@ async def delete_image_db(conn: Connection, image_id: int):
             
         await conn.commit()
 
-    
     except SQLAlchemyError as e:
         await conn.rollback()
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")

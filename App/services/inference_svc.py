@@ -1,17 +1,15 @@
 import asyncio
-from inference.image_predictor_prt import ImagePredictor
-from inference.video_predictor_prt import VideoPredictor
-from inference.utils import PredictorError
+from typing import Literal
 from fastapi import status, Depends
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
-from db.database import context_get_conn, celery_db_conn, engine
+from db.database import celery_db_conn
 from celery_app import celery_app
-
-image_cache = {}
-video_cache = {}
+from inference.image_predictor_prt import ImagePredictor
+from inference.video_predictor_prt import VideoPredictor
+from inference.utils import PredictorError
 
 # 사용자 모델 설정 변수명 
 MODEL_CONFIG = {
@@ -31,29 +29,46 @@ MODEL_CONFIG = {
     }
 }
 
-# 사용자 이미지 딥페이크 여부 판단 로직
-def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str):
-    
-    # image_loc: static 폴더 내 저장된 사용자 이미지 경로
-    # version_type: v1, v2
-    # model_type: fast, pro
-    # domain_type: 서양인, 동양인
-    
-    model_name, dataset = MODEL_CONFIG[version_type][model_type][domain_type]
+_image_cache: dict = {}
+_video_cache: dict = {}
 
-    # 캐시 확인 및 모델 초기화
+ # 캐시 확인 및 모델 초기화
+def _get_or_create_predictor(
+    model_name: str,
+    dataset: str,
+    predictor_mode: Literal["image", "video"],
+) -> ImagePredictor | VideoPredictor:
     cache_key = (model_name, dataset)
-    if cache_key not in image_cache:
-        image_cache[cache_key] = ImagePredictor(
+ 
+    if predictor_mode == "image":
+        if cache_key not in _image_cache:
+            _image_cache[cache_key] = ImagePredictor(
+                margin_ratio=0.2,
+                conf_thres=0.5,
+                model_name=model_name,
+                dataset=dataset,
+            )
+        return _image_cache[cache_key]
+ 
+    if cache_key not in _video_cache:
+        _video_cache[cache_key] = VideoPredictor(
             margin_ratio=0.2,
             conf_thres=0.5,
             model_name=model_name,
-            dataset=dataset
+            dataset=dataset,
         )
-    predictor = image_cache[cache_key]
+    return _video_cache[cache_key]
+
+# 사용자 이미지 딥페이크 여부 판단 로직
+def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str):
+    
+    model_name, dataset = MODEL_CONFIG[version_type][model_type][domain_type]
+
+    predictor = _get_or_create_predictor(model_name, dataset, "image")
+    image_path = "." + image_loc
     
     try:
-        analysis = predictor.predict_img("." + image_loc)
+        analysis = predictor.predict_img(image_path)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
@@ -130,26 +145,13 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
 # 사용자 비디오 딥페이크 여부 판단 로직
 def predict_video(video_loc: str, version_type: str, model_type: str, domain_type: str):
     
-    # video_loc: static 폴더 내 저장된 사용자 비디오 경로
-    # version_type: v1, v2
-    # model_type: fast, pro
-    # domain_type: 서양인, 동양인
-    
     model_name, dataset = MODEL_CONFIG[version_type][model_type][domain_type]
 
-    # 캐시 확인 및 모델 초기화
-    cache_key = (model_name, dataset)
-    if cache_key not in video_cache:
-        video_cache[cache_key] = VideoPredictor(
-            margin_ratio=0.2,
-            conf_thres=0.5,
-            model_name=model_name,
-            dataset=dataset
-        )
-    predictor = video_cache[cache_key]
+    predictor = _get_or_create_predictor(model_name, dataset, "video")
+    video_path = "." + video_loc
     
     try:
-        analysis = predictor.predict_video("." + video_loc)
+        analysis = predictor.predict_video(video_path)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     

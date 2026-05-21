@@ -1,3 +1,5 @@
+import torch
+
 class BinaryClassifierOutputTarget:
     def __init__(self, category):
         self.category = category
@@ -9,3 +11,6 @@ class BinaryClassifierOutputTarget:
             sign = -1
         return model_output * sign
     
+class BinaryClassifierOutputSigmoidTarget:
+    def __call__(self, model_output):
+        return torch.sigmoid(model_output)
