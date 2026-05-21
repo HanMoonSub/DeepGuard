@@ -234,7 +234,8 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
           
         finally:
             if not user_id:
-                video_svc.cleanup_anonymous_video.apply_async(args=[video_id, video_loc], countdown=60)
+                is_success = result.get("status") == "success"
+                video_svc.cleanup_anonymous_video.apply_async(args=[video_id, video_loc, is_success], countdown=60)
 
                 
 

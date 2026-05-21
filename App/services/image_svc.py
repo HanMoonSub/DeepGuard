@@ -21,7 +21,9 @@ EXPLAIN_UPLOAD_DIR = os.getenv("EXPLAIN_UPLOAD_DIR", "./static/explain")
 os.makedirs(EXPLAIN_UPLOAD_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# 사용자 업로드 이미지 파일 서버 내 저장 (회원/비회원 공통)
+# 사용자 업로드 이미지 서버 내 저장 (회원/비회원 공통)
+# 호출 : inference.py 
+# image_loc = await image_svc.upload_image(user_email, imagefile) -> 이미지 업로드 이후, 이미지 저장 경로 반환
 async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
     try:
         # 사용자별 하위 디렉토리 결정
@@ -82,6 +84,8 @@ async def upload_image_cam(user_email: str, image_id: int, image: np.ndarray) ->
     return cam_loc[1:].replace("\\", "/")
 
 # 사용자 업로드 이미지 서버 내 삭제
+# 호출 : image.py : history 삭제 할 때 db 와 실제 파일 삭제
+# 호출 : inference.py : 추론 FAIL일 때 delete_video and delete_video_db 실행
 async def delete_image(image_loc: str):
     try:
         
@@ -97,7 +101,10 @@ async def delete_image(image_loc: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="알수없는 이유로 문제가 발생하였습니다."
         )
+    
+
 # 사용자 전체 히스토리 조회 (image_result 테이블 반영)
+# 호출 : image.py / video.py
 async def get_user_histories(conn: Connection, user_id: int):
     try:
         # SQL에 맞춰 테이블명과 컬럼 변경
@@ -108,8 +115,7 @@ async def get_user_histories(conn: Connection, user_id: int):
             ORDER BY created_at DESC;
         """)
         stmt = text(query)
-        bind_stmt = stmt.bindparams(user_id = user_id)
-        result = await conn.execute(bind_stmt)
+        result = await conn.execute(stmt, {"user_id": user_id})
 
         user_histories = [UserHistory(
             image_id = row.id,
@@ -137,6 +143,7 @@ async def get_user_histories(conn: Connection, user_id: int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
     
 # 사용자 개별 히스토리 조회
+# 호출 : image.py / video.py
 async def get_user_history(conn: Connection, image_id: int):
     try:
         query = """
@@ -145,8 +152,7 @@ async def get_user_history(conn: Connection, image_id: int):
             WHERE id = :image_id;
         """
         stmt = text(query)
-        bind_stmt = stmt.bindparams(image_id=image_id)
-        result = await conn.execute(bind_stmt)
+        result = await conn.execute(stmt, {"image_id": image_id})
         
         row = result.fetchone()
         if row is None:
@@ -183,7 +189,8 @@ async def get_user_history(conn: Connection, image_id: int):
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
-# 비회원 데이터 5분 후 자동 삭제 태스크
+# 비회원 데이터 1분 후 자동 삭제 태스크
+# inference_svc.py : def process_image_task에서 추론이 성공 했을 때, 비회원일 경우 1분 후 자동 삭제
 @celery_app.task(name="cleanup_anonymous_image")
 def cleanup_anonymous_image(image_id: int, image_loc: str):
     loop = asyncio.new_event_loop()
@@ -191,12 +198,23 @@ def cleanup_anonymous_image(image_id: int, image_loc: str):
     try:
         async def _delete():
             async with celery_db_conn() as conn:
-                await delete_image_db(conn, image_id)
-            await delete_image(image_loc)
-            print(f"[Cleanup] 비회원 이미지 삭제 완료 - image_id: {image_id}, image_loc: {image_loc}")
+                success = True
+                try:
+                    await delete_image_db(conn, image_id)
+                except Exception as e:
+                    print(f"[Cleanup] 이미지 DB 삭제 실패 - image_id: {image_id}, error: {e}")
+                    success=False
+            try:
+                await delete_image(image_loc)
+            except Exception as e:
+                print(f"[Cleanup] 이미지 파일 삭제 실패 - image_loc: {image_loc}, error: {e}")
+                success=False
+
+            if success: 
+                print(f"[Cleanup] 비회원 이미지 삭제 프로세스 완료 - image_id: {image_id}, image_loc: {image_loc}")
+
         loop.run_until_complete(_delete())
-    except Exception as e:
-        print(f"[Cleanup Error] 비회원 이미지 삭제 실패 - image_id: {image_id}, error: {e}")
+    
     finally:
         loop.close()
 
@@ -218,10 +236,12 @@ def cleanup_image_cam(cam_loc: str):
         loop.close()
         
 # 이미지 DB 레코드 및 물리 파일 완전 삭제
+# 호출 : image.py : history 삭제 시
+# 호출 : inference.py : get_image_result 에서 FALIED일 시
 async def delete_image_db(conn: Connection, image_id: int):
     try:
         delete_query = text("DELETE FROM image_result WHERE id = :image_id")
-        result = await conn.execute(delete_query.bindparams(image_id=image_id))
+        result = await conn.execute(delete_query, {"image_id": image_id})
 
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 이미지 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")
@@ -236,11 +256,12 @@ async def delete_image_db(conn: Connection, image_id: int):
         raise
     
     except Exception as e:
-        print(e)
         await conn.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
 # 빈 이미지 DB 생성 이후, image_id 반환(접수 완료)
+# 호출 : inference.py : 빈 이미지 DB 생성 후, image_id 받기
+# image_id = (conn, user_id, image_loc, version_type, model_type, domain_type)
 async def register_image_result(conn: Connection, user_id: int | None, image_loc: str, 
                                 version_type: str, model_type: str, domain_type: str):
     try:
@@ -275,6 +296,7 @@ async def register_image_result(conn: Connection, user_id: int | None, image_loc
                             detail="요청데이터가 제대로 전달되지 않았습니다")
         
 # 이미지 메타데이터 + 추론 결과값 DB에 저장
+# 호출 : inference_svc.py : process_image_task 추론 종료 시점
 async def update_image_result(conn: Connection, image_id: int, analysis: dict,
                               result_msg: str, status: str): 
     
@@ -320,6 +342,8 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
         raise e
     
 # 이미지 결과 값 가져오기
+# 프론트엔드가 특정 이미지의 분석 진행 상태 및 최종 결과를 확인하고자 할 때 데이터 반환
+# 호출 위치: routers/inference.py - get_image_result() API
 async def get_image_result(conn: Connection, 
                            image_id: int):
     try:

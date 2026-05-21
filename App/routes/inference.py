@@ -137,6 +137,6 @@ async def get_video_detail(
         )
     
     meta = await video_svc.get_video_meta_result(conn, video_id)
-    frames = await video_svc.get_video_frame_results(conn, video_id)
+    frames = await video_svc.get_video_frame_result(conn, video_id)
 
     return VideoDetailResponse(meta=meta, frames=frames)
