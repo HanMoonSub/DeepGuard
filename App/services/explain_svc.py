@@ -44,9 +44,6 @@ def _run_visualization(explainer: CAMExplainer, image_path: str, explain_req_dic
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
                                                  category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
-    elif explain_req_dict["display_type"] == "contour":
-        return explainer.display_contour_on_image(image_path, threshold=explain_req_dict["threshold"],
-                                                 category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
     else:  
         return explainer.display_bbox_on_image(image_path, threshold=explain_req_dict["threshold"],
                                               category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 

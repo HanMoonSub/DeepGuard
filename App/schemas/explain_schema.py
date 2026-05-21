@@ -25,7 +25,7 @@ _EIGEN_ALLOWED = {"gradcamelementwise", "layercam", "xgradcam"}
 class ExplainImageRequest(BaseModel):
     branch_level: Literal["low","high"] = Field("high", description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역적 위조 흔적 포착")
     explainer_type: str = Field("eigengradcam", description = ("선택 가능한 XAI 기법. low: [hirescam, gradcamelementwise, layercam], ""high: [eigengradcam, gradcamplusplus, xgradcam]"))
-    display_type: Literal["heatmap", "contour", "bbox"] = Field("heatmap", description="시각화 형태. heatmap: 전체 분포, contour: 외곽선, bbox: 위조 의심 영역 사각형")
+    display_type: Literal["heatmap", "bbox"] = Field("heatmap", description="시각화 형태. heatmap: 전체 분포, bbox: 위조 의심 영역 사각형")
     category: Literal[0, 1] = Field(1, description="판단 클래스 인덱스 (0: Real / 1: Fake)")
     overlay_ratio: float = Field(0.5, ge=0.0, le=1.0, description = "Heatmap 투명도 (0: 히트맵만 강조, 1: 원본 이미지 위주)")
     threshold: float = Field(0.5, ge=0.5, le=1.0, description="contour/bbox 이진화 임계값 (0.0~1.0)")
