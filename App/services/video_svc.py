@@ -179,13 +179,13 @@ def cleanup_anonymous_video(video_id: int, video_loc: str, is_success: bool):
                     try:
                         await delete_video_meta_result(conn, video_id)
                     except Exception as e :
-                        print(f"[Cleanup] frame 삭제 실패 - video_id: {video_id}, error: {e}")
+                        print(f"[Cleanup] video meta 삭제 실패 - video_id: {video_id}, error: {e}")
                         success=False
 
                     try:  
                         await delete_video_frame_result(conn, video_id)   
                     except Exception as e :
-                        print (f"[Cleanup] meta 삭제 실패 - video_id: {video_id}, error: {e}")
+                        print (f"[Cleanup] video frame 삭제 실패 - video_id: {video_id}, error: {e}")
                         success=False
                 try:
                     await delete_video_db(conn, video_id)
@@ -195,10 +195,10 @@ def cleanup_anonymous_video(video_id: int, video_loc: str, is_success: bool):
             try:
                 await delete_video(video_loc)
             except Exception as e:
-                print(f"[Cleanup] 파일 삭제 실패 - video_loc: {video_loc}, error: {e}")
+                print(f"[Cleanup] 비디오 파일 삭제 실패 - video_loc: {video_loc}, error: {e}")
                 success=False
 
-            if is_success:        
+            if success:        
                 print(f"[Cleanup] 비회원 비디오 삭제 완료 - video_id: {video_id}, video_loc: {video_loc}")
 
         loop.run_until_complete(_delete())
