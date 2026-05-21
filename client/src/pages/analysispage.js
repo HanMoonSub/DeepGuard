@@ -27,7 +27,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const pollingTimer = useRef(null);
   const isMounted = useRef(true);
 
-  // 스타일 상수
   const sideBarStyle = { width: '280px', backgroundColor: '#050505', borderRight: '1px solid #222', display: 'flex', flexDirection: 'column', padding: '25px' };
   const centerZoneStyle = { flex: 1, padding: '40px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' };
   const rightPanelStyle = { width: '340px', backgroundColor: '#0D0D0D', borderLeft: '1px solid #222', padding: '30px', display: 'flex', flexDirection: 'column' };
@@ -91,7 +90,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         } else {
           setStatusMessage(data.message || "이미지 분석 진행 중...");
         }
-      } catch (err) { setStatusMessage("결과 확인 중..."); }
+      } catch (err) { setResult(null); }
     }, 2000);
   }, [fetchHistory]);
 
@@ -138,13 +137,33 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // [기능 추가 및 연동] 이미지 다중/단일 선택 삭제 로직 (UI 및 기존 기능 보존)
+  // ────────────────────────────────────────────────────────────────────────────
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
     if (!window.confirm(`${selectedIds.length}개의 기록을 삭제하시겠습니까?`)) return;
-    setHistory(history.filter(item => !selectedIds.includes(item.id)));
-    setSelectedIds([]);
-    setIsEditMode(false);
+    
+    try {
+      // 백엔드 image.py의 DELETE /image/history/{image_id} 주소 규격에 완벽 매핑
+      const deletePromises = selectedIds.map(id => 
+        axios.delete(`/image/history/${id}`)
+      );
+
+      await Promise.all(deletePromises);
+
+      alert("선택한 이미지 기록이 성공적으로 삭제되었습니다.");
+      
+      // 삭제 성공 후 최신 상태 실시간 동기화 및 에디터 모드 초기화
+      fetchHistory();
+      setSelectedIds([]);
+      setIsEditMode(false);
+    } catch (error) {
+      console.error(error);
+      alert("서버에서 기록을 삭제하는 중 오류가 발생했습니다.");
+    }
   };
+  // ────────────────────────────────────────────────────────────────────────────
 
   const handleLogoutClick = async () => {
     if (!window.confirm("로그아웃 하시겠습니까?")) return;
@@ -172,23 +191,48 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {sessionUser ? (
             history.map((item, index) => {
-              const p = item.prob ?? item.score ?? -1;
-              const isSelected = selectedIds.includes(item.id);
+              const p = item.prob ?? item.score ?? item.analysis?.prob ?? -1;
+              const isSelected = selectedIds.includes(item.image_id);
               const vType = item.version_type ? item.version_type.toUpperCase() : 'V1';
               const dType = item.domain_type || '서양인';
               const mType = item.model_type ? item.model_type.toUpperCase() : 'FAST';
 
+              const targetBrightness = item.face_brightness ?? item.analysis?.face_brightness ?? item.brightness ?? 0;
+              const targetRatio = item.face_ratio ?? item.analysis?.face_ratio ?? item.ratio ?? 0;
+              const targetConf = item.face_conf ?? item.analysis?.face_conf ?? item.conf ?? item.face_confidence ?? 0;
+
+              let itemLabel = 'UNKNOWN';
+              if (item.label && item.label !== 'UNKNOWN') {
+                itemLabel = item.label.toUpperCase();
+              } else if (p !== -1) {
+                itemLabel = p > 0.5 ? 'FAKE' : 'REAL';
+              }
+
               return (
-                <div key={item.id || index} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                  {isEditMode && <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)} style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} />}
-                  <div onClick={() => !isEditMode && navigate('/analysis-detail', { state: { ...item, prob: p } })} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '12px', border: isSelected ? '1px solid #39FF14' : '1px solid #222', cursor: isEditMode ? 'default' : 'pointer' }}>
+                <div key={item.image_id || index} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                  {isEditMode && <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.image_id)} style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} />}
+                  <div 
+                    onClick={() => !isEditMode && navigate('/analysis-detail', { 
+                      state: { 
+                        ...item, 
+                        prob: p,
+                        label: itemLabel,
+                        id: item.image_id, 
+                        face_brightness: targetBrightness, 
+                        face_ratio: targetRatio,
+                        face_conf: targetConf,
+                        image_loc: item.image_loc 
+                      } 
+                    })}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '12px', border: isSelected ? '1px solid #39FF14' : '1px solid #222', cursor: isEditMode ? 'default' : 'pointer' }}
+                  >
                     <div style={{ width: '45px', height: '45px', backgroundColor: '#222', borderRadius: '8px', overflow: 'hidden' }}>
                       {item.image_loc ? <img src={`${apiUrl}${item.image_loc}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🖼️'}
                     </div>
                     <div>
                       <div style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold', marginBottom: '2px' }}>{vType} | {dType} | {mType}</div>
                       <div style={{ fontSize: '11px', color: '#555' }}>{item.created_at?.split('T')[0]}</div>
-                      <div style={{ fontSize: '13px', color: '#fff' }}>{item.label || (p > 0.5 ? 'FAKE' : 'REAL')}</div>
+                      <div style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>{itemLabel}</div>
                     </div>
                   </div>
                 </div>
@@ -197,7 +241,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           ) : <p style={{ color: '#444', textAlign: 'center' }}>로그인 필요</p>}
         </div>
 
-        {isEditMode && <button onClick={handleDeleteSelected} disabled={selectedIds.length === 0} style={{ width: '100%', padding: '12px', backgroundColor: selectedIds.length > 0 ? '#FF4B4B' : '#222', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}>선택 삭제</button>}
+        {isEditMode && <button onClick={handleDeleteSelected} disabled={selectedIds.length === 0} style={{ width: '100%', padding: '12px', backgroundColor: selectedIds.length > 0 ? '#FF4B4B' : '#222', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}>선택 삭제 ({selectedIds.length})</button>}
 
         <div style={{ borderTop: '1px solid #222', paddingTop: '20px', marginTop: '20px' }}>
           <button onClick={() => navigate('/main')} style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', color: '#fff', border: '1px solid #444', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '15px' }}>메인 화면</button>
@@ -215,17 +259,17 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         <div style={{ display: 'flex', flex: 1, gap: '20px' }}>
           <div style={{...innerBoxStyle, border: showOptions ? '2px solid #39FF14' : '2px dashed #333'}} onClick={() => { if(!previewUrl) setShowOptions(!showOptions); }}>
             {previewUrl ? <img src={previewUrl} alt="preview" style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain' }} /> : (
-               <div style={{textAlign:'center', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-                 <div style={plusBtnStyle}>+</div>
-                 <p style={{fontSize:'20px', fontWeight:'bold', marginBottom: '8px'}}>Image Upload</p>
-                 <p style={{color:'#555', fontSize:'14px'}}>이미지를 업로드하세요</p>
-                 {showOptions && (
-                   <div style={{ marginTop: '25px', display: 'flex', gap: '12px' }}>
-                     <button onClick={(e) => { e.stopPropagation(); document.getElementById('fIn').click(); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#39FF14', border: '1px solid #39FF14', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>내 PC 파일</button>
-                     <button onClick={(e) => { e.stopPropagation(); alert("준비 중입니다."); setShowOptions(false); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#fff', border: '1px solid #444', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Cloud Drive</button>
-                   </div>
-                 )}
-               </div>
+                <div style={{textAlign:'center', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                  <div style={plusBtnStyle}>+</div>
+                  <p style={{fontSize:'20px', fontWeight: 'bold', marginBottom: '8px'}}>Image Upload</p>
+                  <p style={{color:'#555', fontSize:'14px'}}>이미지를 업로드하세요</p>
+                  {showOptions && (
+                    <div style={{ marginTop: '25px', display: 'flex', gap: '12px' }}>
+                      <button onClick={(e) => { e.stopPropagation(); document.getElementById('fIn').click(); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#39FF14', border: '1px solid #39FF14', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>내 PC 파일</button>
+                      <button onClick={(e) => { e.stopPropagation(); alert("준비 중입니다."); setShowOptions(false); }} style={{ padding: '10px 18px', backgroundColor: '#222', color: '#fff', border: '1px solid #444', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Cloud Drive</button>
+                    </div>
+                  )}
+                </div>
             )}
             <input id="fIn" type="file" hidden onChange={(e) => handleFileSelect(e.target.files[0])} />
           </div>
@@ -266,7 +310,22 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <p style={{ fontSize: '48px', fontWeight: 'bold', color: (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? '#FF4B4B' : '#39FF14' }}>
                   {(result.label || ( (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? 'FAKE' : 'REAL' ))}
                 </p>
-                <button onClick={() => navigate('/analysis-detail', { state: { ...result, ...result.analysis, image_loc: previewUrl } })} style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer' }}>상세 결과 보기</button>
+                <button 
+                  onClick={() => navigate('/analysis-detail', { 
+                    state: { 
+                      ...result, 
+                      ...result.analysis, 
+                      face_brightness: result.face_brightness ?? result.analysis?.face_brightness ?? result.brightness ?? 0,
+                      face_ratio: result.face_ratio ?? result.analysis?.face_ratio ?? result.ratio ?? 0,
+                      face_conf: result.face_conf ?? result.analysis?.face_conf ?? result.conf ?? result.face_confidence ?? 0,
+                      prob: result.prob ?? result.analysis?.prob ?? 0,
+                      image_loc: previewUrl 
+                    } 
+                  })} 
+                  style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer' }}
+                >
+                  상세 결과 보기
+                </button>
               </div>
             ) : <p style={{ color: '#222' }}>WAITING...</p>}
           </div>
