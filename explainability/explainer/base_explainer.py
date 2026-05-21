@@ -191,4 +191,4 @@ class BaseExplainer:
                 f"model={self.model_name}, dataset={self.dataset}, "
                 f"margin_ratio={self.margin_ratio}, conf_thres={self.conf_thres}, "
                 f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, block_idx={self.block_idx},"
-                f"category={self.category},device={self.device})")
+                f"device={self.device})")
