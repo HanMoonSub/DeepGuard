@@ -1,14 +1,17 @@
 # Deepfakes Detection
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
+  <img src="https://img.shields.io/github/license/HanMoonSub/DeepGuard?style=flat-square&color=555555&logo=github&logoColor=white" alt="License">
+  <img src="https://img.shields.io/github/stars/HanMoonSub/DeepGuard?style=flat-square&color=FFD700&logo=github&logoColor=white" alt="Stars">
+  <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
+  <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
+  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/license/HanMoonSub/DeepGuard?style=flat-square&color=555555&logo=github&logoColor=white" alt="License">
-  <img src="https://img.shields.io/github/stars/HanMoonSub/DeepGuard?style=flat-square&color=FFD700&logo=github&logoColor=white" alt="Stars">
-  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
 </p>
 
 <p align="center">
@@ -43,6 +46,8 @@
 - [📈 Model Evaluation](#-model-evaluation) - Benchmarking results
 - [💻 Model Usage](#-model-usage) - How to integrate DeepGuard models into your own Python code or via timm
 - [🔮 Predict Image & Video](#-predict-image--video) - Simple Inference examples for detecting deepfakes in image and video
+- [🎨 DeepFake AI Explainability](#-deepfake-ai-explainability) - Visualizing model focus using Grad-CAM and attention maps
+- [📊 Metrics and Evaluation for DeepFake XAI](#-metrics-and-evaluation-for-deepfake-xai) - Quantitative assessment of explanation reliability
 - [📬 Authors](#-authors)
 - [📝 Reference](#-reference)
 - [⚖️ License](#-license)
@@ -303,6 +308,41 @@ print(f"Deepfake Probability: {result:.4f}")
 
 ```
 
+## 🎨 DeepFake AI Explainability
+
+Deepfake detection requires high reliability and interpretability. DeepGuard integrates a robust Explainable AI (XAI) Toolkit to visualize the decision-making process of our hybrid models
+
+⭐ Validated on hybrid CNN-ViT architectures, specifically `MS-EffViT` and `MS-EffGCViT`.  
+⭐ Dual-Branch Analysis: `Low-Level Branch`(focus on local forgery region), `High-Level Branch`(focus on global forgery region)
+
+### Deepfake Detection: XAI Methods by Multi-Scale Branch
+
+| Branch | Method | 🎯 What it does |
+| :--- | :--- | :--- |
+| ![](https://img.shields.io/badge/Low_level-blue?style=flat-square) | **HiResCAM** | Like GradCAM but element-wise multiply the activations with the gradients; provably guaranteed faithfulness for certain models |
+| ![](https://img.shields.io/badge/Low_level-blue?style=flat-square) | **GradCAMElementWise** | Like GradCAM but element-wise multiply the activations with the gradients then apply a ReLU operation before summing |
+| ![](https://img.shields.io/badge/Low_level-blue?style=flat-square) | **LayerCAM** | Spatially weight the activations by positive gradients. Works better especially in lower layers |
+| --- | --- | --- | --- |
+| ![](https://img.shields.io/badge/High_level-red?style=flat-square) | **EigenGradCAM** | Like EigenCAM but with class discrimination: First principle component of Activations*Grad. Looks like GradCAM, but cleaner |
+| ![](https://img.shields.io/badge/High_level-red?style=flat-square) | **GradCAM++** |  Like GradCAM but uses second order gradients |
+| ![](https://img.shields.io/badge/High_level-red?style=flat-square) | **XGradCAM** | Like GradCAM but scale the gradients by the normalized activations |
+
+### Multi Scale Efficient Vision Transformer
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
+| **⚡ ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
+
+
+
+## 📊 Metrics and Evaluation for DeepFake XAI 
+
 
 ## 📬 Authors
 
@@ -323,6 +363,7 @@ _**This project was developed as a Senior Graduation Project by the Department o
 6. [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) - _Multiple Deep Learning Models by Ameen Caslam_
 7. [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection
 ) - _A curated list of tools, papers and code by Daisy Zhang_
+8. [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) - _Advanced Visual Explanations for PyTorch Models_
 
 ## ⚖️ License 
 

@@ -1,5 +1,5 @@
-from pytorch_grad_cam import EigenCAM, EigenGradCAM, KPCA_CAM, SegEigenCAM
-from explainability.cam_explainer import CAMExplainer
+from pytorch_grad_cam import EigenCAM, EigenGradCAM, KPCA_CAM
+from explainability.explainer.cam_explainer import CAMExplainer
 
 class EigenCAMExplainer(CAMExplainer):
     """
@@ -31,14 +31,5 @@ class KPCACAMExplainer(CAMExplainer):
         return KPCA_CAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn,
                         kernel=self.kernel, gamma=self.gamma)
     
-class SegEigenCAMExplainer(CAMExplainer):
-    """
-    Like EigenCAM but with gradient weighting (absolute gradients ⊙ activations )
-    before SVD and sign correction to fix SVD sign ambiguity
-    designed for semantic segmentation
-    """
-    def _build_cam(self):
-        return SegEigenCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
-    
-    
-
+    def __repr__(self):
+        return super().__repr__().rstrip(")") + f", kernel={self.kernel}, gamma={self.gamma})"

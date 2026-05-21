@@ -1,22 +1,24 @@
 from fastapi import (
-    APIRouter, Depends, status, Form,
-    File, UploadFile
-)
+    APIRouter, UploadFile, status,
+    Depends, Form, File)
+from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from services import image_svc, session_svc, inference_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
-from schemas.video_schema import VideoDetailResponse
-
+from schemas.video_schema import VideoDetailResponse, VideoDetailData
+from schemas.image_schema import ImageData_indi
+from typing import Literal
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
-@router.post("/image", status_code=status.HTTP_202_ACCEPTED, summary="딥페이크 비동기 이미지 추론 접수") 
+@router.post("/image", status_code=status.HTTP_202_ACCEPTED,
+             response_class=JSONResponse, summary="딥페이크 비동기 이미지 추론 접수") 
 async def predict_image(
                         imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
-                        version_type: str = Form(...), # deepguard1, deepguard2
-                        model_type: str = Form(...), # fast model, pro moel 
-                        domain_type: str = Form(...), # model 학습시 사용한 dataset 종류
+                        version_type: Literal["v1","v2"] = Form("v2", description="모델 엔진 버전"),
+                        model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
+                        domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
                         conn: Connection = Depends(context_get_conn), # 이미지 File 저장
                         session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
                         ):
@@ -43,7 +45,8 @@ async def predict_image(
         "status": "success",
     }
 
-@router.get("/image/{image_id}", status_code=status.HTTP_200_OK, summary="딥페이크 비동기 이미지 추론 결과값 가져오기")
+@router.get("/image/{image_id}", status_code=status.HTTP_200_OK,
+            response_model=ImageData_indi, summary="딥페이크 비동기 이미지 추론 결과값 가져오기")
 async def get_image_result(
                             image_id: int,
                             conn: Connection = Depends(context_get_conn),
@@ -62,12 +65,13 @@ async def get_image_result(
         )
     return image_data
 
-@router.post("/video", status_code=status.HTTP_202_ACCEPTED, summary="딥페이크 비동기 비디오 추론 접수")
+@router.post("/video", status_code=status.HTTP_202_ACCEPTED, 
+             response_class=JSONResponse, summary="딥페이크 비동기 비디오 추론 접수")
 async def predict_video(
                         videofile: UploadFile = File(...), # 사용자가 업로드한 비디오 객체
-                        version_type: str = Form(...), # deepguard1, deepguard2
-                        model_type: str = Form(...), # fast model, pro moel 
-                        domain_type: str = Form(...), # model 학습시 사용한 dataset 종류
+                        version_type: Literal["v1","v2"] = Form("v2", description="모델 엔진 버전"),
+                        model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
+                        domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
                         conn: Connection = Depends(context_get_conn), # 비디오 File 저장
                         session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
                         ):
@@ -94,7 +98,8 @@ async def predict_video(
         "status": "success",
     }
 
-@router.get("/video/{video_id}", status_code=status.HTTP_200_OK, summary="딥페이크 비디오 비디오 추론 결과값 가져오기")
+@router.get("/video/{video_id}", status_code=status.HTTP_200_OK, 
+            response_model=VideoDetailData, summary="딥페이크 비디오 비디오 추론 결과값 가져오기")
 async def get_video_result(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
@@ -117,12 +122,20 @@ async def get_video_result(
     
     return video_data
 
-@router.get("/video/{video_id}/detail", status_code=status.HTTP_200_OK, summary="딥페이크 상세 분석 결과값 가져오기")
+@router.get("/video/{video_id}/detail", status_code=status.HTTP_200_OK, 
+            response_model=VideoDetailResponse ,summary="딥페이크 상세 분석 결과값 가져오기")
 async def get_video_detail(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
-                           session_user = Depends(session_svc.get_session_user_prt) # 로그인 유저만 가능
+                           session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
                            ):
+    video_data = await video_svc.get_video_result(conn, video_id)
+    if video_data.status != "SUCCESS":
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail = f"비디오 상세 분석은 추론이 성공한 비디오만 가능합니다"
+        )
+    
     meta = await video_svc.get_video_meta_result(conn, video_id)
     frames = await video_svc.get_video_frame_results(conn, video_id)
 

@@ -52,8 +52,6 @@ async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
                 detail="비디오 파일을 저장하는 중 오류가 발생했습니다."
             )
 
-        print(f"Upload Succeeded: {upload_video_loc}")
-
         # 6. DB 저장용 경로 반환
         return upload_video_loc[1:].replace("\\", "/")
     
@@ -73,7 +71,6 @@ async def delete_video(video_loc: str):
 
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"Video file removed: {file_path}")
         else:
             print(f"Video file not found: {file_path}")
 
@@ -347,7 +344,7 @@ async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict
     
 # 비디오 상세 결과 값 저장하기 
 # 비디오 프레임 별 딥페이크 점수, 얼굴 신뢰도, 얼굴 비율, 얼굴 조도 반환
-async def save_video_frame_results(conn: Connection, video_id: int, frame_results: list):
+async def save_video_frame_result(conn: Connection, video_id: int, frame_results: list):
     try:
         query = """
             INSERT INTO video_frame_result

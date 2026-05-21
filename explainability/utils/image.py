@@ -45,3 +45,17 @@ def deprocess_image(tensor):
     img = np.clip(img, 0, 1) # range(0~1)
 
     return np.float32(img)
+
+def remove_padding_and_resize(cam, orig_shape, target_shape):
+    orig_h, orig_w = orig_shape[:2] # (H,W,3)
+    target_h, target_w = target_shape[2:] # (1,3,H,W)
+    
+    scale = max(target_h, target_w) / max(orig_h, orig_w)
+    new_h, new_w = int(orig_h * scale), int(orig_w * scale)
+    
+    pad_h = (target_h - new_h) // 2
+    pad_w = (target_w - new_w) // 2
+    
+    # Remove Padding
+    unpadded_cam = cam[pad_h:pad_h+new_h, pad_w:pad_w+new_w]
+    return cv2.resize(unpadded_cam, (orig_w, orig_h))

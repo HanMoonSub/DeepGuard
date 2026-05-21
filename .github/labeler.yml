@@ -1,0 +1,31 @@
+model:
+  - changed-files:
+    - any-glob-to-any-file: ["src/model/**", "models/**", "*.pt", "*.pth"]
+
+data:
+  - changed-files:
+    - any-glob-to-any-file: ["data/**", "datasets/**", "src/data/**"]
+
+training:
+  - changed-files:
+    - any-glob-to-any-file: ["train*.py", "src/train/**", "configs/**"]
+
+api:
+  - changed-files:
+    - any-glob-to-any-file: ["api/**", "routers/**", "app.py"]
+
+test:
+  - changed-files:
+    - any-glob-to-any-file: ["tests/**", "test_*.py"]
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file: ["docs/**", "*.md", "*.rst"]
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file: [".github/**"]
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file: ["requirements*.txt", "pyproject.toml", "setup.py"]
