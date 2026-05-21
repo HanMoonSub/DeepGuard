@@ -137,15 +137,13 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // [기능 추가 및 연동] 이미지 다중/단일 선택 삭제 로직 (UI 및 기존 기능 보존)
-  // ────────────────────────────────────────────────────────────────────────────
+  // 이미지 다중/단일 선택 삭제 로직 (UI 및 기존 기능 보존)
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
     if (!window.confirm(`${selectedIds.length}개의 기록을 삭제하시겠습니까?`)) return;
     
     try {
-      // 백엔드 image.py의 DELETE /image/history/{image_id} 주소 규격에 완벽 매핑
+      // 백엔드 image.py의 DELETE /image/history/{image_id} 주소 규격에 매핑
       const deletePromises = selectedIds.map(id => 
         axios.delete(`/image/history/${id}`)
       );
@@ -163,7 +161,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       alert("서버에서 기록을 삭제하는 중 오류가 발생했습니다.");
     }
   };
-  // ────────────────────────────────────────────────────────────────────────────
 
   const handleLogoutClick = async () => {
     if (!window.confirm("로그아웃 하시겠습니까?")) return;

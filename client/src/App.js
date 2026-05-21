@@ -8,6 +8,7 @@ import RegisterPage from './pages/signuppage';
 import AnalysisPage from './pages/analysispage';
 import AnalysisDetailPage from './pages/AnalysisDetailPage';
 import VideoAnalysisPage from './pages/VideoAnalysisPage';
+import VideoTimelinePage from './pages/VideoTimelinePage'; 
 
 axios.defaults.withCredentials = true;
 
@@ -49,11 +50,11 @@ function App() {
         
         <Route path="/video-analysis" element={<VideoAnalysisPage sessionUser={sessionUser} onLogout={handleLogout} setSessionUser={setSessionUser} />} />
         
-        {/* 이미지 상세 결과 페이지 경로 */}
         <Route path="/analysis-detail" element={<AnalysisDetailPage sessionUser={sessionUser} />} />
-        
-        {/* 비디오 상세 결과 페이지 경로 */}
+
         <Route path="/video-detail" element={<AnalysisDetailPage sessionUser={sessionUser} />} />
+        
+        <Route path="/video-timeline" element={<VideoTimelinePage sessionUser={sessionUser} />} />
         
         <Route path="/login" element={<LoginPage setSessionUser={setSessionUser} />} />
         <Route path="/register" element={<RegisterPage />} />
