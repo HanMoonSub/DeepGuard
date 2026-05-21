@@ -186,18 +186,20 @@ def cleanup_anonymous_image(image_id: int, image_loc: str):
     try:
         async def _delete():
             async with celery_db_conn() as conn:
+                success = True
                 try:
                     await delete_image_db(conn, image_id)
                 except Exception as e:
                     print(f"[Cleanup] 이미지 DB 삭제 실패 - image_id: {image_id}, error: {e}")
-                    
+                    success=False
             try:
                 await delete_image(image_loc)
             except Exception as e:
                 print(f"[Cleanup] 이미지 파일 삭제 실패 - image_loc: {image_loc}, error: {e}")
-            
-            print(f"[Cleanup] 비회원 이미지 삭제 프로세스 완료 - image_id: {image_id}, image_loc: {image_loc}")
+                success=False
 
+            if success: 
+                print(f"[Cleanup] 비회원 이미지 삭제 프로세스 완료 - image_id: {image_id}, image_loc: {image_loc}")
 
         loop.run_until_complete(_delete())
     
@@ -220,7 +222,6 @@ async def delete_image_db(conn: Connection, image_id: int):
 
     
     except SQLAlchemyError as e:
-        print(e)
         await conn.rollback()
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
 
@@ -228,7 +229,6 @@ async def delete_image_db(conn: Connection, image_id: int):
         raise
     
     except Exception as e:
-        print(e)
         await conn.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
