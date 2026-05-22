@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
+  <img src="docs/samples/deepfake_thumbnails.png" alt="DeepGuard Banner" width="800" height="400">
 </p>
 
 <p align="center">
@@ -143,7 +143,7 @@ Multi Scale Efficient Global Context Vision Transformer is an optimized multi-sc
 
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/ms_eff_gcvit.JPG" width="100%" height="700">
+  <img src="docs/architectures/ms_eff_gcvit.JPG" width="100%" height="700">
 </p>
 
 We utilizes two distinct types of self-attention to capture both long-range and short-range information across feature maps.
@@ -154,7 +154,7 @@ We utilizes two distinct types of self-attention to capture both long-range and 
 
 
 <p align="center">
-  <img src=https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/Images/window_attention.JPG width="100%" height="300">
+  <img src=docs/architectures/window_attention.JPG width="100%" height="300">
 </p>
 
 ## 🧬 Model Zoo
@@ -331,13 +331,13 @@ Deepfake detection requires high reliability and interpretability. DeepGuard int
 
 | Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
-| **⚡ ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
+| **⚡ ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
 
 | Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
-| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="Images/deepfake-xai/서양인_가짜_1.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="Images/deepfake-xai/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
 
 
 

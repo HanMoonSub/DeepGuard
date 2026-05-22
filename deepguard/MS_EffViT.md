@@ -26,11 +26,11 @@ MS_Eff_ViT achieves state-of-the-art(SOTA) results across deepfake video classif
 
 ### Test Result of Celeb_DF(v2)
 
-<img src="../Images/celeb_df_v2_vit.png" width="900">
+<img src="../docs/benchmarks/celeb_df_v2_vit.png" width="900">
 
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of FaceForensics++</span></summary>
-<img src="../Images/ff_vit.png" width="900">
+<img src="../docs/benchmarks/ff_vit.png" width="900">
 </details>
 
 ## Model Introduction

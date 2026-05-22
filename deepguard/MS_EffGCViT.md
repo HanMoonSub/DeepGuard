@@ -14,7 +14,7 @@ This Repository presents the PyTorch implementation of **Multi Scale Efficient G
 
 This model is a **frame-level** and **spatial-domain** architecture, designed to perform classification tasks on both **static images** and **video sequences**
 
-<img src="../Images/multi_scale.JPG" width="900">
+<img src="../docs/architectures/multi_scale.JPG" width="900">
 
 ## 💥 News 💥
 
@@ -32,23 +32,23 @@ MS_Eff_GCViT achieves state-of-the-art(SOTA) results across deepfake video class
 
 ### Test Result of Celeb_DF(v2)
 
-<img src="../Images/celeb_df_v2_gcvit.png" width="900">
+<img src="../docs/benchmarks/celeb_df_v2_gcvit.png" width="900">
 
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of FaceForensics++</span></summary>
-<img src="../Images/ff_gcvit.png" width="900">
+<img src="../docs/benchmarks/ff_gcvit.png" width="900">
 </details>
 
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of KoDF</span></summary>
-<img src="../Images/kodf_gcvit.png" width="900">
+<img src="../docs/benchmarks/kodf_gcvit.png" width="900">
 </details>
 
 ## Model Indroduction
 
 Multi Scale Efficient Global Context Vision Transformer is an optimized multi-scale hybrid architecture that integrates CNN-driven spatial inductive bias with hierarchical attention mechanisms to effectively identify subtle(local) artifacts and macro(global) artifacts for robust deepfake forensics."
 
-<img src="../Images/ms_eff_gcvit.JPG" width="900">
+<img src="../docs/architectures/ms_eff_gcvit.JPG" width="900">
 
 ### Part 1: CNN-based Patch Embedding for Spatial Inductive Bias
 
@@ -61,7 +61,7 @@ While traditional Vision Transformers (ViTs) utilize a Linear Projection for pat
 
 We utilizes two distinct types of self-attention to capture both long-range and short-range information across feature maps.
 
-<img src="../Images/window_attention.JPG" width="900">
+<img src="../docs/architectures/window_attention.JPG" width="900">
 
 - **Local Window Attention**: this model efficiently captures local textures and precise spatial details while maintaining linear computational complexity relative to the image size.
 
