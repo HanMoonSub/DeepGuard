@@ -35,16 +35,20 @@ def show_cam_on_image(img: np.ndarray,
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
 
-def deprocess_image(tensor):
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
+def show_bbox_on_image(annotated_img: np.ndarray, cam_recovered: np.ndarray, binary_mask: np.ndarray, thickness: int = 1):
+    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # (1, C, H, W -> H, W, C)
-    img = tensor.squeeze().cpu().numpy().transpose(1, 2, 0)
-    img = (img * std) + mean
-    img = np.clip(img, 0, 1) # range(0~1)
+    for c in contours:
+        x, y, bw, bh = cv2.boundingRect(c)
+        roi_prob = float(np.max(cam_recovered[y:y + bh, x:x + bw]))
 
-    return np.float32(img)
+        r = int(min(255, 2 * roi_prob * 255))
+        g = int(min(255, 2 * (1 - roi_prob) * 255))
+        box_color = (r, g, 30)
+
+        cv2.rectangle(annotated_img, (x, y), (x + bw, y + bh), box_color, thickness)
+
+        draw_label(annotated_img, f"{roi_prob * 100:.0f}%", x, max(y - 5, 12), roi_prob)
 
 def remove_padding_and_resize(cam, orig_shape, target_shape):
     orig_h, orig_w = orig_shape[:2] # (H,W,3)
@@ -59,3 +63,24 @@ def remove_padding_and_resize(cam, orig_shape, target_shape):
     # Remove Padding
     unpadded_cam = cam[pad_h:pad_h+new_h, pad_w:pad_w+new_w]
     return cv2.resize(unpadded_cam, (orig_w, orig_h))
+
+def draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 1.0):
+    h, w = img.shape[:2]
+    font       = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = max(0.28, min(w,h) / 1000) # 이미지 크기 기반 동적 스케일
+    thickness  = 1
+    pad        = 4
+
+    (tw, th), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+
+    rx1, ry1 = x - pad,      y - th - pad
+    rx2, ry2 = x + tw + pad, y + baseline + pad
+
+    r = int(min(255, 2 * prob_ratio * 255))
+    g = int(min(255, 2 * (1 - prob_ratio) * 255))
+    bg_color = (r, g, 30)  # RGB: green → red
+
+    overlay = img.copy()
+    cv2.rectangle(overlay, (rx1, ry1), (rx2, ry2), bg_color, -1)
+    cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
+    cv2.putText(img, text, (x, y), font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
