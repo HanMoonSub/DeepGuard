@@ -8,13 +8,26 @@ from explainability.utils.image import show_cam_on_image, deprocess_image, remov
 from explainability.explainer.base_explainer import BaseExplainer
 
 
-def _draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 1.0):
-    """Confidence label with a clean pill-style background.
-    
-    prob_ratio: 0~1, controls bg color (green→red)
+def _draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 1.0) -> None:
+    """위조 확률(Confidence)에 따라 색상이 변하는 반투명 필(Pill) 스타일의 레이블을 그린다.
+
+    이미지의 해상도에 맞춰 글자 크기(font_scale)를 동적으로 계산하며, 
+    확률이 높을수록 빨간색(Red), 낮을수록 녹색(Green) 계열의 반투명 배경을 플로팅한다.
+
+    Args:
+        img (np.ndarray): 레이블을 그릴 대상 이미지 배열 (RGB, HWC).
+        text (str): 레이블에 표시할 텍스트 (예: "85.4%").
+        x (int): 텍스트가 시작될 좌측 하단의 X 좌표.
+        y (int): 텍스트가 시작될 좌측 하단의 Y 좌표.
+        prob_ratio (float, optional): 0.0 ~ 1.0 사이의 위조 확률 비율. 
+            배경 색상 제어에 사용된다. Defaults to 1.0.
+
+    Returns:
+        None: 입력받은 이미지(img) 원본 객체를 인플레이스(In-place)로 수정한다.
     """
+    h, w = img.shape[:2]
     font       = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.52
+    font_scale = max(0.28, min(w,h) / 1000) # 이미지 크기 기반 동적 스케일
     thickness  = 1
     pad        = 4
 
@@ -29,7 +42,7 @@ def _draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 
 
     overlay = img.copy()
     cv2.rectangle(overlay, (rx1, ry1), (rx2, ry2), bg_color, -1)
-    cv2.addWeighted(overlay, 0.75, img, 0.25, 0, img)
+    cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
     cv2.putText(img, text, (x, y), font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
 
@@ -266,23 +279,22 @@ class CAMExplainer(BaseExplainer, ABC):
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         annotated_img = face.copy()
+        h, w = annotated_img.shape[:2]
+        MIN_AREA = (h * w) * 0.001 # 전체 면적 0.1 이하 무시
         for c in contours:
-            x, y, w, h = cv2.boundingRect(c)
-            roi_prob = float(np.max(cam_recovered[y:y + h, x:x + w]))
+            if cv2.contourArea(c) < MIN_AREA:
+                continue
+            
+            x, y, bw, bh = cv2.boundingRect(c)
+            roi_prob = float(np.max(cam_recovered[y:y + bh, x:x + bw]))
 
             r = int(min(255, 2 * roi_prob * 255))
             g = int(min(255, 2 * (1 - roi_prob) * 255))
             box_color = (r, g, 30)  # RGB
 
-            cv2.rectangle(annotated_img, (x, y), (x + w, y + h), box_color, kwargs.get("thickness", 1))
+            cv2.rectangle(annotated_img, (x, y), (x + bw, y + bh), box_color, kwargs.get("thickness", 1))
             
-            _draw_label(
-                annotated_img,
-                text=f"{roi_prob * 100:.1f}%",
-                x=x,
-                y=max(y - 6, 14),
-                prob_ratio=roi_prob,
-            )
+            _draw_label(annotated_img, f"{roi_prob * 100:.1f}%", x, max(y - 5, 12), roi_prob)
 
         return annotated_img
 
@@ -313,22 +325,21 @@ class CAMExplainer(BaseExplainer, ABC):
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         annotated_img = face.copy()
+        h, w = annotated_img.shape[:2]
+        MIN_AREA = (h * w) * 0.001 # 전체 면적 0.1 이하 무시
         for c in contours:
-            x, y, w, h = cv2.boundingRect(c)
-            roi_prob = float(np.max(cam_recovered[y:y + h, x:x + w]))
+            if cv2.contourArea(c) < MIN_AREA:
+                continue
+            
+            x, y, bw, bh = cv2.boundingRect(c)
+            roi_prob = float(np.max(cam_recovered[y:y + bh, x:x + bw]))
 
             r = int(min(255, 2 * roi_prob * 255))
             g = int(min(255, 2 * (1 - roi_prob) * 255))
             box_color = (r, g, 30)  # RGB
 
-            cv2.rectangle(annotated_img, (x, y), (x + w, y + h), box_color, kwargs.get("thickness", 1))
+            cv2.rectangle(annotated_img, (x, y), (x + bw, y + bh), box_color, kwargs.get("thickness", 1))
             
-            _draw_label(
-                annotated_img,
-                text=f"{roi_prob * 100:.1f}%",
-                x=x,
-                y=max(y - 6, 14),
-                prob_ratio=roi_prob,
-            )
+            _draw_label(annotated_img, f"{roi_prob * 100:.1f}%", x, max(y - 5, 12), roi_prob)
 
         return annotated_img
