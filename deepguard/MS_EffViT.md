@@ -143,3 +143,19 @@ import deepguard
 model = timm.create_model("ms_eff_vit_b0", pretrained=True, dataset="celeb_df_v2")
 model = timm.create_model("ms_eff_vit_b5", pretrained=True, dataset="ff++")
 ```
+
+## 📊 Visual Results
+
+### MS-EFF-VIT — Low-Level Branch
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
+
+### MS-Eff-ViT — High-Level Branch
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
