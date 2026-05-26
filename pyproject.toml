@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# ─────────────────────────────────────────────
+# [project]
+# PyPI에 올라가는 패키지 메타데이터
+# pip install deepguard 했을 때 보이는 정보들
+# ─────────────────────────────────────────────
+[project]
+name = "deepguard"           # pip install deepguard 할 때 이 이름
+version = "0.2.1"            # pip install deepguard==0.2.1 으로 버전 고정 가능
+description = "Multi-Scale Efficient Vision Transformer for Robust Deepfake Detection"
+readme = "README.md"         # PyPI 페이지에 표시될 설명 (마크다운)
+requires-python = ">=3.10"   # 이 버전 미만이면 pip install 자체를 막음
+license = { text = "MIT" }
+authors = [
+    { name = "seoyunje", email = "seoyunje2001@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = ["torch>=2.10.0", 
+                "torchmetrics>=1.6.1",
+                "timm>=1.0.12",
+                "ultralytics>=8.4.41",
+                "grad-cam>=1.5.5"
+                ]
+
+[project.urls]
+Homepage = "https://github.com/HanMoonSub/DeepGuard"
+"Bug Tracker" = "https://github.com/HanMoonSub/DeepGuard/issues"
+"Source Code" = "https://github.com/HanMoonSub/DeepGuard"
+
+
+[tool.setuptools.packages.find]
+
+include = [
+    "deepguard*",       # 모델, 레이어, 데이터셋 등 핵심 패키지
+    "inference*",       # ImagePredictor, VideoPredictor
+    "explainability*",  # CAM 기반 XAI
+    "preprocess*",      # 얼굴 검출, 프레임 추출 등
+]
+
+exclude = ["App*", "client*"]

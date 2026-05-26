@@ -14,7 +14,7 @@ This Repository presents the PyTorch implementation of **Multi Scale Efficient G
 
 This model is a **frame-level** and **spatial-domain** architecture, designed to perform classification tasks on both **static images** and **video sequences**
 
-<img src="../Images/multi_scale.JPG" width="900">
+<img src="../docs/architectures/dual_branch.gif" width="900">
 
 ## 💥 News 💥
 
@@ -32,23 +32,23 @@ MS_Eff_GCViT achieves state-of-the-art(SOTA) results across deepfake video class
 
 ### Test Result of Celeb_DF(v2)
 
-<img src="../Images/celeb_df_v2_gcvit.png" width="900">
+<img src="../docs/benchmarks/celeb_df_v2_gcvit.png" width="900">
 
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of FaceForensics++</span></summary>
-<img src="../Images/ff_gcvit.png" width="900">
+<img src="../docs/benchmarks/ff_gcvit.png" width="900">
 </details>
 
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of KoDF</span></summary>
-<img src="../Images/kodf_gcvit.png" width="900">
+<img src="../docs/benchmarks/kodf_gcvit.png" width="900">
 </details>
 
 ## Model Indroduction
 
 Multi Scale Efficient Global Context Vision Transformer is an optimized multi-scale hybrid architecture that integrates CNN-driven spatial inductive bias with hierarchical attention mechanisms to effectively identify subtle(local) artifacts and macro(global) artifacts for robust deepfake forensics."
 
-<img src="../Images/ms_eff_gcvit.JPG" width="900">
+<img src="../docs/architectures/ms_eff_gcvit.JPG" width="900">
 
 ### Part 1: CNN-based Patch Embedding for Spatial Inductive Bias
 
@@ -61,7 +61,7 @@ While traditional Vision Transformers (ViTs) utilize a Linear Projection for pat
 
 We utilizes two distinct types of self-attention to capture both long-range and short-range information across feature maps.
 
-<img src="../Images/window_attention.JPG" width="900">
+<img src="../docs/architectures/window_attention.JPG" width="900">
 
 - **Local Window Attention**: this model efficiently captures local textures and precise spatial details while maintaining linear computational complexity relative to the image size.
 
@@ -174,3 +174,29 @@ import deepguard
 model = timm.create_model("ms_eff_gcvit_b0", pretrained=True, dataset="ff++")
 model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 ```
+
+## 📊 Visual Results
+
+<p align="center">
+  <table>
+    <tr>
+      <td><img src="../docs/architectures/low_branch.gif" width="100%"></td>
+      <td width="20%"></td>
+      <td><img src="../docs/architectures/high_branch.gif" width="100%"></td>
+    </tr>
+  </table>
+</p>
+
+### MS-EFF-GCVIT — Low-Level Branch
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b0_low_hirescam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b0_low_layercam.JPG" width="100"> |
+| **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b5_low_hirescam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b5_low_layercam.JPG" width="100"> |
+
+### MS-Eff-GCViT — High-Level Branch
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b0_high_eigengradcam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b5_high_eigengradcam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_gcvit_b5_high_xgradcam.JPG" width="100"> |
