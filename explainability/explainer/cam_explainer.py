@@ -4,34 +4,11 @@ import cv2
 import numpy as np
 from abc import ABC, abstractmethod
 from explainability.utils.model_targets import BinaryClassifierOutputTarget
-from explainability.utils.image import show_cam_on_image, deprocess_image, remove_padding_and_resize
+from explainability.utils.image import (
+    show_cam_on_image, show_bbox_on_image,
+    remove_padding_and_resize, draw_label
+)
 from explainability.explainer.base_explainer import BaseExplainer
-
-
-def _draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 1.0):
-    """Confidence label with a clean pill-style background.
-    
-    prob_ratio: 0~1, controls bg color (green→red)
-    """
-    font       = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.52
-    thickness  = 1
-    pad        = 4
-
-    (tw, th), baseline = cv2.getTextSize(text, font, font_scale, thickness)
-
-    rx1, ry1 = x - pad,      y - th - pad
-    rx2, ry2 = x + tw + pad, y + baseline + pad
-
-    r = int(min(255, 2 * prob_ratio * 255))
-    g = int(min(255, 2 * (1 - prob_ratio) * 255))
-    bg_color = (r, g, 30)  # RGB: green → red
-
-    overlay = img.copy()
-    cv2.rectangle(overlay, (rx1, ry1), (rx2, ry2), bg_color, -1)
-    cv2.addWeighted(overlay, 0.75, img, 0.25, 0, img)
-    cv2.putText(img, text, (x, y), font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
-
 
 class CAMExplainer(BaseExplainer, ABC):
     def __init__(self, **kwargs):
@@ -261,28 +238,10 @@ class CAMExplainer(BaseExplainer, ABC):
             eigen_smooth = kwargs.get("eigen_smooth", False)
             )
         
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
-        
-        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
         annotated_img = face.copy()
-        for c in contours:
-            x, y, w, h = cv2.boundingRect(c)
-            roi_prob = float(np.max(cam_recovered[y:y + h, x:x + w]))
-
-            r = int(min(255, 2 * roi_prob * 255))
-            g = int(min(255, 2 * (1 - roi_prob) * 255))
-            box_color = (r, g, 30)  # RGB
-
-            cv2.rectangle(annotated_img, (x, y), (x + w, y + h), box_color, kwargs.get("thickness", 1))
-            
-            _draw_label(
-                annotated_img,
-                text=f"{roi_prob * 100:.1f}%",
-                x=x,
-                y=max(y - 6, 14),
-                prob_ratio=roi_prob,
-            )
+        
+        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        show_bbox_on_image(annotated_img, cam_recovered, binary_mask, kwargs.get("thickness", 1))
 
         return annotated_img
 
@@ -308,27 +267,53 @@ class CAMExplainer(BaseExplainer, ABC):
             eigen_smooth = kwargs.get("eigen_smooth", False)
             )
         
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
-        
-        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
         annotated_img = face.copy()
-        for c in contours:
-            x, y, w, h = cv2.boundingRect(c)
-            roi_prob = float(np.max(cam_recovered[y:y + h, x:x + w]))
-
-            r = int(min(255, 2 * roi_prob * 255))
-            g = int(min(255, 2 * (1 - roi_prob) * 255))
-            box_color = (r, g, 30)  # RGB
-
-            cv2.rectangle(annotated_img, (x, y), (x + w, y + h), box_color, kwargs.get("thickness", 1))
-            
-            _draw_label(
-                annotated_img,
-                text=f"{roi_prob * 100:.1f}%",
-                x=x,
-                y=max(y - 6, 14),
-                prob_ratio=roi_prob,
-            )
+        
+        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        show_bbox_on_image(annotated_img, cam_recovered, binary_mask, kwargs.get("thickness", 1))
 
         return annotated_img
+    
+    def display_heatmap_bbox_on_image(self, img_path: str, **kwargs) -> np.ndarray:
+        cam_recovered, face = self._prepare_cam(
+            img_path, 
+            category = kwargs.get("category", 1), 
+            aug_smooth = kwargs.get("aug_smooth", False), 
+            eigen_smooth = kwargs.get("eigen_smooth", False)
+            )
+        
+        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
+         
+        heatmap = show_cam_on_image(
+            np.float32(face) / 255.0,
+            cam_recovered,
+            use_rgb = True,
+            colormap = kwargs.get("colormap", cv2.COLORMAP_JET),
+            image_weight = kwargs.get("image_weight", 0.5),
+        )
+        
+        show_bbox_on_image(heatmap, cam_recovered, binary_mask, kwargs.get("thickness", 1))
+        return heatmap
+    
+    def display_heatmap_bbox_on_image_from_array(self, face: np.ndarray, **kwargs) -> np.ndarray:
+        cam_recovered, face = self._prepare_cam_from_array(
+            face, 
+            category = kwargs.get("category", 1), 
+            aug_smooth = kwargs.get("aug_smooth", False), 
+            eigen_smooth = kwargs.get("eigen_smooth", False)
+            )
+        
+        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
+         
+        heatmap = show_cam_on_image(
+            np.float32(face) / 255.0,
+            cam_recovered,
+            use_rgb = True,
+            colormap = kwargs.get("colormap", cv2.COLORMAP_JET),
+            image_weight = kwargs.get("image_weight", 0.5),
+        )
+        
+        show_bbox_on_image(heatmap, cam_recovered, binary_mask, kwargs.get("thickness", 1))
+        return heatmap

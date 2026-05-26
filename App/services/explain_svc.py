@@ -44,10 +44,12 @@ def _run_visualization(explainer: CAMExplainer, image_path: str, explain_req_dic
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
                                                  category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
-    else:  
+    elif explain_req_dict["display_type"] == "bbox":  
         return explainer.display_bbox_on_image(image_path, threshold=explain_req_dict["threshold"],
                                               category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
-
+    else: # display_type == "heatmap_bbox"
+        return explainer.display_heatmap_bbox_on_image(image_path, threshold=explain_req_dict["threshold"], 
+                                                       category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 # 딥페이크 이미지 위조 흔적 시각화 처리
 @celery_app.task(name="process_explain_image_task")
 def process_explain_image_task(user_email: str, 
