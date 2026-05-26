@@ -35,10 +35,10 @@ class ExplainImageRequest(BaseModel):
     category: Literal[0, 1] = Field(1, 
                                     description="판단 클래스 인덱스 (0: Real / 1: Fake)")
     
-    overlay_ratio: float = Field(0.5, ge=0.0, le=1.0, 
+    overlay_ratio: float = Field(0.7, ge=0.0, le=1.0, 
                                  description = "Heatmap 투명도 (0: 히트맵만 강조, 1: 원본 이미지 위주)")
     
-    threshold: float = Field(0.5, ge=0.5, le=1.0, 
+    threshold: float = Field(0.9, ge=0.5, le=1.0, 
                              description="contour/bbox 이진화 임계값 (0.0~1.0)")
     
     aug_smooth: bool = Field(False, 
