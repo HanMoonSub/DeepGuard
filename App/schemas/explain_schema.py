@@ -67,3 +67,6 @@ class ExplainImageRequest(BaseModel):
                 f"(입력값: '{self.explainer_type}')"
             )
         return self
+    
+class ExplainFrameRequest(ExplainImageRequest):
+    pass

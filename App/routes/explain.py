@@ -66,10 +66,10 @@ async def get_explain_image_result(
     task = AsyncResult(task_id, app=celery_app)
     
     if task.state in ("PENDING", "STARTED", "RETRY"):
-        return {
-            "status": "PENDING", 
-            "message": "딥페이크 이미지 위조 흔적 시각화 분석 중 ..."
-            }
+        return JSONResponse(
+            status_code = status.HTTP_202_ACCEPTED,
+            content = {"message": "딥페이크 이미지 위조 흔적 시각화 분석 중 ..."}
+        )
 
     if task.state == "FAILURE":
         raise HTTPException(
@@ -89,6 +89,3 @@ async def get_explain_image_result(
         "message": result["message"],
         "cam_loc": result["cam_loc"],   
     }
-    
-        
-    
