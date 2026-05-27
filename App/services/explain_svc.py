@@ -40,37 +40,36 @@ def _get_or_create_explainer(model_name: str, dataset: str, explain_req_dict: di
     return _explainer_cache[cache_key]
         
 # 시각화 이미지 생성 (heatmap, contour, bbox 선택)
-def _run_visualization(explainer: CAMExplainer, image_path: str, explain_req_dict: dict) -> np.ndarray:
+def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, explain_req_dict: dict) -> np.ndarray:
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
-                                                 category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+                                                 category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
     elif explain_req_dict["display_type"] == "bbox":  
         return explainer.display_bbox_on_image(image_path, threshold=explain_req_dict["threshold"],
-                                              category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
+                                              category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
     else: # display_type == "heatmap_bbox"
         return explainer.display_heatmap_bbox_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"], 
-                                                       category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+                                                       category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 # 딥페이크 이미지 위조 흔적 시각화 처리
 @celery_app.task(name="process_explain_image_task")
 def process_explain_image_task(user_email: str, 
-                               result_dict: dict,
+                               version_type: str,
+                               domain_type: str,
+                               image_loc: str,
+                               image_id: int,
+                               category: int,
                                explain_req_dict: dict):
     async def run_explain():
         cam_loc = None
         try:
-            # 추론에 사용된 모델 및 데이터셋 설정 로드
-            version_type = result_dict["version_type"]
-            model_type = result_dict["model_type"]
-            domain_type = result_dict["domain_type"]
-            
-            model_name, dataset = inference_svc.MODEL_CONFIG[version_type][model_type][domain_type]
+            model_name, dataset = inference_svc.MODEL_CONFIG[version_type][explain_req_dict["model_type"]][domain_type]
         
             explainer = _get_or_create_explainer(model_name, dataset, explain_req_dict)
-            image_path = "." + result_dict["image_loc"]
+            image_path = "." + image_loc
 
             # 시각화 이미지 생성 시작
             try:
-                image = _run_visualization(explainer, image_path, explain_req_dict)
+                image = _run_visualization(explainer, image_path, category, explain_req_dict)
             except Exception:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -79,7 +78,7 @@ def process_explain_image_task(user_email: str,
 
             # 생성된 시각화 이미지 파일 저장 
             try:
-                cam_loc = await image_svc.upload_image_cam(user_email, result_dict["image_id"], image)
+                cam_loc = await image_svc.upload_image_cam(user_email, image_id, image)
             except Exception:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
