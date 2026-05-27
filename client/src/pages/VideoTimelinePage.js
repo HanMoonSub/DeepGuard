@@ -142,7 +142,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', backgroundColor: '#030303', borderRadius: '8px', border: '1px solid #141414' }}>
                       <span style={{ fontSize: '13px', fontWeight: '600', color: '#888', fontFamily: 'monospace' }}>TIMESTAMP {frame.timestamp}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <span style={{ fontSize: '13px', color: '#ccc' }}>FORGERY: <b style={{ color: isFake ? '#FF4B4B' : '#39FF14', fontFamily: 'monospace', fontSize: '14px' }}>{Number(frame.fake_score).toFixed(1)}%</b></span>
+                        <span style={{ fontSize: '13px', color: '#ccc' }}>변조 확률: <b style={{ color: isFake ? '#FF4B4B' : '#39FF14', fontFamily: 'monospace', fontSize: '14px' }}>{Number(frame.fake_score).toFixed(1)}%</b></span>
                         <span style={{ 
                           padding: '3px 10px', 
                           borderRadius: '4px', 
