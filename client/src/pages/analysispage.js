@@ -17,7 +17,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  const [versionType, setVersionType] = useState('v1'); 
+  const [versionType, setVersionType] = useState('v2'); 
   const [modelType, setModelType] = useState('fast');   
   const [domainType, setDomainType] = useState('western'); 
   
@@ -77,7 +77,8 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         if (data.status === 'SUCCESS' || data.prob !== undefined || data.analysis !== undefined) {
           clearInterval(pollingTimer.current);
           pollingTimer.current = null;
-          setResult(data);
+          // [수정] image_id 포함
+          setResult({ ...data, image_id: imageId });
           setIsAnalyzing(false);
           setStatusMessage('');
           fetchHistory();
@@ -87,6 +88,14 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           setIsAnalyzing(false);
           setStatusMessage('');
           alert(data.result_msg || "분석 실패");
+        // [수정] WARNING 분기 추가 — 얼굴 미탐지 등 부분 실패, 상세보기 없이 메시지만 표시
+        } else if (data.status === 'WARNING') {
+          clearInterval(pollingTimer.current);
+          pollingTimer.current = null;
+          setResult({ ...data, status: 'WARNING' });
+          setIsAnalyzing(false);
+          setStatusMessage('');
+          fetchHistory();
         } else {
           setStatusMessage(data.message || "이미지 분석 진행 중...");
         }
@@ -137,22 +146,16 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  // 이미지 다중/단일 선택 삭제 로직 (UI 및 기존 기능 보존)
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
     if (!window.confirm(`${selectedIds.length}개의 기록을 삭제하시겠습니까?`)) return;
     
     try {
-      // 백엔드 image.py의 DELETE /image/history/{image_id} 주소 규격에 매핑
       const deletePromises = selectedIds.map(id => 
         axios.delete(`/image/history/${id}`)
       );
-
       await Promise.all(deletePromises);
-
       alert("선택한 이미지 기록이 성공적으로 삭제되었습니다.");
-      
-      // 삭제 성공 후 최신 상태 실시간 동기화 및 에디터 모드 초기화
       fetchHistory();
       setSelectedIds([]);
       setIsEditMode(false);
@@ -190,7 +193,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
             history.map((item, index) => {
               const p = item.prob ?? item.score ?? item.analysis?.prob ?? -1;
               const isSelected = selectedIds.includes(item.image_id);
-              const vType = item.version_type ? item.version_type.toUpperCase() : 'V1';
+              const vType = item.version_type ? item.version_type.toUpperCase() : 'V2';
               const dType = item.domain_type || '서양인';
               const mType = item.model_type ? item.model_type.toUpperCase() : 'FAST';
 
@@ -209,17 +212,9 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <div key={item.image_id || index} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                   {isEditMode && <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.image_id)} style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} />}
                   <div 
+                    // [수정] image_id만 전달
                     onClick={() => !isEditMode && navigate('/analysis-detail', { 
-                      state: { 
-                        ...item, 
-                        prob: p,
-                        label: itemLabel,
-                        id: item.image_id, 
-                        face_brightness: targetBrightness, 
-                        face_ratio: targetRatio,
-                        face_conf: targetConf,
-                        image_loc: item.image_loc 
-                      } 
+                      state: { image_id: item.image_id } 
                     })}
                     style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '12px', border: isSelected ? '1px solid #39FF14' : '1px solid #222', cursor: isEditMode ? 'default' : 'pointer' }}
                   >
@@ -303,27 +298,32 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 `}</style>
               </div>
             ) : result ? (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '48px', fontWeight: 'bold', color: (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? '#FF4B4B' : '#39FF14' }}>
-                  {(result.label || ( (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? 'FAKE' : 'REAL' ))}
-                </p>
-                <button 
-                  onClick={() => navigate('/analysis-detail', { 
-                    state: { 
-                      ...result, 
-                      ...result.analysis, 
-                      face_brightness: result.face_brightness ?? result.analysis?.face_brightness ?? result.brightness ?? 0,
-                      face_ratio: result.face_ratio ?? result.analysis?.face_ratio ?? result.ratio ?? 0,
-                      face_conf: result.face_conf ?? result.analysis?.face_conf ?? result.conf ?? result.face_confidence ?? 0,
-                      prob: result.prob ?? result.analysis?.prob ?? 0,
-                      image_loc: previewUrl 
-                    } 
-                  })} 
-                  style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer' }}
-                >
-                  상세 결과 보기
-                </button>
-              </div>
+              // [수정] WARNING 분기 — result_msg만 표시, 상세보기 없음
+              result.status === 'WARNING' ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFA500', marginBottom: '16px' }}>
+                    ⚠ UNDETECTED
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#888', lineHeight: '1.7', maxWidth: '300px', margin: '0 auto' }}>
+                    {result.result_msg || result.message || "얼굴을 탐지하지 못했습니다."}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: '48px', fontWeight: 'bold', color: (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? '#FF4B4B' : '#39FF14' }}>
+                    {(result.label || ( (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? 'FAKE' : 'REAL' ))}
+                  </p>
+                  <button 
+                    // [수정] image_id만 전달
+                    onClick={() => navigate('/analysis-detail', { 
+                      state: { image_id: result.image_id } 
+                    })} 
+                    style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer' }}
+                  >
+                    상세 결과 보기
+                  </button>
+                </div>
+              )
             ) : <p style={{ color: '#222' }}>WAITING...</p>}
           </div>
         </div>
