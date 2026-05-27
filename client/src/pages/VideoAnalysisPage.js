@@ -17,7 +17,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]); 
 
-  const [versionType, setVersionType] = useState('v1'); 
+  const [versionType, setVersionType] = useState('v2'); 
   const [modelType, setModelType] = useState('fast');   
   const [domainType, setDomainType] = useState('western'); 
   
@@ -77,7 +77,8 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         if (data.status === 'SUCCESS' || data.prob !== undefined || data.analysis !== undefined) {
           clearInterval(pollingTimer.current);
           pollingTimer.current = null;
-          setResult(data);
+          // [수정] video_id 포함
+          setResult({ ...data, video_id: videoId });
           setIsAnalyzing(false);
           setStatusMessage('');
           fetchHistory(); 
@@ -87,6 +88,14 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           setIsAnalyzing(false);
           setStatusMessage('');
           alert(data.result_msg || "비디오 분석 실패");
+        // [수정] WARNING 분기 추가 — 얼굴 미탐지 등, 상세보기 없이 메시지만 표시
+        } else if (data.status === 'WARNING') {
+          clearInterval(pollingTimer.current);
+          pollingTimer.current = null;
+          setResult({ ...data, status: 'WARNING' });
+          setIsAnalyzing(false);
+          setStatusMessage('');
+          fetchHistory();
         } else {
           setStatusMessage(data.message || "비디오 분석 진행 중...");
         }
@@ -145,11 +154,8 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       const deletePromises = selectedIds.map(id => 
         axios.delete(`/video/history/${id}`)
       );
-
       await Promise.all(deletePromises);
-
       alert("선택한 비디오 기록이 삭제되었습니다.");
-      
       fetchHistory(); 
       setSelectedIds([]);
       setIsEditMode(false);
@@ -189,7 +195,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
               const currentId = item.video_id || item.id;
               const p = item.prob ?? item.score ?? item.analysis?.prob ?? -1;
               const isSelected = selectedIds.includes(currentId);
-              const vType = item.version_type ? item.version_type.toUpperCase() : 'V1';
+              const vType = item.version_type ? item.version_type.toUpperCase() : 'V2';
               const dType = item.domain_type || '서양인';
               const mType = item.model_type ? item.model_type.toUpperCase() : 'FAST';
 
@@ -197,15 +203,9 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <div key={currentId || index} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                   {isEditMode && <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(currentId)} style={{ accentColor: '#39FF14', width: '18px', height: '18px' }} />}
                   <div 
+                    // [수정] video_id만 전달
                     onClick={() => !isEditMode && navigate('/video-detail', { 
-                      state: { 
-                        ...item, 
-                        prob: p,
-                        face_brightness: item.face_brightness ?? item.analysis?.face_brightness ?? 0,
-                        face_ratio: item.face_ratio ?? item.analysis?.face_ratio ?? 0,
-                        face_conf: item.face_conf ?? item.analysis?.face_conf ?? 0,
-                        video_loc: item.video_loc 
-                      } 
+                      state: { video_id: currentId } 
                     })} 
                     style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '12px', border: isSelected ? '1px solid #39FF14' : '1px solid #222', cursor: isEditMode ? 'default' : 'pointer' }}
                   >
@@ -228,7 +228,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <button 
             onClick={handleDeleteSelected} 
             disabled={selectedIds.length === 0} 
-            style={{ width: '100%', padding: '12px', backgroundColor: selectedIds.length > 0 ? '#FF4B4B' : '#222', color: '#fff', border: 'none', borderRadius: '8px', cursor: selectedIds.length > 0 ? 'pointer' : 'not-allowed', fontWeight: 'bold', marginTop: '10px' }}
+            style={{ width: '100%', padding: '12px', backgroundColor: selectedIds.length > 0 ? '#FF4B4B' : '#222', color: '#fff', border: 'none', borderRadius: '8px', cursor: selectedIds.length > 0 ? 'pointer' : 'not-allowed', marginTop: '10px', fontWeight: 'bold' }}
           >
             선택 삭제 ({selectedIds.length})
           </button>
@@ -238,7 +238,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <button onClick={() => navigate('/main')} style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', color: '#fff', border: '1px solid #444', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '15px' }}>메인 화면</button>
           {sessionUser ? (
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>{sessionUser.name}님</p>
+              <p style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>{sessionUser.name}님 접속 중</p>
               <button onClick={handleLogoutClick} style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', color: '#FF4B4B', border: '1px solid #FF4B4B', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>로그아웃</button>
             </div>
           ) : <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '12px', backgroundColor: '#1A2C50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>로그인</button>}
@@ -246,9 +246,8 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       </aside>
 
       <main style={centerZoneStyle}>
-        <h2 style={{ fontSize: '28px', fontWeight: 'bold' }}>Deep Guard Video AI</h2>
+        <h2 style={{ fontSize: '28px', fontWeight: 'bold' }}>Deep Guard AI</h2>
         <div style={{ display: 'flex', flex: 1, gap: '20px' }}>
-          
           <div style={{...innerBoxStyle, border: showOptions ? '2px solid #39FF14' : '2px dashed #333'}} onClick={() => { if(!previewUrl) setShowOptions(!showOptions); }}>
             {previewUrl ? <video src={previewUrl} controls style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain' }} /> : (
                <div style={{textAlign:'center', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
@@ -288,27 +287,32 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 </div>
               </div>
             ) : result ? (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '48px', fontWeight: 'bold', color: (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? '#FF4B4B' : '#39FF14' }}>
-                  {(result.label || ( (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? 'FAKE' : 'REAL' ))}
-                </p>
-                <button 
-                  onClick={() => navigate('/video-detail', { 
-                    state: { 
-                      ...result, 
-                      ...result.analysis, 
-                      face_brightness: result.face_brightness ?? result.analysis?.face_brightness ?? 0,
-                      face_ratio: result.face_ratio ?? result.analysis?.face_ratio ?? 0,
-                      face_conf: result.face_conf ?? result.analysis?.face_conf ?? 0,
-                      prob: result.prob ?? result.analysis?.prob ?? 0,
-                      video_loc: previewUrl 
-                    } 
-                  })} 
-                  style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer', fontWeight: 'bold' }}
-                >
-                  상세 결과 보기
-                </button>
-              </div>
+              // [수정] WARNING 분기 — result_msg만 표시, 상세보기 없음
+              result.status === 'WARNING' ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFA500', marginBottom: '16px' }}>
+                    ⚠ UNDETECTED
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#888', lineHeight: '1.7', maxWidth: '300px', margin: '0 auto' }}>
+                    {result.result_msg || result.message || "얼굴을 탐지하지 못했습니다."}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: '48px', fontWeight: 'bold', color: (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? '#FF4B4B' : '#39FF14' }}>
+                    {(result.label || ( (result.prob ?? result.analysis?.prob ?? 0) > 0.5 ? 'FAKE' : 'REAL' ))}
+                  </p>
+                  <button 
+                    // [수정] video_id만 전달
+                    onClick={() => navigate('/video-detail', { 
+                      state: { video_id: result.video_id } 
+                    })} 
+                    style={{ color: '#39FF14', background: 'none', border: 'none', textDecoration: 'underline', marginTop: '15px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    상세 결과 보기
+                  </button>
+                </div>
+              )
             ) : <p style={{ color: '#222' }}>READY TO ANALYZE</p>}
           </div>
         </div>
