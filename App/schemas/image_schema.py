@@ -31,7 +31,7 @@ class UserHistory(BaseMetadata):
 # - routes: image (GET /image/history/{image_id})
 # - services: image_svc.get_user_history
 class UserHistory_indi(UserHistory, InferenceResult):
-    pass
+    status: str
 
 # [추론 결과 조회] 분석 진행 상태 + 최종 결과 (회원/비회원 공통)
 # - routes: inference (GET /inference/image/{image_id})

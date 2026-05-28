@@ -83,6 +83,25 @@ async def upload_image_cam(user_email: str, image_id: int, image: np.ndarray) ->
 
     return cam_loc[1:].replace("\\", "/")
 
+# 딥페이크 비디오 프레임 위조 흔적 시각화 파일 서버 내 저장 (회원 전용)
+async def upload_frame_cam(user_email: str, video_id: int, frame_time: float, image: np.ndarray) -> str:
+    user_dir = os.path.join(EXPLAIN_UPLOAD_DIR, user_email)
+    os.makedirs(user_dir, exist_ok=True)
+    
+    cam_filename = f"v{video_id}_t{frame_time}_{int(time.time())}.png"
+    cam_loc = os.path.join(user_dir, cam_filename)
+            
+    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    _, buf = cv2.imencode(".png", image_bgr)
+
+    try:
+        async with aio.open(cam_loc, "wb") as outfile:
+            await outfile.write(buf.tobytes())
+    except Exception as e:
+        raise e
+
+    return cam_loc[1:].replace("\\", "/")
+
 # 사용자 업로드 이미지 서버 내 삭제
 # 호출 : image.py : history 삭제 할 때 db 와 실제 파일 삭제
 # 호출 : inference.py : 추론 FAIL일 때 delete_video and delete_video_db 실행
@@ -147,7 +166,7 @@ async def get_user_histories(conn: Connection, user_id: int):
 async def get_user_history(conn: Connection, image_id: int):
     try:
         query = """
-            SELECT id, user_id, image_loc, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, user_id, image_loc, status, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
             WHERE id = :image_id;
         """
@@ -162,6 +181,7 @@ async def get_user_history(conn: Connection, image_id: int):
             image_id = row.id,
             user_id = row.user_id,
             image_loc = row.image_loc,
+            status = row.status,
             label = row.label,
             score = row.score,
             face_conf = row.face_conf,
