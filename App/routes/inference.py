@@ -99,7 +99,7 @@ async def predict_video(
     }
 
 @router.get("/video/{video_id}", status_code=status.HTTP_200_OK, 
-            response_model=VideoDetailData, summary="딥페이크 비디오 비디오 추론 결과값 가져오기")
+            response_model=VideoDetailData, summary="딥페이크 비디오 추론 결과값 가져오기")
 async def get_video_result(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
