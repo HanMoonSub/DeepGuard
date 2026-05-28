@@ -166,7 +166,7 @@ async def get_user_histories(conn: Connection, user_id: int):
 async def get_user_history(conn: Connection, image_id: int):
     try:
         query = """
-            SELECT id, user_id, image_loc, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, user_id, image_loc, status, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
             WHERE id = :image_id;
         """
@@ -181,6 +181,7 @@ async def get_user_history(conn: Connection, image_id: int):
             image_id = row.id,
             user_id = row.user_id,
             image_loc = row.image_loc,
+            status = row.status,
             label = row.label,
             score = row.score,
             face_conf = row.face_conf,
