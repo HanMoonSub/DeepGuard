@@ -530,6 +530,33 @@ async def get_video_frame_result(conn: Connection, video_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+# 비디오 특정 프레임의 Frame Time 조회
+# 호출 위치: routers/explain.py - explain_frame()
+# 비디오 내 frame_index에 해당하는 특정 frame의 frame_time만 추출한다
+async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index: int):
+    try:
+        query = text("""
+            SELECT frame_time
+            FROM video_frame_result
+            WHERE video_id = :video_id AND frame_index = :frame_index
+        """)
+        
+        result = await conn.execute(query, {"video_id": video_id, "frame_index": frame_index})        
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail=f"해당 ID: {video_id} Video 내 Frame Index {frame_index}에 해당하는 프레임을 찾을 수 없습니다")
+        
+        row = result.fetchone()
+        
+        return row.frame_time
+        
+    except SQLAlchemyError as e:
+        print(f"[Frame Query Error] {e}")
+        raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
     
 
     

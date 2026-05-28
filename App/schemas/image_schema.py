@@ -17,6 +17,7 @@ class InferenceResult(BaseModel):
     result_msg : str
 class UserHistory(BaseMetadata):
     user_id: int
+    status: str
 
 class UserHistory_indi(UserHistory, InferenceResult):   
     pass

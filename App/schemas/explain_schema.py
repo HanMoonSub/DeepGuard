@@ -23,22 +23,22 @@ _EIGEN_ALLOWED = {"gradcamelementwise", "layercam", "xgradcam"}
 
 
 class ExplainImageRequest(BaseModel):
+    model_type: Literal["fast", "pro"] = Field("fast",
+                                               description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)")
+    
     branch_level: Literal["low","high"] = Field("high", 
-                                                description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역적 위조 흔적 포착")
+                                                description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역 위조 흔적 포착")
     
     explainer_type: str = Field("eigengradcam", 
                                 description = ("선택 가능한 XAI 기법. low: [hirescam, gradcamelementwise, layercam], ""high: [eigengradcam, gradcamplusplus, xgradcam]"))
     
-    display_type: Literal["heatmap", "bbox", "heatmap_bbox"] = Field("heatmap", 
+    display_type: Literal["heatmap", "bbox", "heatmap_bbox"] = Field("heatmap_bbox", 
                                                                      description="시각화 형태. heatmap: 전체 분포, bbox: 위조 의심 영역 사각형, heatmap_bbox: 위조 의심 사각형 내부에 블러 처리된 히트맵을 중첩")
     
-    category: Literal[0, 1] = Field(1, 
-                                    description="판단 클래스 인덱스 (0: Real / 1: Fake)")
-    
-    overlay_ratio: float = Field(0.5, ge=0.0, le=1.0, 
+    overlay_ratio: float = Field(0.7, ge=0.5, le=1.0, 
                                  description = "Heatmap 투명도 (0: 히트맵만 강조, 1: 원본 이미지 위주)")
     
-    threshold: float = Field(0.5, ge=0.5, le=1.0, 
+    threshold: float = Field(0.9, ge=0.5, le=1.0, 
                              description="contour/bbox 이진화 임계값 (0.0~1.0)")
     
     aug_smooth: bool = Field(False, 
@@ -67,3 +67,6 @@ class ExplainImageRequest(BaseModel):
                 f"(입력값: '{self.explainer_type}')"
             )
         return self
+    
+class ExplainFrameRequest(ExplainImageRequest):
+    pass

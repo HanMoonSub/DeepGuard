@@ -47,9 +47,8 @@ class VideoPredictor:
             
             frame_cnt = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-            duration_sec = int(frame_cnt / fps)
-            num_frames = max(10, min(duration_sec, 60))
-            
+            num_frames = int(frame_cnt / fps)
+
             frame_indices = [min(int(sec * fps), frame_cnt - 1) for sec in range(num_frames)]
             frame_indices = sorted(set(frame_indices))     
             frames = {}

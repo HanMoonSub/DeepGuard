@@ -27,6 +27,18 @@ EXPLAINER_REGISTRY = {
 
 _explainer_cache: dict = {}
 
+# 비디오 내 특정 Frame 추출 + Face Cropping
+def _extract_face_from_frame(video_path: str, frame_time: float, explainer: CAMExplainer):
+    cap = cv2.VideoCapture(video_path)
+    cap.set(cv2.CAP_PROP_POS_MSEC, frame_time * 1000)
+    ret, frame = cap.read()
+    cap.release()
+
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    bbox = explainer._get_face_bbox(frame_rgb)
+    
+    return explainer._crop_face(frame_rgb, bbox[:4])
+    
 # 캐시된 CAMExplainer 객체 반환하거나 새로 생성 
 def _get_or_create_explainer(model_name: str, dataset: str, explain_req_dict: dict):
     cache_key = (model_name, dataset, explain_req_dict["explainer_type"], explain_req_dict["branch_level"])
@@ -40,37 +52,49 @@ def _get_or_create_explainer(model_name: str, dataset: str, explain_req_dict: di
     return _explainer_cache[cache_key]
         
 # 시각화 이미지 생성 (heatmap, contour, bbox 선택)
-def _run_visualization(explainer: CAMExplainer, image_path: str, explain_req_dict: dict) -> np.ndarray:
+def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, explain_req_dict: dict) -> np.ndarray:
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
-                                                 category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+                                                 category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
     elif explain_req_dict["display_type"] == "bbox":  
         return explainer.display_bbox_on_image(image_path, threshold=explain_req_dict["threshold"],
-                                              category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
+                                              category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
     else: # display_type == "heatmap_bbox"
-        return explainer.display_heatmap_bbox_on_image(image_path, threshold=explain_req_dict["threshold"], 
-                                                       category=explain_req_dict["category"], aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+        return explainer.display_heatmap_bbox_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"], 
+                                                       category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+
+# 비디오 프레임 시각화 생성 (heatmap, contour, bbox 선택)
+def _run_visualization_from_array(explainer: CAMExplainer, face: str, category: int, explain_req_dict: dict) -> np.ndarray:
+    if explain_req_dict["display_type"] == "heatmap":
+        return explainer.display_heatmap_from_array(face, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
+                                                 category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+    elif explain_req_dict["display_type"] == "bbox":  
+        return explainer.display_bbox_from_array(face, threshold=explain_req_dict["threshold"],
+                                              category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
+    else: # display_type == "heatmap_bbox"
+        return explainer.display_heatmap_bbox_from_array(face, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"], 
+                                                       category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+
 # 딥페이크 이미지 위조 흔적 시각화 처리
 @celery_app.task(name="process_explain_image_task")
 def process_explain_image_task(user_email: str, 
-                               result_dict: dict,
+                               version_type: str,
+                               domain_type: str,
+                               image_loc: str,
+                               image_id: int,
+                               category: int,
                                explain_req_dict: dict):
     async def run_explain():
         cam_loc = None
         try:
-            # 추론에 사용된 모델 및 데이터셋 설정 로드
-            version_type = result_dict["version_type"]
-            model_type = result_dict["model_type"]
-            domain_type = result_dict["domain_type"]
-            
-            model_name, dataset = inference_svc.MODEL_CONFIG[version_type][model_type][domain_type]
+            model_name, dataset = inference_svc.MODEL_CONFIG[version_type][explain_req_dict["model_type"]][domain_type]
         
             explainer = _get_or_create_explainer(model_name, dataset, explain_req_dict)
-            image_path = "." + result_dict["image_loc"]
+            image_path = "." + image_loc
 
             # 시각화 이미지 생성 시작
             try:
-                image = _run_visualization(explainer, image_path, explain_req_dict)
+                image = _run_visualization(explainer, image_path, category, explain_req_dict)
             except Exception:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -79,7 +103,7 @@ def process_explain_image_task(user_email: str,
 
             # 생성된 시각화 이미지 파일 저장 
             try:
-                cam_loc = await image_svc.upload_image_cam(user_email, result_dict["image_id"], image)
+                cam_loc = await image_svc.upload_image_cam(user_email, image_id, image)
             except Exception:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -110,3 +134,67 @@ def process_explain_image_task(user_email: str,
         return loop.run_until_complete(run_explain())
     finally:
         loop.close()
+        
+# 딥페이크 비디오 프레임 위조 흔적 시각화 처리
+@celery_app.task(name="process_explain_frame_task")
+def process_explain_frame_task(user_email: str, 
+                               version_type: str,
+                               domain_type: str,
+                               video_loc: str,
+                               video_id: int,
+                               category: int,
+                               frame_time: float, 
+                               explain_req_dict: dict):
+    async def run_explain():
+        cam_loc = None
+        try:
+            model_name, dataset = inference_svc.MODEL_CONFIG[version_type][explain_req_dict["model_type"]][domain_type]
+            video_path = "." + video_loc
+
+            explainer = _get_or_create_explainer(model_name, dataset, explain_req_dict)
+
+            face = _extract_face_from_frame(video_path, frame_time, explainer)
+            
+            # 비디오 프레임 시각화 생성 시작
+            try:
+                image = _run_visualization_from_array(explainer, face, category, explain_req_dict)
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="딥페이크 비디오 프레임 위조 흔적을 생성하는 중 오류가 발생하였습니다"
+                )
+
+            # 비디오 프레임 시각화 파일 저장 
+            try:
+                cam_loc = await image_svc.upload_frame_cam(user_email, video_id, frame_time, image)
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="딥페이크 비디오 프레임 위조 흔적 파일을 저장하는 중 오류가 발생했습니다."
+                )
+            
+            return {"status": "SUCCESS", 
+                    "message": "딥페이크 비디오 프레임 위조 흔적 시각화가 성공적으로 이루어졌습니다",
+                    "cam_loc": cam_loc}
+        
+        except HTTPException as e:
+            print(e.detail)
+            return {"status": "FAILED", "message": str(e.detail)}
+        
+        except Exception as e:
+            print(str(e))                    
+            return {"status": "FAILED", "message": str(e)}
+        
+        finally:
+            # 임시 저장된 비디오 프레임 시각화 파일 삭제 
+            if cam_loc:
+                image_svc.cleanup_image_cam.apply_async(args=[cam_loc], countdown=60) 
+
+    # 동기식 Celery 워커 내 비동기 이벤트 루프 구동
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(run_explain())
+    finally:
+        loop.close()
+
