@@ -17,10 +17,9 @@ class InferenceResult(BaseModel):
     result_msg : str
 class UserHistory(BaseMetadata):
     user_id: int
-    status: str
 
 class UserHistory_indi(UserHistory, InferenceResult):   
-    pass
+    status: str
 class ImageData_indi(BaseMetadata, InferenceResult):
     user_id : int | None
     status : str
