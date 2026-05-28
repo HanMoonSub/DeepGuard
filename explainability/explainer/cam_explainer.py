@@ -296,7 +296,7 @@ class CAMExplainer(BaseExplainer, ABC):
         show_bbox_on_image(heatmap, cam_recovered, binary_mask, kwargs.get("thickness", 1))
         return heatmap
     
-    def display_heatmap_bbox_on_image_from_array(self, face: np.ndarray, **kwargs) -> np.ndarray:
+    def display_heatmap_bbox_from_array(self, face: np.ndarray, **kwargs) -> np.ndarray:
         cam_recovered, face = self._prepare_cam_from_array(
             face, 
             category = kwargs.get("category", 1), 

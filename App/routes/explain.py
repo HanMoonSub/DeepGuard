@@ -127,7 +127,7 @@ async def explain_frame(
         )
     
     # 비디오 내 해당 frame이 몇초에 위치한 frame인지 확인
-    frame_time = video_svc.get_video_frame_by_index(conn, video_id, frame_index)
+    frame_time = await video_svc.get_video_frame_by_index(conn, video_id, frame_index)
         
     # Celery Task 호출(Redis Broker 활용)
     task = explain_svc.process_explain_frame_task.delay(

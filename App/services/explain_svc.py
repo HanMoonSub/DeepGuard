@@ -64,7 +64,7 @@ def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, 
                                                        category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 
 # 비디오 프레임 시각화 생성 (heatmap, contour, bbox 선택)
-def _run_visualization_from_array(explainer: CAMExplainer, face: str, category: int, explain_req_dict: dict) -> np.ndarray:
+def _run_visualization_from_array(explainer: CAMExplainer, face: np.ndarray, category: int, explain_req_dict: dict) -> np.ndarray:
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_from_array(face, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
                                                  category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])

@@ -554,6 +554,8 @@ async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index:
     except SQLAlchemyError as e:
         print(f"[Frame Query Error] {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
