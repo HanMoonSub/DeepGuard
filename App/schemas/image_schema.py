@@ -14,6 +14,10 @@ class BaseMetadata(BaseModel):
     created_at: datetime = Field(..., description="분석 요청 생성 시각 (UTC)")
 
 # [추론 상세 결과] 딥페이크 분석 수치 결과
+# - 상속 베이스 클래스 (직접 응답 X)
+# - 상속처: UserHistory_indi, ImageData_indi
+# - 사용처: image (GET /image/history/{image_id}), inference (GET /inference/image/{image_id})
+# - services: image_svc.get_user_history, image_svc.get_image_result
 class InferenceResult(BaseModel):
     score: float = Field(..., description="딥페이크 확률 점수 (0.0~1.0, 0.5 이상이면 FAKE 판정). 분석 실패 시 -1.0")
     face_conf: float = Field(..., description="얼굴 탐지 신뢰도 (0.0~1.0). 분석 실패 시 -1.0")
@@ -28,7 +32,7 @@ class UserHistory(BaseMetadata):
     user_id: int = Field(..., description="분석을 요청한 유저 ID (user.id FK)")
 
 # [히스토리 상세] 회원 개별 이미지 분석 상세 결과
-# - routes: image (GET /image/history/{image_id})
+# - routes: image (GET /image/history/{image_id}, DELETE /image/history/{image_id} - 내부 조회)
 # - services: image_svc.get_user_history
 class UserHistory_indi(UserHistory, InferenceResult):
     status: str
