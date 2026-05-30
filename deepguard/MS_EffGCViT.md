@@ -14,7 +14,8 @@ This Repository presents the PyTorch implementation of **Multi Scale Efficient G
 
 This model is a **frame-level** and **spatial-domain** architecture, designed to perform classification tasks on both **static images** and **video sequences**
 
-<img src="../docs/architectures/dual_branch.gif" width="900">
+
+<img src="../docs/benchmarks/celeb_df_v2_gcvit.png" width="900">
 
 ## 💥 News 💥
 
@@ -27,21 +28,37 @@ This model is a **frame-level** and **spatial-domain** architecture, designed to
 
 ## Model Performance
 
-MS_Eff_GCViT achieves state-of-the-art(SOTA) results across deepfake video classification. On Celeb_DF(v2) dataset, MS_EFF_GCViT variants with `8.7M`, `50.3M` parameters achieve `0.9842`, `0.9981` Accuracy. Notably, the MS_EFF_GCViT_B0 variant demonstrates exceptional efficiency, matching or exceeding SOTA performance even with a siginificantly lower parameter
+**MS-EFF-GCViT achieves state-of-the-art (SOTA) results across three DeepFake benchmarks.**
+The model ships in two variants from a single architecture — **Fast (b0)** for real-time / edge
+deployment and **Pro (b5)** for enterprise-grade accuracy. Notably, **Fast** matches or exceeds
+much larger SOTA models while using a fraction of the parameters and compute.
 
+<p align="center">
+  <img src="../docs/benchmarks/gcvit_summary_bars.png" width="100%">
+</p>
 
-### Test Result of Celeb_DF(v2)
-
-<img src="../docs/benchmarks/celeb_df_v2_gcvit.png" width="900">
+> On **Celeb-DF(v2)**, Pro reaches **0.9981 Acc** (rank #1) and Fast **0.9842** (rank #3) among 20 architectures.
+> On the **KoDF competition** leaderboard, Pro ranks **#1** and Fast **#4** out of 49 entries.
 
 <details>
-<summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of FaceForensics++</span></summary>
-<img src="../docs/benchmarks/ff_gcvit.png" width="900">
+<summary><b>📊 Celeb-DF (v2) — Accuracy & Efficiency</b></summary>
+<br>
+<img src="../docs/benchmarks/celeb_df_v2_gcvit_2.png" width="100%">
+
 </details>
 
 <details>
-<summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of KoDF</span></summary>
-<img src="../docs/benchmarks/kodf_gcvit.png" width="900">
+<summary><b>📊 FaceForensics++ — Accuracy & Efficiency</b></summary>
+<br>
+<img src="../docs/benchmarks/ff_gcvit.png" width="100%">
+
+</details>
+
+<details>
+<summary><b>📊 KoDF Competition — Accuracy Ranking</b></summary>
+<br>
+<img src="../docs/benchmarks/kodf_gcvit.png" width="100%">
+
 </details>
 
 ## Model Indroduction
@@ -76,6 +93,8 @@ While both **Xception** and **EfficientNet** show great results on DeepFake benc
 
 
 ### Part 4: Multi-Scale Feature Map Fusion
+
+<img src="../docs/architectures/dual_branch.gif" width="900">  
 
 Modern DeepFakes can leave very localized forgery region. To Capture this, we adopts a **multi-scale strategy** by extracting features from different levels of the backbone.
 
@@ -176,16 +195,6 @@ model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 ```
 
 ## 📊 Visual Results
-
-<p align="center">
-  <table>
-    <tr>
-      <td><img src="../docs/architectures/low_branch.gif" width="100%"></td>
-      <td width="20%"></td>
-      <td><img src="../docs/architectures/high_branch.gif" width="100%"></td>
-    </tr>
-  </table>
-</p>
 
 ### MS-EFF-GCVIT — Low-Level Branch
 
