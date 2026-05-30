@@ -1,14 +1,17 @@
-# Deepfakes Detection (딥페이크 탐지)
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/docs/samples/deepfake_thumbnails.png" alt="DeepGuard Banner" width="800" height="400">
-</p>
+# Deepfakes Detection
 
 <p align="center">
   <img src="https://img.shields.io/github/license/HanMoonSub/DeepGuard?style=flat-square&color=555555&logo=github&logoColor=white" alt="License">
   <img src="https://img.shields.io/github/stars/HanMoonSub/DeepGuard?style=flat-square&color=FFD700&logo=github&logoColor=white" alt="Stars">
+  <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
+  <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
   <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
+</p>
+
+<p align="center">
+  <img src="docs/samples/deepfake_thumbnails.png" alt="DeepGuard Banner" width="800" height="400">
 </p>
 
 <p align="center">
@@ -27,6 +30,7 @@
 
 <p align="center">
   <a href="README.md"><b>🇺🇸 English Version</b></a> | 
+  <a href="README_JP.md"><b>🇯🇵 日本語版</b></a> | 
   <a href="#-모델-평가"><b>📈 모델 평가</b></a> | 
   <a href="#-이미지-및-비디오-예측"><b>🔮 데모 실행</b></a>
 </p>
@@ -38,11 +42,13 @@
 - [📚 딥페이크 비디오 벤치마크 데이터셋](#-딥페이크-비디오-벤치마크-데이터셋) — 학습에 사용된 Celeb-DF-v2, FF++, KoDF 데이터셋 개요.
 - [⚙️ 데이터 준비](#데이터-준비) — YOLOv8을 이용한 효율적인 얼굴 검출 및 랜드마크 추출 파이프라인.
 - [🏗 모델 구조](#-모델-구조) — 하이브리드 CNN-ViT (MS-EffViT & MS-EffGCViT) 설계 상세.
-- [🧬 모델 주(Model Zoo)](#-모델-주model-zoo) — 모델 변체별 파라미터 수 및 연산량(FLOPs) 비교.
+- [🧬 모델 주(Model Zoo)](#-model-zoo) — 모델 변체별 파라미터 수 및 연산량(FLOPs) 비교.
 - [🚀 학습](#-학습) - Google Colab 및 W&B를 활용한 단계별 학습 스크립트.
 - [📈 모델 평가](#-모델-평가) - 벤치마크 결과.
 - [💻 모델 사용법](#-모델-사용법) - Python 코드 및 timm을 통한 DeepGuard 모델 통합 방법.
 - [🔮 이미지 및 비디오 예측](#-이미지-및-비디오-예측) - 딥페이크 탐지를 위한 간단한 추론 예시.
+- [🎨 딥페이크 AI 설명가능성(XAI)](#-딥페이크-ai-설명가능성xai) - Grad-CAM 및 어텐션 맵을 통한 모델 판단 근거 시각화.
+- [📊 딥페이크 XAI 정량 평가](#-딥페이크-xai-정량-평가) - 설명의 신뢰도에 대한 정량적 평가.
 - [📬 제작자](#-제작자)
 - [📝 참고 문헌](#-참고-문헌)
 - [⚖️ 라이선스](#-라이선스)
@@ -61,7 +67,7 @@ pip install -r requirements.txt
 
 저장소를 클론하고 해당 디렉토리로 이동합니다:
 ```bash
-git clone [https://github.com/HanMoonSub/DeepGuard.git](https://github.com/HanMoonSub/DeepGuard.git)
+git clone https://github.com/HanMoonSub/DeepGuard.git
 cd DeepGuard
 ```
 
@@ -135,7 +141,7 @@ DATA_ROOT/
 
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/docs/architectures/ms_eff_gcvit.JPG" width="100%" height="700">
+  <img src="docs/architectures/ms_eff_gcvit.JPG" width="100%" height="700">
 </p>
 
 특징 맵 전체에 걸쳐 장거리(Long-range) 및 단거리(Short-range) 정보를 모두 캡처하기 위해 두 가지 유형의 셀프 어텐션을 활용합니다.
@@ -144,10 +150,10 @@ DATA_ROOT/
 - **Global Window Attention**: Swin Transformer와 달리, 이 모듈은 로컬 윈도우의 Key, Value와 상호작용하는 글로벌 쿼리(Global-queries)를 사용합니다. 이를 통해 각 로컬 영역이 전역 컨텍스트를 수용하게 함으로써 장거리 의존성을 효과적으로 파악하고 전체 공간 구조에 대한 포괄적인 이해를 제공합니다.
 
 <p align="center">
-  <img src=https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/docs/architectures/window_attention.JPG width="100%" height="300">
+  <img src=docs/architectures/window_attention.JPG width="100%" height="300">
 </p>
 
-## 🧬 모델 주(Model Zoo)
+## 🧬 Model Zoo
 
 | 모델명 | 해상도 | 총 파라미터(M) | 백본(M) | L-ViT(M) | H-ViT(M) | 연산량(FLOPs, G) | 설정 파일 |
 | ----- | ---------- | -------------- | ----------- |------------- | ------------- | --------------  | ------- | 
@@ -220,7 +226,7 @@ DATA_ROOT/
 **설치**
 
 ```bash
-# pip install -U git+[https://github.com/HanMoonSub/DeepGuard.git](https://github.com/HanMoonSub/DeepGuard.git)
+# pip install -U git+https://github.com/HanMoonSub/DeepGuard.git
 pip install deepguard
 ```
 
@@ -294,6 +300,152 @@ result = predictor.predict_video(
 print(f"딥페이크 확률: {result:.4f}")
 ```
 
+## 🎨 딥페이크 AI 설명가능성(XAI)
+
+딥페이크 탐지는 그 판단 근거가 설명될 수 있을 때 비로소 신뢰받을 수 있습니다. DeepGuard는 모델이 어떤 얼굴을 *어디서, 왜* 조작된 것으로 판단했는지 시각화하는 **프로덕션 레벨의 XAI 툴킷**을 통합하여, 블랙박스 점수를 실질적인 포렌식 증거로 전환합니다.
+
+⭐ 하이브리드 CNN-ViT 아키텍처, 특히 `MS-EffViT`와 `MS-EffGCViT`에서 검증되었습니다.  
+⭐ **듀얼 브랜치 분석(Dual-Branch Analysis)**: 듀얼 브랜치 설계는 모델 자체의 멀티 스케일 추론 방식을 그대로 반영합니다.
+
+### 🧠 듀얼 브랜치 XAI 작동 원리
+
+<p align="center">
+  <img src="docs/architectures/dual_branch.gif" width="70%" height="300">
+</p>
+
+| 브랜치 | 특징 맵 | 초점 | 최적 용도 |
+| ------ | ----------- | ----- | -------- |
+| ![](https://img.shields.io/badge/Low_level-blue?style=flat-square) | 고해상도 | 국부적 위조 아티팩트 | 피부 질감, 경계 블렌딩, 압축 흔적 |
+| ![](https://img.shields.io/badge/High_level-red?style=flat-square) | 저해상도 | 전역 의미 구조 | 조명 불일치, 얼굴 기하 구조, 그림자 아티팩트 |
+
+### 📐 XAI 기법
+
+각 기법은 경험적으로 가장 좋은 성능을 보이는 브랜치에 배정되었습니다.
+
+| 브랜치 | 기법 | 🎯 핵심 아이디어 |
+| :--- | :--- | :--- |
+| **`low level`** | **HiResCAM** | GradCAM과 유사하나 활성화(activation)와 그래디언트를 요소별(element-wise)로 곱함. 특정 모델에 대해 충실도(faithfulness)가 이론적으로 보장됨 |
+| **`low level`** | **GradCAMElementWise** | GradCAM과 유사하나 활성화와 그래디언트를 요소별로 곱한 뒤, 합산 전에 ReLU를 적용 |
+| **`low level`** | **LayerCAM** | 양의 그래디언트로 활성화에 공간적 가중치를 부여. 특히 하위 레이어에서 더 잘 작동 |
+| **`high level`** | **EigenGradCAM** | EigenCAM과 유사하나 클래스 판별력을 추가: (활성화×그래디언트)의 제1주성분(First principal component). GradCAM과 비슷하면서도 더 깔끔 |
+| **`high level`** | **GradCAM++** | GradCAM과 유사하나 2차 그래디언트(second order gradients)를 사용 |
+| **`high level`** | **XGradCAM** | GradCAM과 유사하나 정규화된 활성화로 그래디언트를 스케일링 |
+
+- **`aug_smooth`**: CAM을 평균화하기 전에 TTA(수평 뒤집기)를 적용 → 더 부드럽고 객체에 잘 정렬된 맵 생성
+- **`eigen_smooth`**: PCA 노이즈 제거를 적용 → 지배적인 위조 패턴만 유지
+
+### 💡 딥페이크 XAI 사용법
+
+**Low-Level 브랜치 — 국부적 아티팩트 탐지**
+
+```python
+from explainability import HiResCAMExplainer, GradCAMElementWiseExplainer, LayerCAMExplainer
+
+explainer = HiResCAMExplainer(
+    model_name   = "ms_eff_gcvit_b0",  # ms_eff_vit_b0, ms_eff_gcvit_b5, ms_eff_vit_b5 중 선택
+    dataset      = "celeb_df_v2",       # ff++, kodf 중 선택
+    branch_level = "low",
+)
+```
+
+**High-Level 브랜치 — 전역 의미 구조 탐지**
+```python
+from explainability import EigenGradCAMExplainer, GradCAMPlusPlusExplainer, XGradCAMExplainer
+
+explainer = EigenGradCAMExplainer(
+    model_name   = "ms_eff_gcvit_b0",
+    dataset      = "celeb_df_v2",
+    branch_level = "high",
+)
+```
+
+### 🎨 시각화 모드
+
+<p align="center">
+  <img src="docs/xai-results/xai_demo.gif" width="80%" height=300>
+</p>
+
+**1. Heatmap — 연속적인 활성화 분포**
+
+```python
+result = explainer.display_heatmap_on_image(
+    img_path     = "path/to/image.jpg",
+    category     = 1,      # 0: Real, 1: Fake
+    threshold    = 0.5,    # 이진화 컷오프 (0.5~1.0), 또는 Otsu 자동 임계값은 "auto"
+    image_weight = 0.5,    # 0.0: 히트맵만 ← → 1.0: 원본만
+    aug_smooth   = False,  # TTA 스무딩 ('pro' 모델은 미지원)
+    eigen_smooth = False,  # PCA 노이즈 제거
+)
+```
+
+**2. Bounding Box — 이산적인 위조 영역 지역화**
+
+```python
+result = explainer.display_bbox_on_image(
+    img_path     = "path/to/image.jpg",
+    category     = 1,
+    threshold    = 0.5,
+    thickness    = 1,
+    aug_smooth   = False,
+    eigen_smooth = False,
+)
+```
+
+**3. Heatmap + BBox — 통합 오버레이 (리포팅 시 권장)**
+```python
+result = explainer.display_heatmap_bbox_on_image(
+    img_path     = "path/to/image.jpg",
+    category     = 1,
+    threshold    = 0.5,
+    image_weight = 0.5,
+    aug_smooth   = False,
+    eigen_smooth = False,
+)
+```
+
+### 📊 시각화 결과
+
+<p align="center">
+  <table>
+    <tr>
+      <td><img src="docs/architectures/low_branch.gif" width="100%"></td>
+      <td width="20%"></td>
+      <td><img src="docs/architectures/high_branch.gif" width="100%"></td>
+    </tr>
+  </table>
+</p>
+
+
+#### MS-EFF-VIT — Low-Level Branch
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
+
+#### MS-Eff-ViT — High-Level Branch
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
+
+#### MS-EFF-GCVIT — Low-Level Branch
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_low_layercam.JPG" width="100"> |
+| **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_low_layercam.JPG" width="100"> |
+
+#### MS-Eff-GCViT — High-Level Branch
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_xgradcam.JPG" width="100"> |
+
+## 📊 딥페이크 XAI 정량 평가
+
 
 ## 📬 제작자
 
@@ -310,11 +462,11 @@ _**본 프로젝트는 충북대학교(CBNU) 소프트웨어학부 졸업 작품
 2. [`face-cutout`](https://github.com/sowmen/face-cutout) - _Sowmen의 Face Cutout 라이브러리_
 3. [`Celeb-DF++`](https://github.com/OUC-VAS/Celeb-DF-PP) - _OUC-VAS Group의 Celeb-DF++ 데이터셋_
 4. [`DeeperForensics-1.0`](https://github.com/EndlessSora/DeeperForensics-1.0) - _Endless Sora의 DeeperForensics-1.0 데이터셋_
-5. [`Deepfake Detection`](https://github.com/abhijithjadhav/Deepfake_detection_using_deep_learning) - _Abhijith Jadhav의 ResNext와 LSTM을 이용한 딥페이크 탐지_
-6. [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) - _Ameen Caslam의 다양한 딥러닝 모델들_
-7. [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection
-) - _Daisy Zhang이 정리한 도구, 논문 및 코드 리스트_
+5. [`Deepfake Detection`](https://github.com/abhijithjadhav/Deepfake_detection_using_deep_learning) - _Abhijith Jadhav의 ResNext와 LSTM을 이용한 비디오 딥페이크 탐지_
+6. [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) - _Ameen Caslam의 다중 딥러닝 모델_
+7. [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) - _Daisy Zhang이 정리한 도구, 논문, 코드 큐레이션 목록_
+8. [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) - _PyTorch 모델을 위한 고급 시각적 설명 도구_
 
 ## ⚖️ 라이선스 
 
-본 프로젝트는 MIT 라이선스의 규정에 따라 라이선스가 부여됩니다.
+본 프로젝트는 MIT 라이선스 조건에 따라 배포됩니다.

@@ -30,6 +30,7 @@
 
 <p align="center">
   <a href="README_KR.md"><b>🇰🇷 한국어 버전</b></a> | 
+  <a href="README_JP.md"><b>🇯🇵 日本語版</b></a> | 
   <a href="#-model-evaluation"><b>📈 Model Evaluation</b></a> | 
   <a href="#-predict-image--video"><b>🔮 Try Demo</b></a>
 </p>
@@ -418,9 +419,9 @@ result = explainer.display_heatmap_bbox_on_image(
 <p align="center">
   <table>
     <tr>
-      <td><img src="/docs/architectures/low_branch.gif" width="100%"></td>
+      <td><img src="docs/architectures/low_branch.gif" width="100%"></td>
       <td width="20%"></td>
-      <td><img src="/docs/architectures/high_branch.gif" width="100%"></td>
+      <td><img src="docs/architectures/high_branch.gif" width="100%"></td>
     </tr>
   </table>
 </p>
