@@ -157,7 +157,7 @@ const HeatmapPage = ({ sessionUser }) => {
           }
         } else if (typeof d === 'object') {
           // 응답이 객체: 가능한 모든 경로 필드 시도
-          loc = d.cam_loc ?? d.result_loc ?? d.image_loc ?? d.heatmap_loc ?? d.file_loc
+          loc = d.result_loc ?? d.image_loc ?? d.heatmap_loc ?? d.file_loc
               ?? d.result_path ?? d.path ?? d.url ?? d.image_url ?? d.output_path
               ?? d.result ?? null;
 

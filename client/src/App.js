@@ -9,6 +9,7 @@ import AnalysisPage from './pages/analysispage';
 import AnalysisDetailPage from './pages/AnalysisDetailPage';
 import VideoAnalysisPage from './pages/VideoAnalysisPage';
 import VideoTimelinePage from './pages/VideoTimelinePage'; 
+import HeatmapPage from './pages/HeatmapPage';
 
 axios.defaults.withCredentials = true;
 
@@ -59,6 +60,7 @@ function App() {
         <Route path="/login" element={<LoginPage setSessionUser={setSessionUser} />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="*" element={<Navigate to="/main" />} />
+        <Route path="/heatmap" element={<HeatmapPage sessionUser={sessionUser} />} />
       </Routes>
     </Router>
   );
