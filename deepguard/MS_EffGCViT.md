@@ -45,10 +45,6 @@ much larger SOTA models while using a fraction of the parameters and compute.
 <br>
 <img src="../docs/benchmarks/celeb_df_v2_gcvit_2.png" width="100%">
 
-| Variant | Test@Acc | Test@AUC | Test@LogLoss |
-| :------ | :------: | :------: | :----------: |
-| ms_eff_gcvit_b0 | 0.9842 | 0.9965 | 0.0283 |
-| ms_eff_gcvit_b5 | 0.9981 | 0.9984 | 0.0089 |
 </details>
 
 <details>
@@ -56,10 +52,6 @@ much larger SOTA models while using a fraction of the parameters and compute.
 <br>
 <img src="../docs/benchmarks/ff_gcvit.png" width="100%">
 
-| Variant | Test@Acc | Test@AUC | Test@LogLoss |
-| :------ | :------: | :------: | :----------: |
-| ms_eff_gcvit_b0 | 0.9808 | 0.9969 | 0.0637 |
-| ms_eff_gcvit_b5 | 0.9850 | 0.9974 | 0.0492 |
 </details>
 
 <details>
@@ -67,10 +59,6 @@ much larger SOTA models while using a fraction of the parameters and compute.
 <br>
 <img src="../docs/benchmarks/kodf_gcvit.png" width="100%">
 
-| Variant | Test@Acc | Test@AUC | Test@LogLoss |
-| :------ | :------: | :------: | :----------: |
-| ms_eff_gcvit_b0 | 0.9655 | 0.9792 | 0.1237 |
-| ms_eff_gcvit_b5 | 0.9792 | 0.9974 | 0.0492 |
 </details>
 
 ## Model Indroduction
