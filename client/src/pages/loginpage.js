@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios'; 
 import logo from '../assets/logo.svg';
 
-// 백엔드 세션 쿠키 전역 설정
 axios.defaults.withCredentials = true;
 
 const LoginPage = ({ setSessionUser }) => {
@@ -16,15 +15,13 @@ const LoginPage = ({ setSessionUser }) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // 로그인 요청
       await axios.post('/auth/login', { email, password });
       
-      // 세션 정보 가져오기 (home.py)
       const homeRes = await axios.get('/home');
       if (homeRes.data.session_user) {
         setSessionUser(homeRes.data.session_user);
         alert(`${homeRes.data.session_user.name}님 환영합니다!`);
-        navigate('/analysis'); // 성공 시 분석 페이지로
+        navigate('/analysis');
       }
     } catch (error) {
       const detail = error.response?.data?.detail || "로그인 정보를 확인해주세요.";
