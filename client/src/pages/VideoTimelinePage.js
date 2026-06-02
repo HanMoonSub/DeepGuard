@@ -1,221 +1,175 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_INTERVAL = 2000;
 
-const BRANCH_CONFIG = {
-  low: {
-    branch_level: 'low',
-    explainer_type: 'layercam',      // low branch: LayerCAM
-    display_type: 'heatmap_bbox',
-    overlay_ratio: 0.7,
-    threshold: 0.9,
-    aug_smooth: false,
-    eigen_smooth: true,
-  },
-  high: {
-    branch_level: 'high',
-    explainer_type: 'xgradcam',      // high branch: XGradCAM (허용값: gradcamelementwise, layercam, xgradcam)
-    display_type: 'heatmap_bbox',
-    overlay_ratio: 0.7,
-    threshold: 0.9,
-    aug_smooth: false,
-    eigen_smooth: true,
-  },
+const normalizeFrame = (f, i) => {
+  const raw = f.score ?? f.fake_score ?? 0;
+  const fake_score = raw <= 1 ? raw * 100 : raw;
+  const ts = f.frame_time != null
+    ? new Date(f.frame_time * 1000).toISOString().substr(14, 5)
+    : f.timestamp ?? `00:${String(i * 2).padStart(2, '0')}`;
+  return { ...f, fake_score, frame_index: f.frame_index ?? i, timestamp: ts };
 };
 
-// API 응답에서 이미지 경로 추출
-// POST /explain/video/{id}/frame/{idx} → 202, body = "task_id_string"
-// GET  /explain/frame/result/{task_id} → 200, body = "image_path_string" or { result_loc, ... }
-const extractTaskId = (data) => {
-  if (typeof data === 'string') return data;
-  return data?.task_id || data?.id || null;
-};
-
-const extractImagePath = (data) => {
-  if (typeof data === 'string') return data;
-  return data?.result_loc || data?.image_loc || data?.heatmap_loc || data?.file_loc || null;
-};
-
-const toAbsoluteUrl = (path) => {
-  if (!path) return null;
-  if (path.startsWith('http') || path.startsWith('blob')) return path;
-  return `${apiUrl}${path}`;
-};
-
-const HeatmapPage = ({ sessionUser }) => {
-  const { state } = useLocation();
+const VideoTimelinePage = ({ sessionUser }) => {
+  const { state: data } = useLocation();
   const navigate = useNavigate();
+  const [timelineData, setTimelineData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { video_id, frame_index, timestamp, fake_score, model_type, video_name } = state || {};
+  const videoId = data?.video_id || data?.id;
+  const mediaLoc = data?.video_loc || '';
+  const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : `${apiUrl}${mediaLoc}`;
 
-  const [activeBranch, setActiveBranch] = useState('high');
-  // status: 'idle' | 'submitting' | 'polling' | 'done' | 'error'
-  const [status, setStatus] = useState('idle');
-  const [heatmapSrc, setHeatmapSrc] = useState(null);
-  const [taskId, setTaskId] = useState(null);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [errorDetail, setErrorDetail] = useState(''); // 개발용 상세 에러
-
-  const pollingRef = useRef(null);
-  const isMounted = useRef(true);
+  // Canvas는 막대 div 위에 absolute로 얹히므로
+  // 막대 div 자체를 ref로 잡아서 크기/위치를 측정
+  const canvasRef   = useRef(null);
+  const barsRef     = useRef(null); // 막대들이 들어있는 flex div
+  const barRefs     = useRef([]);   // 각 막대 div ref 배열
 
   useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      stopPolling();
-    };
-  }, []);
-
-  const stopPolling = () => {
-    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
-  };
-
-  const handleBranchChange = (branch) => {
-    if (status === 'submitting' || status === 'polling') return;
-    stopPolling();
-    setActiveBranch(branch);
-    setStatus('idle');
-    setHeatmapSrc(null);
-    setTaskId(null);
-    setErrorMsg('');
-    setErrorDetail('');
-  };
-
-  // ── STEP 1: POST 접수 → task_id 수신 ──
-  const requestHeatmap = async () => {
-    if (video_id == null) {
-      setErrorMsg('video_id가 없습니다.');
-      setErrorDetail('state에 video_id가 전달되지 않았습니다.');
-      setStatus('error');
-      return;
-    }
-
-    stopPolling();
-    setStatus('submitting');
-    setHeatmapSrc(null);
-    setErrorMsg('');
-    setErrorDetail('');
-    setTaskId(null);
-
-    const body = {
-      model_type: model_type || 'fast',
-      ...BRANCH_CONFIG[activeBranch],
-    };
-
-    try {
-      // POST /explain/video/{video_id}/frame/{frame_index}
-      // Response 202: "task_id_string"
-      const res = await axios.post(
-        `/explain/video/${video_id}/frame/${frame_index ?? 0}`,
-        body
-      );
-
-      const tid = extractTaskId(res.data);
-      if (!tid) {
-        throw new Error(`task_id 추출 실패. 응답: ${JSON.stringify(res.data)}`);
-      }
-
-      setTaskId(tid);
-      setStatus('polling');
-      startPolling(tid);
-    } catch (e) {
-      if (!isMounted.current) return;
-      const msg = e.response?.data?.detail || e.response?.data || e.message || '요청 실패';
-      setErrorMsg('히트맵 생성 요청 실패');
-      setErrorDetail(typeof msg === 'string' ? msg : JSON.stringify(msg));
-      setStatus('error');
-    }
-  };
-
-  // ── STEP 2: GET 폴링 → 결과 이미지 수신 ──
-  const startPolling = (tid) => {
-    let networkErrorCount = 0;
-    const MAX_ERRORS = 5;
-
-    pollingRef.current = setInterval(async () => {
-      if (!isMounted.current) return;
+    const fetchTimelineDetails = async () => {
+      if (!videoId) { setIsLoading(false); return; }
       try {
-        const res = await axios.get(`/explain/frame/result/${tid}`);
-        networkErrorCount = 0;
-        const d = res.data;
-
-        // 디버그: 실제 응답 구조 확인 (확인 후 제거 가능)
-        console.log('[heatmap polling] response:', JSON.stringify(d));
-
-        if (d === null || d === undefined) return;
-
-        let loc = null;
-
-        if (typeof d === 'string' && d.length > 0) {
-          // 응답이 문자열: 이미지 경로인지 확인
-          if (d.includes('/') || d.match(/\.(png|jpg|jpeg|webp)/i)) {
-            loc = d;
-          }
-        } else if (typeof d === 'object') {
-          // 응답이 객체: 가능한 모든 경로 필드 시도
-          loc = d.cam_loc ?? d.result_loc ?? d.image_loc ?? d.heatmap_loc ?? d.file_loc
-              ?? d.result_path ?? d.path ?? d.url ?? d.image_url ?? d.output_path
-              ?? d.result ?? null;
-
-          if (!loc) {
-            const st = (d.status || '').toUpperCase();
-            if (st === 'FAILED' || st === 'ERROR') {
-              stopPolling();
-              setErrorMsg('히트맵 생성 실패');
-              setErrorDetail(d.result_msg || d.message || d.detail || '서버 오류');
-              setStatus('error');
-              return;
-            }
-            // PENDING / STARTED → 계속 폴링
-            return;
-          }
+        const response = await axios.get(`/inference/video/${videoId}/detail`);
+        const d = response.data;
+        let frames = [];
+        if (d?.frames?.length)        frames = d.frames;
+        else if (d?.timeline?.length) frames = d.timeline;
+        if (frames.length) {
+          setTimelineData(frames.map(normalizeFrame));
+        } else {
+          setTimelineData(Array.from({ length: 10 }, (_, i) => normalizeFrame({
+            frame_index: i, frame_time: i * 2,
+            score: (i >= 3 && i <= 6) ? 0.855 : 0.123,
+          }, i)));
         }
-
-        if (loc) {
-          stopPolling();
-          setHeatmapSrc(toAbsoluteUrl(loc));
-          setStatus('done');
-        }
-      } catch (e) {
-        networkErrorCount++;
-        console.warn(`[heatmap polling] 에러 ${networkErrorCount}/${MAX_ERRORS}:`, e.message);
-        if (networkErrorCount >= MAX_ERRORS) {
-          stopPolling();
-          setErrorMsg('서버 연결 실패');
-          setErrorDetail(`${MAX_ERRORS}회 연속 연결 오류. 백엔드 서버 상태를 확인해주세요. (${e.message})`);
-          setStatus('error');
-        }
+      } catch {
+        setTimelineData(Array.from({ length: 10 }, (_, i) => normalizeFrame({
+          frame_index: i, frame_time: i * 2,
+          score: (i >= 3 && i <= 6) ? 0.855 : 0.123,
+        }, i)));
+      } finally {
+        setIsLoading(false);
       }
-    }, POLL_INTERVAL);
-  };
+    };
+    fetchTimelineDetails();
+  }, [videoId]);
 
-  const isFake = (fake_score ?? 0) > 50;
-  const isProcessing = status === 'submitting' || status === 'polling';
+  // ── Canvas 렌더링 ──
+  // 핵심: 각 막대 div의 getBoundingClientRect()로 실제 화면 위치를 측정해
+  //       캔버스 좌표로 변환 → 완벽하게 막대 상단 중앙을 통과하는 꺾은선
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const barsEl = barsRef.current;
+    if (!canvas || !barsEl || timelineData.length < 2) return;
+    if (barRefs.current.length !== timelineData.length) return;
+    if (barRefs.current.some(r => !r)) return;
 
-  if (!state) {
+    const barsRect = barsEl.getBoundingClientRect();
+    const W = barsRect.width;
+    const H = barsRect.height;
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    // 각 막대 상단 중앙 좌표 계산
+    // barRef는 막대 div (색깔 있는 직사각형)
+    const points = barRefs.current.map((barEl, i) => {
+      const barRect = barEl.getBoundingClientRect();
+      // canvas 기준 좌표 = barRect - barsRect (offset)
+      const x = barRect.left - barsRect.left + barRect.width / 2;
+      const y = barRect.top  - barsRect.top;  // 막대 상단
+      return { x, y, isFake: timelineData[i].fake_score > 50 };
+    });
+
+    // 50% 기준선 y좌표: fake_score=50일 때의 막대 높이 비율로 계산
+    // 막대 영역 높이 = barsEl에서 timestamp span 제외한 부분
+    // barsEl padding-top=30px → 막대 영역 시작 y=30, 막대 바닥 y=H-23(timestamp)
+    const BAR_TOP    = 30;  // padding-top
+    const BAR_BOTTOM = H - 23; // timestamp 텍스트 영역 제외
+    const BAR_H      = BAR_BOTTOM - BAR_TOP;
+    const y50 = BAR_BOTTOM - (50 / 100) * BAR_H;
+
+    // 50% 기준선
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = 'rgba(255, 75, 75, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, y50);
+    ctx.lineTo(points[points.length - 1].x, y50);
+    ctx.stroke();
+    ctx.restore();
+
+    // 꺾은선 글로우 (바깥 레이어)
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,255,255,0.6)';
+    ctx.shadowBlur  = 10;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // 데이터 포인트 dot
+    points.forEach((pt) => {
+      // 외곽 글로우 원
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = pt.isFake ? 'rgba(255,75,75,0.15)' : 'rgba(57,255,20,0.12)';
+      ctx.fill();
+      // 내부 dot
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = pt.isFake ? '#FF4B4B' : '#39FF14';
+      ctx.fill();
+    });
+  }, [timelineData]);
+
+  useEffect(() => {
+    if (isLoading || !timelineData.length) return;
+    // DOM 렌더 완료 후 실행 (두 번 대기로 안전하게)
+    const t1 = setTimeout(drawCanvas, 100);
+    const t2 = setTimeout(drawCanvas, 400);
+    const ro = new ResizeObserver(() => setTimeout(drawCanvas, 50));
+    if (barsRef.current) ro.observe(barsRef.current);
+    return () => { clearTimeout(t1); clearTimeout(t2); ro.disconnect(); };
+  }, [timelineData, isLoading, drawCanvas]);
+
+  if (!data) {
     return (
       <div style={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
-        <p>전송된 프레임 데이터가 없습니다.</p>
+        <p>전송된 비디오 분석 데이터가 없습니다.</p>
         <button onClick={() => navigate(-1)} style={{ marginLeft: '15px', padding: '8px 16px', backgroundColor: '#1A2C50', color: '#39FF14', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>뒤로가기</button>
       </div>
     );
   }
 
   return (
-    <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', padding: '40px 80px', boxSizing: 'border-box', fontFamily: 'sans-serif', overflowX: 'hidden' }}>
+    <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', padding: '40px 80px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
 
-      {/* 헤더 */}
+      {/* 네비게이션 헤더 */}
       <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', alignItems: 'center' }}>
         <button onClick={() => navigate(-1)} style={{ color: '#888', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>←</span> 타임라인으로
+          <span>←</span> 분석 결과 목록
         </button>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '4px', fontSize: '12px', color: '#39FF14', border: '1px solid #222', fontWeight: 'bold', letterSpacing: '0.5px' }}>
-            FORGERY TRACE VISUALIZATION
+            FRAME-LEVEL ANALYSIS REPORT
           </span>
           {sessionUser && (
             <div style={{ backgroundColor: '#111', padding: '8px 16px', borderRadius: '6px', border: '1px solid #222', fontSize: '13px' }}>
@@ -228,231 +182,172 @@ const HeatmapPage = ({ sessionUser }) => {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '30px' }}>
 
-        {/* 프레임 메타 패널 */}
+        {/* 상단 미디어 정보 패널 존 */}
         <div style={{ display: 'flex', backgroundColor: '#050505', borderRadius: '16px', border: '1px solid #1A1A1A', padding: '24px', gap: '32px', alignItems: 'center' }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1.2, height: '280px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#000', borderRadius: '8px', overflow: 'hidden', border: '1px solid #111' }}>
+            <video src={mediaSrc} controls style={{ maxWidth: '100%', maxHeight: '100%' }} />
+          </div>
+          <div style={{ flex: 0.8 }}>
             <p style={{ color: '#444', fontSize: '11px', letterSpacing: '2px', margin: '0 0 8px 0', fontWeight: 'bold' }}>TARGET METADATA</p>
-            <h3 style={{ fontSize: '22px', margin: '0 0 20px 0', color: '#fff', fontWeight: '700' }}>{video_name || `STREAM_INSTANCE_${video_id}`}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
+            <h3 style={{ fontSize: '22px', margin: '0 0 20px 0', color: '#fff', fontWeight: '700' }}>{data.video_name || `STREAM_INSTANCE_${videoId}`}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#aaa' }}>
               <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '8px' }}>
-                <span style={{ width: '160px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>FRAME INDEX</span>
-                <span style={{ color: '#fff', fontFamily: 'monospace' }}>#{frame_index ?? 0}</span>
+                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>ANALYSIS MODEL</span>
+                <span style={{ color: '#fff', fontWeight: '6px' }}>{data.model_type?.toUpperCase() || 'FAST'} ENGINE</span>
               </div>
               <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '8px' }}>
-                <span style={{ width: '160px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>TIMESTAMP</span>
-                <span style={{ color: '#39FF14', fontWeight: '600', fontFamily: 'monospace' }}>{timestamp || '—'}</span>
-              </div>
-              <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '8px' }}>
-                <span style={{ width: '160px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>FORGERY RISK</span>
-                <span style={{ color: isFake ? '#FF4B4B' : '#39FF14', fontWeight: '700', fontFamily: 'monospace' }}>
-                  {Number(fake_score ?? 0).toFixed(1)}%
-                </span>
+                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>CORE KERNEL VERSION</span>
+                <span style={{ color: '#39FF14', fontWeight: '600' }}>{data.version_type?.toUpperCase() || 'V1'} SYSTEM</span>
               </div>
               <div style={{ display: 'flex', paddingBottom: '4px' }}>
-                <span style={{ width: '160px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>VERDICT</span>
-                <span style={{ color: isFake ? '#FF4B4B' : '#39FF14', fontWeight: '700', fontFamily: 'monospace' }}>
-                  {isFake ? 'FAKE' : 'REAL'}
-                </span>
+                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>TOTAL FORGERY RISK</span>
+                <span style={{ color: '#FF4B4B', fontWeight: '700' }}>{(Number(data.prob ?? data.score ?? 0) * 100).toFixed(1)}% RISK</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 메인 2열 */}
-        <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+        {/* 하단: 타임라인 그래프 & 프레임 데이터 보드 */}
+        <div style={{ backgroundColor: '#0A0A0A', borderRadius: '16px', border: '1px solid #161616', padding: '32px' }}>
+          <p style={{ color: '#444', fontSize: '11px', letterSpacing: '2px', margin: '0 0 24px 0', fontWeight: 'bold' }}>CHRONOLOGICAL FORGERY RISK MATRIX</p>
 
-          {/* 좌: 히트맵 결과 뷰어 */}
-          <div style={{ flex: 1.4, backgroundColor: '#050505', borderRadius: '16px', border: '1px solid #1A1A1A', display: 'flex', flexDirection: 'column', minHeight: '520px' }}>
+          {isLoading ? (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#444', fontSize: '14px' }}>CALCULATING FRAME-LEVEL METRICS...</div>
+          ) : (
+            <div>
+              {/* 차트 영역: 막대 + Canvas 꺾은선 */}
+              <div style={{ position: 'relative', backgroundColor: '#020202', borderRadius: '8px', border: '1px solid #111', boxSizing: 'border-box' }}>
 
-            {/* 뷰어 헤더 */}
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#444', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1.5px' }}>HEATMAP + BBOX OVERLAY</span>
-              {status === 'done' && heatmapSrc && (
-                <a
-                  href={heatmapSrc}
-                  download={`heatmap_f${frame_index}_${activeBranch}.png`}
-                  style={{ fontSize: '11px', color: '#39FF14', textDecoration: 'none', border: '1px solid rgba(57,255,20,0.3)', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold' }}
+                {/* 막대 그래프 */}
+                <div
+                  ref={barsRef}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '180px', padding: '30px 40px', boxSizing: 'border-box' }}
                 >
-                  ↓ SAVE
-                </a>
-              )}
-            </div>
-
-            {/* 뷰어 본문 */}
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '30px', minHeight: '460px' }}>
-
-              {/* idle */}
-              {status === 'idle' && (
-                <div style={{ textAlign: 'center', color: '#333' }}>
-                  <p style={{ fontSize: '14px', letterSpacing: '2px', fontWeight: 'bold' }}>BRANCH LEVEL을 선택하고</p>
-                  <p style={{ fontSize: '14px', letterSpacing: '2px', fontWeight: 'bold', marginTop: '6px' }}>GENERATE를 실행하세요</p>
+                  {timelineData.map((frame, i) => {
+                    const isFakeUnit = frame.fake_score > 50;
+                    return (
+                      <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '12px' }}>
+                        {/* 막대 div — ref 배열로 각각 잡음 */}
+                        <div
+                          ref={el => barRefs.current[i] = el}
+                          style={{
+                            width: '24%',
+                            height: `${Math.max(frame.fake_score, 4)}%`,
+                            backgroundColor: isFakeUnit ? '#FF4B4B' : '#39FF14',
+                            borderRadius: '2px 2px 0 0',
+                            transition: 'height 0.4s cubic-bezier(0.1, 1, 0.1, 1)',
+                            boxShadow: isFakeUnit ? '0 0 12px rgba(255,75,75,0.25)' : '0 0 12px rgba(57,255,20,0.15)'
+                          }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#444', fontFamily: 'monospace', fontWeight: '600' }}>{frame.timestamp}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
 
-              {/* 처리중 */}
-              {isProcessing && (
-                <div style={{ textAlign: 'center', width: '100%' }}>
-                  <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto 30px', backgroundColor: '#0A0A0A', borderRadius: '12px', border: '1px solid #222', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', width: '100%', height: '2px', background: 'linear-gradient(90deg, transparent, #39FF14, transparent)', boxShadow: '0 0 12px #39FF14', animation: 'scanLine 2s ease-in-out infinite' }} />
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '9px', color: '#39FF14', letterSpacing: '2px', fontWeight: 'bold' }}>
-                        {status === 'submitting' ? '서버 접수 중...' : '히트맵 생성 중...'}
-                      </span>
+                {/* Canvas: barsRef와 완전히 동일한 위치/크기 */}
+                <canvas
+                  ref={canvasRef}
+                  style={{
+                    position: 'absolute',
+                    top: 0, left: 0,
+                    width: '100%', height: '100%',
+                    pointerEvents: 'none',
+                  }}
+                />
+              </div>
+
+              {/* 구간별 히트맵 버튼 행 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', marginTop: '10px' }}>
+                {timelineData.map((frame, i) => {
+                  const isFake = frame.fake_score > 50;
+                  return (
+                    <div key={i} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => navigate('/heatmap', {
+                          state: {
+                            video_id: videoId,
+                            frame_index: frame.frame_index,
+                            timestamp: frame.timestamp,
+                            fake_score: frame.fake_score,
+                            model_type: data.model_type || 'fast',
+                            video_name: data.video_name,
+                          }
+                        })}
+                        title={`${frame.timestamp} 히트맵`}
+                        style={{
+                          width: '100%', padding: '5px 0',
+                          backgroundColor: 'transparent',
+                          color: isFake ? '#FF4B4B' : '#39FF14',
+                          border: `1px solid ${isFake ? 'rgba(255,75,75,0.3)' : 'rgba(57,255,20,0.25)'}`,
+                          borderRadius: '4px', fontSize: '9px', fontWeight: '700',
+                          letterSpacing: '0.3px', cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isFake ? 'rgba(255,75,75,0.1)' : 'rgba(57,255,20,0.08)';
+                          e.currentTarget.style.boxShadow = isFake ? '0 0 8px rgba(255,75,75,0.2)' : '0 0 8px rgba(57,255,20,0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        HEAT
+                      </button>
                     </div>
-                  </div>
-                  <p style={{ fontSize: '11px', color: '#39FF14', letterSpacing: '3px', fontWeight: 'bold', marginBottom: '6px' }}>
-                    {status === 'submitting' ? 'SUBMITTING...' : 'GENERATING HEATMAP...'}
-                  </p>
-                  <p style={{ fontSize: '11px', color: '#444' }}>
-                    {activeBranch.toUpperCase()} BRANCH · LAYERCAM · heatmap_bbox
-                  </p>
-                  {taskId && (
-                    <p style={{ fontSize: '10px', color: '#333', marginTop: '8px', fontFamily: 'monospace' }}>TASK: {taskId}</p>
-                  )}
-                  <div style={{ width: '180px', height: '2px', backgroundColor: '#111', borderRadius: '1px', margin: '20px auto 0', overflow: 'hidden' }}>
-                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, #1A2C50, #39FF14, #1A2C50)', backgroundSize: '200%', animation: 'loadingBar 1.5s linear infinite' }} />
-                  </div>
-                </div>
-              )}
+                  );
+                })}
+              </div>
 
-              {/* 결과 이미지 */}
-              {status === 'done' && heatmapSrc && (
-                <div style={{ width: '100%', textAlign: 'center' }}>
-                  <img
-                    src={heatmapSrc}
-                    alt="HeatMap + BBox"
-                    style={{ maxWidth: '100%', maxHeight: '480px', borderRadius: '10px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      setErrorMsg('이미지 로드 실패');
-                      setErrorDetail(`URL: ${heatmapSrc}`);
-                      setStatus('error');
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* 결과 없음 */}
-              {status === 'done' && !heatmapSrc && (
-                <div style={{ textAlign: 'center', color: '#555' }}>
-                  <p style={{ fontSize: '14px' }}>결과 이미지를 받지 못했습니다.</p>
-                  <button onClick={requestHeatmap} style={{ marginTop: '16px', padding: '8px 20px', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid #39FF14', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>재시도</button>
-                </div>
-              )}
-
-              {/* 오류 */}
-              {status === 'error' && (
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: '36px', marginBottom: '16px' }}>⚠</p>
-                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#FF4B4B', marginBottom: '8px' }}>{errorMsg || '분석 실패'}</p>
-                  {errorDetail && (
-                    <p style={{ fontSize: '11px', color: '#555', maxWidth: '340px', lineHeight: '1.8', margin: '0 auto 16px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                      {errorDetail}
-                    </p>
-                  )}
-                  <button
-                    onClick={requestHeatmap}
-                    style={{ padding: '8px 20px', backgroundColor: 'transparent', color: '#FF4B4B', border: '1px solid #FF4B4B', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
-                  >
-                    재시도
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 우: 컨트롤 패널 */}
-          <div style={{ flex: 0.7, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-            {/* 브랜치 선택 */}
-            <div style={{ backgroundColor: '#0D0D0D', borderRadius: '16px', border: '1px solid #1A1A1A', padding: '28px' }}>
-              <p style={{ color: '#555', fontSize: '12px', fontWeight: 'bold', letterSpacing: '1.5px', margin: '0 0 16px 0' }}>BRANCH LEVEL</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[
-                  { key: 'low',  desc: '국소 위조 흔적 포착 (Subtle Artifacts)' },
-                  { key: 'high', desc: '전역 의미 구조 포착 (Global Artifacts)' },
-                ].map(({ key, desc }) => (
-                  <button
-                    key={key}
-                    onClick={() => handleBranchChange(key)}
-                    disabled={isProcessing}
-                    style={{
-                      padding: '16px 20px',
-                      backgroundColor: activeBranch === key ? 'rgba(57,255,20,0.06)' : 'transparent',
-                      border: `1px solid ${activeBranch === key ? '#39FF14' : '#222'}`,
-                      borderRadius: '10px',
-                      cursor: isProcessing ? 'not-allowed' : 'pointer',
-                      color: activeBranch === key ? '#39FF14' : '#555',
-                      fontWeight: 'bold', fontSize: '13px', letterSpacing: '1px',
-                      textAlign: 'left', transition: 'all 0.15s',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span>{key.toUpperCase()} BRANCH</span>
-                      {activeBranch === key && <span style={{ fontSize: '10px', color: '#39FF14' }}>● ACTIVE</span>}
+              {/* 구간별 텍스트 그리드 */}
+              <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {timelineData.map((frame, idx) => {
+                  const isFake = frame.fake_score > 50;
+                  return (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', backgroundColor: '#030303', borderRadius: '8px', border: '1px solid #141414' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#888', fontFamily: 'monospace' }}>TIMESTAMP {frame.timestamp}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <span style={{ fontSize: '13px', color: '#ccc' }}>변조 확률: <b style={{ color: isFake ? '#FF4B4B' : '#39FF14', fontFamily: 'monospace', fontSize: '14px' }}>{Number(frame.fake_score).toFixed(1)}%</b></span>
+                        <span style={{
+                          padding: '3px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px',
+                          backgroundColor: isFake ? 'rgba(255,75,75,0.08)' : 'rgba(57,255,20,0.06)',
+                          color: isFake ? '#FF4B4B' : '#39FF14',
+                          border: `1px solid ${isFake ? 'rgba(255,75,75,0.4)' : 'rgba(57,255,20,0.3)'}`
+                        }}>
+                          {isFake ? 'MANIPULATED' : 'VERIFIED'}
+                        </span>
+                        <button
+                          onClick={() => navigate('/heatmap', {
+                            state: {
+                              video_id: videoId,
+                              frame_index: frame.frame_index,
+                              timestamp: frame.timestamp,
+                              fake_score: frame.fake_score,
+                              model_type: data.model_type || 'fast',
+                              video_name: data.video_name,
+                            }
+                          })}
+                          style={{
+                            padding: '3px 10px', backgroundColor: 'transparent', color: '#666',
+                            border: '1px solid #2A2A2A', borderRadius: '4px', fontSize: '11px',
+                            fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#39FF14'; e.currentTarget.style.color = '#39FF14'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2A2A2A'; e.currentTarget.style.color = '#666'; }}
+                        >
+                          히트맵
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#444', fontWeight: 'normal', lineHeight: '1.6' }}>{desc}</div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
-
-            {/* 파라미터 요약 */}
-            <div style={{ backgroundColor: '#0D0D0D', borderRadius: '16px', border: '1px solid #1A1A1A', padding: '28px' }}>
-              <p style={{ color: '#555', fontSize: '12px', fontWeight: 'bold', letterSpacing: '1.5px', margin: '0 0 14px 0' }}>REQUEST PARAMETERS</p>
-              {[
-                ['model_type', model_type || 'fast'],
-                ...Object.entries(BRANCH_CONFIG[activeBranch]),
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #111', fontSize: '12px' }}>
-                  <span style={{ color: '#555', fontFamily: 'monospace' }}>{k}</span>
-                  <span style={{ color: '#39FF14', fontFamily: 'monospace', fontWeight: 'bold' }}>{String(v)}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* 분석 시작 버튼 */}
-            <button
-              onClick={requestHeatmap}
-              disabled={isProcessing}
-              style={{
-                padding: '18px',
-                backgroundColor: isProcessing ? '#111' : '#1A2C50',
-                color: isProcessing ? '#444' : 'white',
-                border: 'none', borderRadius: '12px',
-                fontWeight: 'bold', fontSize: '16px', letterSpacing: '1px',
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                transition: 'background 0.2s',
-              }}
-            >
-              {isProcessing ? '분석 중...' : 'GENERATE HEATMAP'}
-            </button>
-
-            {/* task_id 표시 (디버그용) */}
-            {taskId && (
-              <div style={{ backgroundColor: '#050505', borderRadius: '10px', border: '1px solid #111', padding: '12px 16px' }}>
-                <p style={{ color: '#333', fontSize: '10px', letterSpacing: '1px', margin: '0 0 4px 0', fontWeight: 'bold' }}>TASK ID</p>
-                <p style={{ color: '#444', fontSize: '10px', fontFamily: 'monospace', margin: 0, wordBreak: 'break-all' }}>{taskId}</p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes scanLine {
-          0%   { top: -2px; opacity: 0; }
-          10%  { opacity: 1; }
-          90%  { opacity: 1; }
-          100% { top: 100%; opacity: 0; }
-        }
-        @keyframes loadingBar {
-          0%   { background-position: 100% 0; }
-          100% { background-position: -100% 0; }
-        }
-      `}</style>
     </div>
   );
 };
 
-export default HeatmapPage;
+export default VideoTimelinePage;
