@@ -197,9 +197,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
               const dType = item.domain_type || '서양인';
               const mType = item.model_type ? item.model_type.toUpperCase() : 'FAST';
 
-              const targetBrightness = item.face_brightness ?? item.analysis?.face_brightness ?? item.brightness ?? 0;
-              const targetRatio = item.face_ratio ?? item.analysis?.face_ratio ?? item.ratio ?? 0;
-              const targetConf = item.face_conf ?? item.analysis?.face_conf ?? item.conf ?? item.face_confidence ?? 0;
 
               let itemLabel = 'UNKNOWN';
               if (item.label && item.label !== 'UNKNOWN') {
