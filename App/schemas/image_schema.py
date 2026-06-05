@@ -1,12 +1,16 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-class BaseMetadata(BaseModel):
+
+class ImageData(BaseModel):
     """
-    [공통 메타데이터] 이미지 분석 결과의 기본 식별 정보
-    
-    - routes: image (히스토리 조회)
-    - services: image_svc.get_image_result, get_user_histories, get_user_history
+    [공통 메타 / 히스토리 목록] 이미지 분석 기본 식별 정보
+
+    목록 응답으로 직접 사용되며, 상세/추론 결과 스키마의 베이스가 된다.
+
+    - routes: image (GET /image/history)
+    - services: image_svc.get_user_histories
+    - 상속처: ImageDetailData, ImageResultData
     """
     image_id: int = Field(..., description="이미지 분석 레코드 고유 ID (image_result.id)")
     image_loc: str = Field(..., description="서버 내 저장된 이미지 파일 경로 (DB 저장 형식, 예: /static/uploads/user@a.com/img_1700000000.png)")
@@ -16,13 +20,13 @@ class BaseMetadata(BaseModel):
     domain_type: str = Field(..., description="얼굴 도메인 타입 (서양인 / 동양인)")
     created_at: datetime = Field(..., description="분석 요청 생성 시각 (UTC)")
 
-class InferenceResult(BaseModel):
+
+class ImageInference(BaseModel):
     """
     [추론 상세 결과] 딥페이크 분석 수치 결과
-    
+
     - 상속 베이스 클래스 (직접 응답 X)
-    - 상속처: UserHistory_indi, ImageData_indi
-    - 사용처: image (GET /image/history/{image_id}), inference (GET /inference/image/{image_id})
+    - 상속처: ImageDetailData, ImageResultData
     - services: image_svc.get_user_history, image_svc.get_image_result
     """
     score: float = Field(..., description="딥페이크 확률 점수 (0.0~1.0, 0.5 이상이면 FAKE 판정). 분석 실패 시 -1.0")
@@ -31,28 +35,21 @@ class InferenceResult(BaseModel):
     face_brightness: float = Field(..., description="얼굴 영역 평균 밝기 값. 분석 실패 시 -1.0")
     result_msg: str = Field(..., description="분석 결과에 대한 상세 메시지 (성공/경고/실패 사유)")
 
-class UserHistory(BaseMetadata):
-    """
-    [히스토리 목록] 회원 전체 이미지 분석 이력
-    
-    - routes: image (GET /image/history)
-    - services: image_svc.get_user_histories
-    """
-    user_id: int = Field(..., description="분석을 요청한 유저 ID (user.id FK)")
 
-class UserHistory_indi(UserHistory, InferenceResult):
+class ImageDetailData(ImageData, ImageInference):
     """
     [히스토리 상세] 회원 개별 이미지 분석 상세 결과
-    
+
     - routes: image (GET /image/history/{image_id}, DELETE /image/history/{image_id} - 내부 조회)
     - services: image_svc.get_user_history
     """
     status: str
 
-class ImageData_indi(BaseMetadata, InferenceResult):
+
+class ImageResultData(ImageData, ImageInference):
     """
     [추론 결과 조회] 분석 진행 상태 + 최종 결과 (회원/비회원 공통)
-    
+
     - routes: inference (GET /inference/image/{image_id})
     - services: image_svc.get_image_result
     """
