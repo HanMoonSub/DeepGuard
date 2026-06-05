@@ -23,6 +23,12 @@ _EIGEN_ALLOWED = {"gradcamelementwise", "layercam", "xgradcam"}
 
 
 class ExplainImageRequest(BaseModel):
+    """
+    [이미지 시각화 요청] 딥페이크 이미지 위조 흔적 CAM 시각화 파라미터
+
+    - routes: explain (POST /explain/image/{image_id})
+    - services: explain_svc.process_explain_image_task
+    """
     model_type: Literal["fast", "pro"] = Field("fast",
                                                description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)")
     
@@ -69,4 +75,12 @@ class ExplainImageRequest(BaseModel):
         return self
     
 class ExplainFrameRequest(ExplainImageRequest):
+    """
+    [프레임 시각화 요청] 딥페이크 비디오 프레임 위조 흔적 CAM 시각화 파라미터
+
+    ExplainImageRequest와 동일한 파라미터를 사용하며, 비디오 특정 프레임 단위 시각화에 적용된다.
+
+    - routes: explain (POST /explain/video/{video_id}/frame/{frame_index})
+    - services: explain_svc.process_explain_frame_task
+    """
     pass
