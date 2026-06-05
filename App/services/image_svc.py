@@ -9,7 +9,7 @@ from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
-from schemas.image_schema import UserHistory, UserHistory_indi, ImageData_indi
+from schemas.image_schema import ImageData, ImageDetailData, ImageResultData
 from db.database import celery_db_conn
 from celery_app import celery_app
 
@@ -373,7 +373,12 @@ async def get_image_result(conn: Connection, image_id: int):
         HTTPException 500: 예기치 못한 오류 발생 시.
     """
     try:
-        query = text("SELECT * FROM image_result WHERE id = :image_id")
+        query = text("""
+            SELECT id, user_id, image_loc, status, label, score, face_conf, face_ratio,
+                   face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            FROM image_result
+            WHERE id = :image_id
+        """)
         result = await conn.execute(query, {"image_id": image_id})
         
         if result.rowcount == 0:
@@ -381,7 +386,7 @@ async def get_image_result(conn: Connection, image_id: int):
                                 detail=f"요청하신 이미지 분석 결과(ID: {image_id})를 찾을 수 없습니다. ID를 다시 확인해주세요.")
         row = result.fetchone()
         
-        image_data = ImageData_indi(
+        image_data = ImageResultData(
             image_id = row.id,
             user_id = row.user_id,
             image_loc = row.image_loc,
@@ -420,7 +425,7 @@ async def get_user_histories(conn: Connection, user_id: int):
         user_id (int): 조회할 사용자 PK.
 
     Returns:
-        list[UserHistory]: 이미지 히스토리 스키마 리스트. 결과 없으면 빈 리스트.
+        list[ImageData]: 이미지 히스토리 스키마 리스트. 결과 없으면 빈 리스트.
 
     Raises:
         HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
@@ -429,29 +434,25 @@ async def get_user_histories(conn: Connection, user_id: int):
     try:
         # SQL에 맞춰 테이블명과 컬럼 변경
         query = ("""
-            SELECT id, user_id, image_loc, label, version_type, model_type, domain_type, created_at
+            SELECT id, image_loc, label, version_type, model_type, domain_type, created_at
             FROM image_result
             WHERE user_id = :user_id
             ORDER BY created_at DESC;
         """)
         stmt = text(query)
         result = await conn.execute(stmt, {"user_id": user_id})
-
-        user_histories = [UserHistory(
+        
+        user_histories = [ImageData(
             image_id = row.id,
-            user_id = row.user_id,
             image_loc = row.image_loc,
             label = row.label,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,
             created_at = row.created_at
-        )
-            for row in result]
+        ) for row in result]
         
-        result.close()
-
-            
+        result.close()            
         return user_histories
     
     except SQLAlchemyError as e:
@@ -470,7 +471,7 @@ async def get_user_history(conn: Connection, image_id: int):
         image_id (int): 조회할 이미지 레코드 PK.
 
     Returns:
-        UserHistory_indi | None: 상세 히스토리 스키마 객체. 레코드 없으면 None.
+        ImageDetailData | None: 상세 히스토리 스키마 객체. 레코드 없으면 None.
 
     Raises:
         HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
@@ -478,7 +479,7 @@ async def get_user_history(conn: Connection, image_id: int):
     """
     try:
         query = """
-            SELECT id, user_id, image_loc, status, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, image_loc, status, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
             WHERE id = :image_id;
         """
@@ -489,9 +490,8 @@ async def get_user_history(conn: Connection, image_id: int):
         if row is None:
             return None
         
-        user_history = UserHistory_indi(
+        user_history = ImageDetailData(
             image_id = row.id,
-            user_id = row.user_id,
             image_loc = row.image_loc,
             status = row.status,
             label = row.label,

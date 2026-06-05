@@ -7,7 +7,7 @@ from services import image_svc, session_svc, inference_svc, video_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
 from schemas.video_schema import VideoDetailResponse, VideoDetailData
-from schemas.image_schema import ImageData_indi
+from schemas.image_schema import ImageResultData
 from typing import Literal
 
 router = APIRouter(prefix="/inference", tags=["inference"])
@@ -46,7 +46,7 @@ async def predict_image(
     }
 
 @router.get("/image/{image_id}", status_code=status.HTTP_200_OK,
-            response_model=ImageData_indi, summary="딥페이크 비동기 이미지 추론 결과값 가져오기")
+            response_model=ImageResultData, summary="딥페이크 비동기 이미지 추론 결과값 가져오기")
 async def get_image_result(
                             image_id: int,
                             conn: Connection = Depends(context_get_conn),
