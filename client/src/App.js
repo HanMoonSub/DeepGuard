@@ -11,7 +11,7 @@ import VideoAnalysisPage from './pages/VideoAnalysisPage';
 import VideoTimelinePage from './pages/VideoTimelinePage'; 
 import HeatmapPage from './pages/HeatmapPage';
 
-axios.defaults.withCredentials = true;
+
 
 function App() {
   const [sessionUser, setSessionUser] = useState(null);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
-axios.defaults.withCredentials = true;
+
 
 const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const navigate = useNavigate();

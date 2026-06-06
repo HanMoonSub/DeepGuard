@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios'; 
 
 
-axios.defaults.withCredentials = true;
+
 
 const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const navigate = useNavigate();
