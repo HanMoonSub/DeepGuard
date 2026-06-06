@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const apiUrl = '';
+
 
 const normalizeFrame = (f, i) => {
   const raw = f.score ?? f.fake_score ?? 0;
@@ -21,7 +21,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
 
   const videoId = data?.video_id || data?.id;
   const mediaLoc = data?.video_loc || '';
-  const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : `${apiUrl}${mediaLoc}`;
+  const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : mediaLoc;
 
   // Canvas는 막대 div 위에 absolute로 얹히므로
   // 막대 div 자체를 ref로 잡아서 크기/위치를 측정

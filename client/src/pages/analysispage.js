@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const apiUrl = '';
+
 
 
 const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
@@ -216,7 +216,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                     style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '12px', border: isSelected ? '1px solid #39FF14' : '1px solid #222', cursor: isEditMode ? 'default' : 'pointer' }}
                   >
                     <div style={{ width: '45px', height: '45px', backgroundColor: '#222', borderRadius: '8px', overflow: 'hidden' }}>
-                      {item.image_loc ? <img src={`${apiUrl}${item.image_loc}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🖼️'}
+                      {item.image_loc ? <img src={item.image_loc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🖼️'}
                     </div>
                     <div>
                       <div style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold', marginBottom: '2px' }}>{vType} | {dType} | {mType}</div>

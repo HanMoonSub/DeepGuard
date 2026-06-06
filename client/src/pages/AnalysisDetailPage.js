@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const apiUrl = '';
 
 const AnalysisDetailPage = ({ sessionUser }) => {
   const { state } = useLocation();
@@ -71,7 +70,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
   const ratioColor = face_ratio >= 3 ? '#39FF14' : '#FF4B4B';
 
   const mediaLoc = data.video_loc || data.media_loc || data.image_loc || '';
-  const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : `${apiUrl}${mediaLoc}`;
+  const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : mediaLoc;
   const isVideo = !!data.video_loc || (data.score !== undefined && !data.image_loc) || window.location.pathname.includes('video');
 
   // [수정] WARNING 여부 판단
