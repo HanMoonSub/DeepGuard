@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios'; 
 import logo from '../assets/logo.svg';
 
-axios.defaults.withCredentials = true;
+
 
 const LoginPage = ({ setSessionUser }) => {
   const navigate = useNavigate();
