@@ -17,6 +17,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
   const { state: data } = useLocation();
   const navigate = useNavigate();
   const [timelineData, setTimelineData] = useState([]);
+  const [videoMeta, setVideoMeta]       = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const videoId = data?.video_id || data?.id;
@@ -38,6 +39,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
         let frames = [];
         if (d?.frames?.length)        frames = d.frames;
         else if (d?.timeline?.length) frames = d.timeline;
+        if (d?.meta) setVideoMeta(d.meta);
         if (frames.length) {
           setTimelineData(frames.map(normalizeFrame));
         } else {
@@ -188,20 +190,19 @@ const VideoTimelinePage = ({ sessionUser }) => {
             <video src={mediaSrc} controls style={{ maxWidth: '100%', maxHeight: '100%' }} />
           </div>
           <div style={{ flex: 0.8 }}>
-            <p style={{ color: '#444', fontSize: '11px', letterSpacing: '2px', margin: '0 0 8px 0', fontWeight: 'bold' }}>TARGET METADATA</p>
-            <h3 style={{ fontSize: '22px', margin: '0 0 20px 0', color: '#fff', fontWeight: '700' }}>{data.video_name || `STREAM_INSTANCE_${videoId}`}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#aaa' }}>
-              <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '8px' }}>
-                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>ANALYSIS MODEL</span>
-                <span style={{ color: '#fff', fontWeight: '6px' }}>{data.model_type?.toUpperCase() || 'FAST'} ENGINE</span>
-              </div>
-              <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '8px' }}>
-                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>CORE KERNEL VERSION</span>
-                <span style={{ color: '#39FF14', fontWeight: '600' }}>{data.version_type?.toUpperCase() || 'V1'} SYSTEM</span>
+            <p style={{ color: '#444', fontSize: '11px', letterSpacing: '2px', margin: '0 0 20px 0', fontWeight: 'bold' }}>VIDEO METADATA</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '16px' }}>
+                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>TOTAL FRAMES</span>
+                <span style={{ color: '#fff', fontSize: '22px', fontWeight: '900', fontFamily: 'monospace' }}>
+                  {videoMeta?.total_frames ?? '—'}
+                </span>
               </div>
               <div style={{ display: 'flex', paddingBottom: '4px' }}>
-                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>TOTAL FORGERY RISK</span>
-                <span style={{ color: '#FF4B4B', fontWeight: '700' }}>{(Number(data.prob ?? data.score ?? 0) * 100).toFixed(1)}% RISK</span>
+                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>NUM SAMPLED</span>
+                <span style={{ color: '#39FF14', fontSize: '22px', fontWeight: '900', fontFamily: 'monospace' }}>
+                  {videoMeta?.num_sampled ?? '—'}
+                </span>
               </div>
             </div>
           </div>
