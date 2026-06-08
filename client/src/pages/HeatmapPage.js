@@ -143,9 +143,9 @@ const HeatmapPage = ({ sessionUser }) => {
         {/* 헤더 */}
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' }}>
           <button onClick={() => navigate(-1)}
-            style={{ color: '#555', background: 'none', border: '1px solid #1A1A1A', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', transition: 'all 0.2s' }}
+            style={{ color: '#999', background: 'none', border: '1px solid #1A1A1A', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#39FF14'; e.currentTarget.style.color = '#39FF14'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#555'; }}>
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#999'; }}>
             ← 타임라인으로
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -155,7 +155,7 @@ const HeatmapPage = ({ sessionUser }) => {
             <div style={{ padding: '6px 16px', backgroundColor: '#0A0A0A', borderRadius: '6px', fontSize: '12px', color: '#39FF14', border: '1px solid #1A1A1A', fontWeight: 'bold', letterSpacing: '1px' }}>FRAME FORGERY TRACE</div>
             {sessionUser && (
               <div style={{ backgroundColor: '#0A0A0A', padding: '6px 14px', borderRadius: '6px', border: '1px solid #1A1A1A', fontSize: '12px' }}>
-                <span style={{ color: '#555' }}>담당: </span>
+                <span style={{ color: '#999' }}>담당: </span>
                 <span style={{ color: '#39FF14', fontWeight: 'bold' }}>{sessionUser.name}</span>
               </div>
             )}
@@ -173,7 +173,7 @@ const HeatmapPage = ({ sessionUser }) => {
           ].map((item, i) => (
             <div key={i} style={{ backgroundColor: '#050505', border: '1px solid #1A1A1A', borderRadius: '12px', padding: '16px 20px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${item.color}40, transparent)` }} />
-              <p style={{ color: '#444', fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px', margin: '0 0 6px 0' }}>{item.label}</p>
+              <p style={{ color: '#999', fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px', margin: '0 0 6px 0' }}>{item.label}</p>
               <p style={{ color: item.color, fontWeight: '900', fontFamily: 'monospace', fontSize: item.big ? '20px' : '14px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.value}</p>
             </div>
           ))}
@@ -186,7 +186,7 @@ const HeatmapPage = ({ sessionUser }) => {
           <div style={{ padding: '14px 22px', borderBottom: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#030303' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isProcessing ? '#39FF14' : status === 'done' ? '#39FF14' : '#333', boxShadow: isProcessing ? '0 0 8px #39FF14' : 'none', animation: isProcessing ? 'pulse 1.5s ease-in-out infinite' : 'none' }} />
-              <span style={{ color: '#555', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px' }}>HEATMAP + BBOX OVERLAY</span>
+              <span style={{ color: '#999', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px' }}>HEATMAP + BBOX OVERLAY</span>
               {selectedBranch && <span style={{ color: '#2A2A2A', fontSize: '10px', fontFamily: 'monospace' }}>{selectedBranch.toUpperCase()} / {(selectedModel || '').toUpperCase()}</span>}
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -209,16 +209,16 @@ const HeatmapPage = ({ sessionUser }) => {
                   <div style={{ marginBottom: '28px' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid rgba(255,75,75,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '20px', backgroundColor: 'rgba(255,75,75,0.06)' }}>⚠</div>
                     <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#FF4B4B', marginBottom: '6px' }}>{errorMsg}</p>
-                    {errorDetail && <p style={{ fontSize: '10px', color: '#444', lineHeight: '1.7', fontFamily: 'monospace', wordBreak: 'break-all', backgroundColor: '#0A0A0A', padding: '10px', borderRadius: '6px', border: '1px solid #1A1A1A', textAlign: 'left', marginBottom: '20px' }}>{errorDetail}</p>}
+                    {errorDetail && <p style={{ fontSize: '10px', color: '#999', lineHeight: '1.7', fontFamily: 'monospace', wordBreak: 'break-all', backgroundColor: '#0A0A0A', padding: '10px', borderRadius: '6px', border: '1px solid #1A1A1A', textAlign: 'left', marginBottom: '20px' }}>{errorDetail}</p>}
                   </div>
                 )}
 
                 {/* Branch */}
-                <p style={{ color: '#444', fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 10px 0' }}>BRANCH LEVEL</p>
+                <p style={{ color: '#999', fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 10px 0' }}>BRANCH LEVEL</p>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '22px' }}>
                   {Object.keys(BRANCH_OPTIONS).map(branch => (
                     <button key={branch} onClick={() => setTempBranch(branch)}
-                      style={{ padding: '12px 36px', backgroundColor: tempBranch === branch ? 'rgba(57,255,20,0.08)' : 'transparent', border: `1px solid ${tempBranch === branch ? '#39FF14' : '#333'}`, borderRadius: '8px', color: tempBranch === branch ? '#39FF14' : '#555', fontSize: '13px', fontWeight: 'bold', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase' }}>
+                      style={{ padding: '12px 36px', backgroundColor: tempBranch === branch ? 'rgba(57,255,20,0.08)' : 'transparent', border: `1px solid ${tempBranch === branch ? '#39FF14' : '#333'}`, borderRadius: '8px', color: tempBranch === branch ? '#39FF14' : '#999', fontSize: '13px', fontWeight: 'bold', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase' }}>
                       {branch}
                       <span style={{ display: 'block', fontSize: '9px', color: tempBranch === branch ? 'rgba(57,255,20,0.5)' : '#2A2A2A', fontWeight: 'normal', marginTop: '3px' }}>
                         {branch === 'low' ? '국소 흔적' : '전역 구조'}
@@ -228,11 +228,11 @@ const HeatmapPage = ({ sessionUser }) => {
                 </div>
 
                 {/* Model */}
-                <p style={{ color: '#444', fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 10px 0' }}>MODEL TYPE</p>
+                <p style={{ color: '#999', fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 10px 0' }}>MODEL TYPE</p>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '32px' }}>
                   {MODEL_OPTIONS.map(m => (
                     <button key={m} onClick={() => setTempModel(m)}
-                      style={{ padding: '12px 36px', backgroundColor: tempModel === m ? 'rgba(57,255,20,0.08)' : 'transparent', border: `1px solid ${tempModel === m ? '#39FF14' : '#333'}`, borderRadius: '8px', color: tempModel === m ? '#39FF14' : '#555', fontSize: '13px', fontWeight: 'bold', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase' }}>
+                      style={{ padding: '12px 36px', backgroundColor: tempModel === m ? 'rgba(57,255,20,0.08)' : 'transparent', border: `1px solid ${tempModel === m ? '#39FF14' : '#333'}`, borderRadius: '8px', color: tempModel === m ? '#39FF14' : '#999', fontSize: '13px', fontWeight: 'bold', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase' }}>
                       {m}
                     </button>
                   ))}
@@ -253,9 +253,9 @@ const HeatmapPage = ({ sessionUser }) => {
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
                 <div style={{ width: '48px', height: '48px', border: '3px solid #1A1A1A', borderTop: '3px solid #39FF14', borderRadius: '50%', margin: '0 auto 24px', animation: 'spin 0.8s linear infinite' }} />
                 <p style={{ fontSize: '13px', color: '#39FF14', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 8px 0' }}>GENERATING HEATMAP</p>
-                <p style={{ fontSize: '11px', color: '#444', margin: '0 0 6px 0' }}>프레임 위조 흔적 시각화 처리 중...</p>
-                <p style={{ fontSize: '11px', color: '#333', fontFamily: 'monospace', margin: '0 0 4px 0' }}>{(selectedBranch || tempBranch || '').toUpperCase()} BRANCH · {(selectedModel || tempModel || '').toUpperCase()} MODEL</p>
-                <p style={{ fontSize: '12px', color: '#555', fontFamily: 'monospace', margin: 0 }}>{elapsed}s elapsed</p>
+                <p style={{ fontSize: '11px', color: '#999', margin: '0 0 6px 0' }}>프레임 위조 흔적 시각화 처리 중...</p>
+                <p style={{ fontSize: '11px', color: '#888', fontFamily: 'monospace', margin: '0 0 4px 0' }}>{(selectedBranch || tempBranch || '').toUpperCase()} BRANCH · {(selectedModel || tempModel || '').toUpperCase()} MODEL</p>
+                <p style={{ fontSize: '12px', color: '#999', fontFamily: 'monospace', margin: 0 }}>{elapsed}s elapsed</p>
               </div>
             )}
 
@@ -275,7 +275,7 @@ const HeatmapPage = ({ sessionUser }) => {
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '20px', flexWrap: 'wrap' }}>
                   {Object.keys(BRANCH_OPTIONS).flatMap(branch => MODEL_OPTIONS.map(m => ({ branch, m }))).map(({ branch, m }) => (
                     <button key={branch + m} onClick={() => handleBranchSelect(branch, m)}
-                      style={{ padding: '6px 14px', backgroundColor: (selectedBranch === branch && selectedModel === m) ? 'rgba(57,255,20,0.1)' : 'transparent', border: `1px solid ${(selectedBranch === branch && selectedModel === m) ? '#39FF14' : '#2A2A2A'}`, borderRadius: '6px', color: (selectedBranch === branch && selectedModel === m) ? '#39FF14' : '#444', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s' }}>
+                      style={{ padding: '6px 14px', backgroundColor: (selectedBranch === branch && selectedModel === m) ? 'rgba(57,255,20,0.1)' : 'transparent', border: `1px solid ${(selectedBranch === branch && selectedModel === m) ? '#39FF14' : '#2A2A2A'}`, borderRadius: '6px', color: (selectedBranch === branch && selectedModel === m) ? '#39FF14' : '#999', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s' }}>
                       {branch.toUpperCase()} / {m.toUpperCase()}
                     </button>
                   ))}
@@ -285,7 +285,7 @@ const HeatmapPage = ({ sessionUser }) => {
 
             {status === 'done' && !heatmapSrc && (
               <div style={{ textAlign: 'center' }}>
-                <p style={{ color: '#555', marginBottom: '16px' }}>결과 이미지를 받지 못했습니다.</p>
+                <p style={{ color: '#999', marginBottom: '16px' }}>결과 이미지를 받지 못했습니다.</p>
                 <button onClick={() => requestHeatmap(selectedBranch, selectedModel)} style={{ padding: '10px 24px', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid rgba(57,255,20,0.4)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>재시도</button>
               </div>
             )}

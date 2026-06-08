@@ -108,7 +108,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
             ) : mediaLoc ? (
               <img src={mediaSrc} alt="Analyzed media" style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', borderRadius: '12px' }} onError={(e) => { e.target.src = 'https://via.placeholder.com/600x400?text=No+Image'; }} />
             ) : (
-              <div style={{ color: '#444', textAlign: 'center' }}>미디어가 존재하지 않습니다.</div>
+              <div style={{ color: '#999', textAlign: 'center' }}>미디어가 존재하지 않습니다.</div>
             )}
           </div>
 
@@ -119,7 +119,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
               onMouseEnter={(e) => { e.target.style.backgroundColor = 'rgba(57, 255, 20, 0.06)'; e.target.style.borderColor = '#39FF14'; e.target.style.boxShadow = '0 0 15px rgba(57, 255, 20, 0.15)'; }}
               onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.borderColor = 'rgba(57, 255, 20, 0.4)'; e.target.style.boxShadow = '0 2px 8px rgba(57, 255, 20, 0.05)'; }}
             >
-              EXPAND TIMELINE ANALYSIS
+              Forgery Localization: Heatmap + BBox
             </button>
           )}
 
@@ -138,7 +138,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
               onMouseEnter={(e) => { e.target.style.backgroundColor = 'rgba(57, 255, 20, 0.06)'; e.target.style.borderColor = '#39FF14'; e.target.style.boxShadow = '0 0 15px rgba(57, 255, 20, 0.15)'; }}
               onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.borderColor = 'rgba(57, 255, 20, 0.4)'; e.target.style.boxShadow = '0 2px 8px rgba(57, 255, 20, 0.05)'; }}
             >
-              FORGERY TRACE HEATMAP + BBOX
+              Forgery Localization: Heatmap + BBox
             </button>
           )}
         </div>
@@ -159,35 +159,35 @@ const AnalysisDetailPage = ({ sessionUser }) => {
             <>
               {/* 종합 리포트 판정 카드 — flex:1로 남은 공간 채움 */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px', backgroundColor: '#0D0D0D', borderRadius: '28px', border: '1px solid #1A1A1A', textAlign: 'center', gap: '8px' }}>
-                <p style={{ color: '#555', fontSize: '13px', letterSpacing: '2px', margin: '0' }}>FINAL ANALYSIS</p>
-                <h1 style={{ fontSize: '84px', fontWeight: '900', color: label === 'FAKE' ? '#FF4B4B' : (isInvalid ? '#444' : '#39FF14'), margin: '8px 0 0', letterSpacing: '1px', lineHeight: 1 }}>
+                <p style={{ color: '#aaa', fontSize: '13px', letterSpacing: '2px', margin: '0' }}>FINAL ANALYSIS</p>
+                <h1 style={{ fontSize: '84px', fontWeight: '900', color: label === 'FAKE' ? '#FF4B4B' : (isInvalid ? '#999' : '#39FF14'), margin: '8px 0 0', letterSpacing: '1px', lineHeight: 1 }}>
                   {label}
                 </h1>
                 <div style={{ width: '40px', height: '2px', backgroundColor: label === 'FAKE' ? '#FF4B4B' : '#39FF14', borderRadius: '1px', margin: '12px 0' }} />
-                <p style={{ fontSize: '12px', color: '#555', letterSpacing: '1.5px', margin: '0', fontWeight: 'bold' }}>FAKE 확률</p>
+                <p style={{ fontSize: '12px', color: '#bbb', letterSpacing: '1.5px', margin: '0', fontWeight: 'bold' }}>FAKE 확률</p>
                 <p style={{ fontSize: '48px', fontWeight: '900', margin: '0', color: label === 'FAKE' ? '#FF4B4B' : '#fff', letterSpacing: '1px', lineHeight: 1 }}>{displayProb}</p>
               </div>
 
               {/* 보조 메트릭 — 작게 고정 높이 */}
               <div style={{ padding: '20px 24px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A' }}>
-                <p style={{ color: '#444', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1.5px', margin: '0 0 14px 0' }}>DETAIL METRICS</p>
+                <p style={{ color: '#999', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1.5px', margin: '0 0 14px 0' }}>DETAIL METRICS</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
                   {/* BRIGHTNESS */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#444', fontSize: '12px', fontWeight: 'bold' }}>BRIGHTNESS</span>
+                    <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 밝기</span>
                     <span style={{ color: brightnessColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_brightness).toFixed(1)}%</span>
                   </div>
 
                   {/* FACE RATIO */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#444', fontSize: '12px', fontWeight: 'bold' }}>FACE RATIO</span>
+                    <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 비율</span>
                     <span style={{ color: ratioColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_ratio).toFixed(1)}%</span>
                   </div>
 
                   {/* MODEL CONFIDENCE */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ color: '#444', fontSize: '12px', fontWeight: 'bold' }}>MODEL CONFIDENCE</span>
+                    <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>모델 신뢰도</span>
                     <span style={{ color: '#39FF14', fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_conf).toFixed(1)}%</span>
                   </div>
                   <div style={{ width: '100%', height: '4px', backgroundColor: '#1A1A1A', borderRadius: '2px', overflow: 'hidden' }}>
