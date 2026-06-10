@@ -32,7 +32,7 @@ const HeatmapPage = ({ sessionUser }) => {
   const [selectedModel, setSelectedModel]   = useState(null);
   const [status, setStatus]                 = useState('idle');
   const [heatmapSrc, setHeatmapSrc]         = useState(null);
-  const [taskId, setTaskId]                 = useState(null);
+  const [, setTaskId]                 = useState(null);
   const [errorMsg, setErrorMsg]             = useState('');
   const [errorDetail, setErrorDetail]       = useState('');
   const [elapsed, setElapsed]               = useState(0);

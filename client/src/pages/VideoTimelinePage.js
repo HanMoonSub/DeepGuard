@@ -17,7 +17,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
   const { state: data } = useLocation();
   const navigate = useNavigate();
   const [timelineData, setTimelineData] = useState([]);
-  const [videoMeta, setVideoMeta]       = useState(null);
+  const [, setVideoMeta]       = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const videoId = data?.video_id || data?.id;
