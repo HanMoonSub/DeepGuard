@@ -17,6 +17,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
   const { state: data } = useLocation();
   const navigate = useNavigate();
   const [timelineData, setTimelineData] = useState([]);
+  const [videoMeta, setVideoMeta]       = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const videoId = data?.video_id || data?.id;
@@ -38,6 +39,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
         let frames = [];
         if (d?.frames?.length)        frames = d.frames;
         else if (d?.timeline?.length) frames = d.timeline;
+        if (d?.meta) setVideoMeta(d.meta);
         if (frames.length) {
           setTimelineData(frames.map(normalizeFrame));
         } else {
@@ -57,6 +59,12 @@ const VideoTimelinePage = ({ sessionUser }) => {
     };
     fetchTimelineDetails();
   }, [videoId]);
+
+  // ── fake/real 비율 (프레임 카운트 기준) ──
+  const fakeCount  = timelineData.filter(f => f.fake_score > 50).length;
+  const totalCount = timelineData.length;
+  const fakeRatio  = totalCount ? (fakeCount / totalCount) * 100 : 0;
+  const realRatio  = 100 - fakeRatio;
 
   // ── Canvas 렌더링 ──
   // 핵심: 각 막대 div의 getBoundingClientRect()로 실제 화면 위치를 측정해
@@ -188,20 +196,51 @@ const VideoTimelinePage = ({ sessionUser }) => {
             <video src={mediaSrc} controls style={{ maxWidth: '100%', maxHeight: '100%' }} />
           </div>
           <div style={{ flex: 0.8 }}>
-            <p style={{ color: '#444', fontSize: '11px', letterSpacing: '2px', margin: '0 0 8px 0', fontWeight: 'bold' }}>TARGET METADATA</p>
-            <h3 style={{ fontSize: '22px', margin: '0 0 20px 0', color: '#fff', fontWeight: '700' }}>{data.video_name || `STREAM_INSTANCE_${videoId}`}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#aaa' }}>
-              <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '8px' }}>
-                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>ANALYSIS MODEL</span>
-                <span style={{ color: '#fff', fontWeight: '6px' }}>{data.model_type?.toUpperCase() || 'FAST'} ENGINE</span>
-              </div>
-              <div style={{ display: 'flex', borderBottom: '1px solid #111', paddingBottom: '8px' }}>
-                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>CORE KERNEL VERSION</span>
-                <span style={{ color: '#39FF14', fontWeight: '600' }}>{data.version_type?.toUpperCase() || 'V1'} SYSTEM</span>
-              </div>
-              <div style={{ display: 'flex', paddingBottom: '4px' }}>
-                <span style={{ width: '140px', color: '#555', fontWeight: 'bold', fontSize: '12px' }}>TOTAL FORGERY RISK</span>
-                <span style={{ color: '#FF4B4B', fontWeight: '700' }}>{(Number(data.prob ?? data.score ?? 0) * 100).toFixed(1)}% RISK</span>
+            <p style={{ color: '#999', fontSize: '11px', letterSpacing: '2px', margin: '0 0 20px 0', fontWeight: 'bold' }}>FORGERY RATIO</p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+              {/* 도넛 차트 */}
+              <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
+                {/* real(초록) 전체 배경 링 */}
+                <circle
+                  cx="70" cy="70" r="56" fill="none"
+                  stroke="#39FF14" strokeWidth="16"
+                  opacity="0.9"
+                />
+                {/* fake(빨강) 비율만큼 덮어쓰기 */}
+                <circle
+                  cx="70" cy="70" r="56" fill="none"
+                  stroke="#FF4B4B" strokeWidth="16"
+                  strokeDasharray={`${(fakeRatio / 100) * 2 * Math.PI * 56} ${2 * Math.PI * 56}`}
+                  strokeLinecap="butt"
+                  style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.1, 1, 0.1, 1)' }}
+                />
+                {/* 중앙 fake % 텍스트 (rotate 보정) */}
+                <text
+                  x="70" y="70"
+                  textAnchor="middle" dominantBaseline="central"
+                  fill="#fff" fontSize="26" fontWeight="900" fontFamily="monospace"
+                  style={{ transform: 'rotate(90deg)', transformOrigin: '70px 70px' }}
+                >
+                  {fakeRatio.toFixed(0)}%
+                </text>
+              </svg>
+
+              {/* 범례 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#FF4B4B', boxShadow: '0 0 8px rgba(255,75,75,0.4)' }} />
+                  <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold', width: '44px' }}>FAKE</span>
+                  <span style={{ color: '#FF4B4B', fontSize: '18px', fontWeight: '900', fontFamily: 'monospace' }}>{fakeRatio.toFixed(1)}%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#39FF14', boxShadow: '0 0 8px rgba(57,255,20,0.3)' }} />
+                  <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold', width: '44px' }}>REAL</span>
+                  <span style={{ color: '#39FF14', fontSize: '18px', fontWeight: '900', fontFamily: 'monospace' }}>{realRatio.toFixed(1)}%</span>
+                </div>
+                <div style={{ marginTop: '4px', color: '#999', fontSize: '11px', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                  {fakeCount} / {totalCount} FRAMES
+                </div>
               </div>
             </div>
           </div>
@@ -209,10 +248,10 @@ const VideoTimelinePage = ({ sessionUser }) => {
 
         {/* 하단: 타임라인 그래프 & 프레임 데이터 보드 */}
         <div style={{ backgroundColor: '#0A0A0A', borderRadius: '16px', border: '1px solid #161616', padding: '32px' }}>
-          <p style={{ color: '#444', fontSize: '11px', letterSpacing: '2px', margin: '0 0 24px 0', fontWeight: 'bold' }}>CHRONOLOGICAL FORGERY RISK MATRIX</p>
+          <p style={{ color: '#999', fontSize: '11px', letterSpacing: '2px', margin: '0 0 24px 0', fontWeight: 'bold' }}>CHRONOLOGICAL FORGERY RISK MATRIX</p>
 
           {isLoading ? (
-            <div style={{ padding: '60px', textAlign: 'center', color: '#444', fontSize: '14px' }}>CALCULATING FRAME-LEVEL METRICS...</div>
+            <div style={{ padding: '60px', textAlign: 'center', color: '#999', fontSize: '14px' }}>CALCULATING FRAME-LEVEL METRICS...</div>
           ) : (
             <div>
               {/* 차트 영역: 막대 + Canvas 꺾은선 */}
@@ -239,7 +278,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                             boxShadow: isFakeUnit ? '0 0 12px rgba(255,75,75,0.25)' : '0 0 12px rgba(57,255,20,0.15)'
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: '#444', fontFamily: 'monospace', fontWeight: '600' }}>{frame.timestamp}</span>
+                        <span style={{ fontSize: '11px', color: '#999', fontFamily: 'monospace', fontWeight: '600' }}>{frame.timestamp}</span>
                       </div>
                     );
                   })}
