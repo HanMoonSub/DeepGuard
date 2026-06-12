@@ -26,7 +26,6 @@ client/package-lock.json
 
 # [Vercel - client 폴더 관련]
 client/.vercel
-client/vercel.json
 
 # 테스트 및 빌드 결과물
 client/coverage/
