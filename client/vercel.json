@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://lagging-pavilion-skyrocket.ngrok-free.dev/:path*"
+      "destination": "https://lagging-pavilion-skyrocket.ngrok-free.dev/api/:path*"
     },
     {
       "source": "/static/uploads/:path*",
