@@ -171,14 +171,24 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int) -> Vid
         HTTPException 500: 예기치 못한 오류 발생 시.
     """
     try:
-        stmt = text("""
-            SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
-                    face_brightness, version_type, model_type, domain_type, result_msg, created_at
-            FROM video_result
-            WHERE id = :video_id AND user_id = :user_id
-        """)
-        result = await conn.execute(stmt, {"video_id": video_id, "user_id": user_id})
-        
+        # user_id 있으면 본인 것만, None이면 video_id로만 조회 (비회원 상세 허용)
+        if user_id is not None:
+            stmt = text("""
+                SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
+                        face_brightness, version_type, model_type, domain_type, result_msg, created_at
+                FROM video_result
+                WHERE id = :video_id AND user_id = :user_id
+            """)
+            params = {"video_id": video_id, "user_id": user_id}
+        else:
+            stmt = text("""
+                SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
+                        face_brightness, version_type, model_type, domain_type, result_msg, created_at
+                FROM video_result
+                WHERE id = :video_id
+            """)
+            params = {"video_id": video_id}
+        result = await conn.execute(stmt, params)
         row = result.fetchone()
         if row is None:
             return None

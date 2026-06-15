@@ -29,10 +29,10 @@ async def get_video_histories(
 async def get_video_history(
     video_id: int,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
+    session_user = Depends(session_svc.get_session_user_opt)
 ):
     
-    user_id = session_user['id']
+    user_id = session_user['id'] if session_user else None
     # 본인의 데이터만 조회할 수 있도록 user_id도 함께 전달
     history = await video_svc.get_user_history(conn, user_id, video_id)
     
