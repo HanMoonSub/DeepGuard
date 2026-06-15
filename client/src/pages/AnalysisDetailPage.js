@@ -73,8 +73,37 @@ const AnalysisDetailPage = ({ sessionUser }) => {
   const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : mediaLoc;
   const isVideo = !!data.video_loc || (data.score !== undefined && !data.image_loc) || window.location.pathname.includes('video');
 
-  // [수정] WARNING 여부 판단
   const isWarning = data.status?.toUpperCase() === 'WARNING';
+
+  const handleImageHeatmap = () => {
+    if (!sessionUser) {
+      alert("로그인이 필요한 기능이에요.");
+      return;
+    }
+
+    navigate('/image-heatmap', {
+      state: {
+        image_id: data.image_id,
+        image_loc: data.image_loc,
+        model_type: data.model_type || 'fast',
+        prob,
+        label,
+      },
+    });
+  };
+
+  const handleVideoHeatmap = () => {
+    if (!sessionUser) {
+      alert("로그인이 필요한 기능이에요.");
+      return;
+    }
+    navigate('/video-timeline', { 
+      state: { 
+        ...data 
+      } 
+    });
+  };
+
 
   return (
     <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', padding: '40px 80px', boxSizing: 'border-box', fontFamily: 'sans-serif', overflowX: 'hidden' }}>
@@ -89,11 +118,6 @@ const AnalysisDetailPage = ({ sessionUser }) => {
           <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '20px', fontSize: '12px', color: '#39FF14', border: '1px solid #333', fontWeight: 'bold' }}>{data.domain_type || '서양인'}</span>
           <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '20px', fontSize: '12px', color: '#39FF14', border: '1px solid #333', fontWeight: 'bold' }}>{data.model_type?.toUpperCase() || 'FAST'}</span>
         </div>
-        {sessionUser && (
-          <div style={{ backgroundColor: '#111', padding: '8px 16px', borderRadius: '12px', border: '1px solid #222', fontSize: '14px' }}>
-            <span style={{ color: '#39FF14', fontWeight: 'bold' }}>분석 담당: {sessionUser.name}</span>
-          </div>
-        )}
       </header>
 
       {/* 2분할 메인 그리드 레이아웃 */}
@@ -101,11 +125,13 @@ const AnalysisDetailPage = ({ sessionUser }) => {
         
         {/* 왼쪽 섹션: 미디어 플레이어 전용 배치 존 */}
         <div style={{ flex: 1.2, backgroundColor: '#050505', borderRadius: '28px', border: '1px solid #1A1A1A', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', padding: '28px', boxSizing: 'border-box', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', position: 'relative' }}>
-          <div style={{ flex: 1, width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: '480px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
             {isVideo && mediaLoc ? (
-              <video src={mediaSrc} controls autoPlay muted style={{ maxWidth: '95%', maxHeight: '95%', borderRadius: '12px', objectFit: 'contain' }} />
+              <video src={mediaSrc} controls autoPlay muted style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '12px', objectFit: 'contain' }} />
             ) : mediaLoc ? (
-              <img src={mediaSrc} alt="Analyzed media" style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', borderRadius: '12px' }} onError={(e) => { e.target.src = 'https://via.placeholder.com/600x400?text=No+Image'; }} />
+              <img src={mediaSrc} alt="Analyzed media"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '12px' }}
+                onError={(e) => { e.target.src = 'https://via.placeholder.com/600x400?text=No+Image'; }} />
             ) : (
               <div style={{ color: '#999', textAlign: 'center' }}>미디어가 존재하지 않습니다.</div>
             )}
@@ -113,31 +139,23 @@ const AnalysisDetailPage = ({ sessionUser }) => {
 
           {isVideo && mediaLoc && (
             <button 
-              onClick={() => navigate('/video-timeline', { state: { ...data } })}
+              onClick={handleVideoHeatmap}
               style={{ marginTop: '20px', width: '95%', padding: '15px 0', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid rgba(57, 255, 20, 0.4)', borderRadius: '6px', fontSize: '13px', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s ease-in-out', boxShadow: '0 2px 8px rgba(57, 255, 20, 0.05)' }}
               onMouseEnter={(e) => { e.target.style.backgroundColor = 'rgba(57, 255, 20, 0.06)'; e.target.style.borderColor = '#39FF14'; e.target.style.boxShadow = '0 0 15px rgba(57, 255, 20, 0.15)'; }}
               onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.borderColor = 'rgba(57, 255, 20, 0.4)'; e.target.style.boxShadow = '0 2px 8px rgba(57, 255, 20, 0.05)'; }}
             >
-              Forgery Localization: Heatmap + BBox
+              비디오 위조 흔적 분석하기
             </button>
           )}
 
           {!isVideo && mediaLoc && !isWarning && (
             <button
-              onClick={() => navigate('/image-heatmap', {
-                state: {
-                  image_id: data.image_id,
-                  image_loc: data.image_loc,
-                  model_type: data.model_type || 'fast',
-                  prob,
-                  label,
-                }
-              })}
-              style={{ marginTop: '20px', width: '95%', padding: '15px 0', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid rgba(57, 255, 20, 0.4)', borderRadius: '6px', fontSize: '13px', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s ease-in-out', boxShadow: '0 2px 8px rgba(57, 255, 20, 0.05)' }}
+              onClick={handleImageHeatmap}
+              style={{ marginTop: '20px', width: '95%', padding: '15px 0', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid rgba(57, 255, 20, 0.4)', borderRadius: '6px', fontSize: '15px', fontWeight: '500', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s ease-in-out', boxShadow: '0 2px 8px rgba(57, 255, 20, 0.05)' }}
               onMouseEnter={(e) => { e.target.style.backgroundColor = 'rgba(57, 255, 20, 0.06)'; e.target.style.borderColor = '#39FF14'; e.target.style.boxShadow = '0 0 15px rgba(57, 255, 20, 0.15)'; }}
               onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.borderColor = 'rgba(57, 255, 20, 0.4)'; e.target.style.boxShadow = '0 2px 8px rgba(57, 255, 20, 0.05)'; }}
             >
-              Forgery Localization: Heatmap + BBox
+              이미지 위조 흔적 분석하기
             </button>
           )}
         </div>
@@ -147,11 +165,10 @@ const AnalysisDetailPage = ({ sessionUser }) => {
 
           {isWarning ? (
             // WARNING일 때 — 경고 메시지만, 꽉 채움
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px', backgroundColor: '#0D0D0D', borderRadius: '28px', border: '1px solid #1A1A1A', textAlign: 'center', gap: '20px' }}>
-              <p style={{ fontSize: '48px', margin: '0' }}>⚠</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFA500', margin: '0', letterSpacing: '2px' }}>UNDETECTED</p>
-              <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.8', margin: '0', maxWidth: '280px' }}>
-                {data.result_msg || data.message || "얼굴을 탐지하지 못했습니다."}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px', backgroundColor: '#0D0D0D', borderRadius: '28px', border: '1px solid #1A1A1A', textAlign: 'center' }}>
+              <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFA500', margin: '0 0 64px' }}>분석을 완료하지 못했어요</p>
+              <p style={{ fontSize: '24px', color: '#aaa', lineHeight: '1.7', margin: 0, maxWidth: '300px' }}>
+                {data.result_msg}
               </p>
             </div>
           ) : (
@@ -173,15 +190,25 @@ const AnalysisDetailPage = ({ sessionUser }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
                   {/* BRIGHTNESS */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 밝기</span>
-                    <span style={{ color: brightnessColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_brightness).toFixed(1)}%</span>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 밝기</span>
+                      <span style={{ color: brightnessColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_brightness).toFixed(1)}%</span>
+                    </div>
+                    <div style={{ width: '100%', height: '4px', backgroundColor: '#1A1A1A', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.min(face_brightness, 100)}%`, height: '100%', backgroundColor: brightnessColor, transition: 'width 1s cubic-bezier(0.1, 1, 0.1, 1)' }} />
+                    </div>
                   </div>
 
                   {/* FACE RATIO */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 비율</span>
-                    <span style={{ color: ratioColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_ratio).toFixed(1)}%</span>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 비율</span>
+                      <span style={{ color: ratioColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_ratio).toFixed(1)}%</span>
+                    </div>
+                    <div style={{ width: '100%', height: '4px', backgroundColor: '#1A1A1A', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.min(face_ratio, 100)}%`, height: '100%', backgroundColor: ratioColor, transition: 'width 1s cubic-bezier(0.1, 1, 0.1, 1)' }} />
+                    </div>
                   </div>
 
                   {/* MODEL CONFIDENCE */}

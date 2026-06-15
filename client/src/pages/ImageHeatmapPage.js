@@ -126,6 +126,10 @@ const ImageHeatmapPage = ({ sessionUser }) => {
   const isProcessing = status === 'submitting' || status === 'polling';
   const imageSrc = image_loc ? toAbsoluteUrl(image_loc) : null;
 
+  // 양쪽 패널 공통 미디어 스타일 — 표시 높이를 동일하게 고정해 좌우 대칭 유지
+  const mediaBoxStyle = { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px', minHeight: '440px' };
+  const mediaImgStyle = { maxWidth: '100%', height: '400px', borderRadius: '8px', objectFit: 'contain', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' };
+
   if (!state) return (
     <div style={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
       <p>전송된 이미지 데이터가 없습니다.</p>
@@ -139,7 +143,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
       <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(57,255,20,0.04) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
       <div style={{ position: 'fixed', bottom: '-20%', left: '-10%', width: '500px', height: '500px', borderRadius: '50%', background: `radial-gradient(circle, ${isFake ? 'rgba(255,75,75,0.04)' : 'rgba(57,255,20,0.04)'} 0%, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
 
-      <div style={{ position: 'relative', zIndex: 1, padding: '32px 60px', maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '32px 60px', maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* 헤더 */}
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' }}>
@@ -153,13 +157,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
             <div style={{ padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: '900', letterSpacing: '2px', backgroundColor: isFake ? 'rgba(255,75,75,0.1)' : 'rgba(57,255,20,0.08)', color: isFake ? '#FF4B4B' : '#39FF14', border: `1px solid ${isFake ? 'rgba(255,75,75,0.4)' : 'rgba(57,255,20,0.3)'}` }}>
               {label || (isFake ? 'FAKE' : 'REAL')}
             </div>
-            <div style={{ padding: '6px 16px', backgroundColor: '#0A0A0A', borderRadius: '6px', fontSize: '12px', color: '#39FF14', border: '1px solid #1A1A1A', fontWeight: 'bold', letterSpacing: '1px' }}>IMAGE FORGERY TRACE</div>
-            {sessionUser && (
-              <div style={{ backgroundColor: '#0A0A0A', padding: '6px 14px', borderRadius: '6px', border: '1px solid #1A1A1A', fontSize: '12px' }}>
-                <span style={{ color: '#999' }}>담당: </span>
-                <span style={{ color: '#39FF14', fontWeight: 'bold' }}>{sessionUser.name}</span>
-              </div>
-            )}
+            <div style={{ padding: '6px 16px', backgroundColor: '#0A0A0A', borderRadius: '6px', fontSize: '12px', color: '#39FF14', border: '1px solid #1A1A1A', fontWeight: 'bold', letterSpacing: '1px' }}>위조 흔적 분석</div>
           </div>
         </header>
 
@@ -188,9 +186,9 @@ const ImageHeatmapPage = ({ sessionUser }) => {
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#39FF14', boxShadow: '0 0 6px #39FF14' }} />
                 <span style={{ color: '#999', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px' }}>ORIGINAL IMAGE</span>
               </div>
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '28px', minHeight: '420px' }}>
+              <div style={mediaBoxStyle}>
                 <img src={imageSrc} alt="Original"
-                  style={{ maxWidth: '100%', maxHeight: '480px', borderRadius: '8px', objectFit: 'contain', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}
+                  style={mediaImgStyle}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </div>
@@ -218,7 +216,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
               </div>
             </div>
 
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '28px', minHeight: '420px' }}>
+            <div style={mediaBoxStyle}>
 
               {/* 옵션 선택 */}
               {(status === 'idle' || status === 'error') && !isProcessing && (
@@ -281,12 +279,12 @@ const ImageHeatmapPage = ({ sessionUser }) => {
               {/* 결과 */}
               {status === 'done' && heatmapSrc && (
                 <div style={{ width: '100%' }}>
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 2, padding: '4px 10px', backgroundColor: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.3)', borderRadius: '6px', fontSize: '10px', color: '#39FF14', fontWeight: 'bold' }}>
                       ✓ {(selectedBranch || '').toUpperCase()} / {(selectedModel || '').toUpperCase()}
                     </div>
                     <img src={heatmapSrc} alt="Heatmap"
-                      style={{ maxWidth: '100%', maxHeight: '480px', borderRadius: '10px', objectFit: 'contain', display: 'block', margin: '0 auto', boxShadow: '0 0 40px rgba(57,255,20,0.08), 0 8px 32px rgba(0,0,0,0.6)' }}
+                      style={{ maxWidth: '100%', height: '400px', borderRadius: '10px', objectFit: 'contain', display: 'block', boxShadow: '0 0 40px rgba(57,255,20,0.08), 0 8px 32px rgba(0,0,0,0.6)' }}
                       onError={(e) => { e.target.style.display = 'none'; setErrorMsg('이미지 로드 실패'); setErrorDetail(`URL: ${heatmapSrc}`); setStatus('error'); }}
                     />
                   </div>

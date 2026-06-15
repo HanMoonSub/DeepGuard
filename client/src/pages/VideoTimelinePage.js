@@ -177,14 +177,8 @@ const VideoTimelinePage = ({ sessionUser }) => {
         </button>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '4px', fontSize: '12px', color: '#39FF14', border: '1px solid #222', fontWeight: 'bold', letterSpacing: '0.5px' }}>
-            FRAME-LEVEL ANALYSIS REPORT
+            비디오 상세분석 결과
           </span>
-          {sessionUser && (
-            <div style={{ backgroundColor: '#111', padding: '8px 16px', borderRadius: '6px', border: '1px solid #222', fontSize: '13px' }}>
-              <span style={{ color: '#aaa' }}>ANALYSIS TASK MANAGER: </span>
-              <span style={{ color: '#39FF14', fontWeight: 'bold' }}>{sessionUser.name}</span>
-            </div>
-          )}
         </div>
       </header>
 
