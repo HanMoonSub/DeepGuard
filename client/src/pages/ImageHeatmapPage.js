@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
 const POLL_INTERVAL = 2000;
 
 const BRANCH_OPTIONS = {
@@ -18,7 +17,7 @@ const extractTaskId = (data) => {
 const toAbsoluteUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http') || path.startsWith('blob')) return path;
-  return `${apiUrl}${path}`;
+  return path;  
 };
 
 const ImageHeatmapPage = ({ sessionUser }) => {
