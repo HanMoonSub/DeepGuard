@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 # from starlette.middleware.sessions import SessionMiddleware
-from routes import auth, home, inference, image, video, explain
+from routes import api_router
 from utils import exc_handler, middleware, common
 
 
@@ -46,12 +46,7 @@ app.add_middleware(CORSMiddleware,
 app.add_middleware(middleware.RedisSessionMiddleware, max_age=3600)
 
 # 라우터 등록 (View: Router, Controller: Service)
-app.include_router(auth.router) # 로그인, 로그아웃, 회원가입
-app.include_router(home.router) # 세션 유저 정보 가져오기
-app.include_router(inference.router) # 이미지, 비디오 비동기 추론 접수, 추론 값 가져오기 
-app.include_router(image.router) # 이미지 삭제 및 가져오기 
-app.include_router(video.router) # 비디오 삭제 및 가져오기
-app.include_router(explain.router) # 딥페이크 이미지, 비디오 위조 흔적 표시
+app.include_router(api_router)
 
 # 커스텀 예외 처리: HTTPException
 app.add_exception_handler(StarletteHTTPException, exc_handler.custom_http_exception_handler)
