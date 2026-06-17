@@ -1,22 +1,34 @@
 import os
-import asyncio
 import time
-import aiofiles as aio
 from dotenv import load_dotenv
-
+import asyncio
+import aiofiles as aio
 from fastapi import UploadFile, status
 from fastapi.exceptions import HTTPException
 from sqlalchemy import text, Connection
-from sqlalchemy.exc import SQLAlchemyError, DBAPIError
+from sqlalchemy.exc import SQLAlchemyError
 from schemas.video_schema import (
-    VideoData, VideoDetailData, VideoFrameData, VideoMetaData )
+    VideoData, VideoDetailData, VideoFrameData, VideoMetaData)
 from db.database import celery_db_conn
 from celery_app import celery_app
+
 load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
-# 사용자 업로드 동영상 서버 내 저장 (회원/비회원 공통)
+
 async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
+    """업로드된 비디오를 서버에 저장하고 DB 저장용 경로를 반환한다. 회원/비회원 공통.
+
+    Args:
+        user_email (str | None): 로그인 사용자 이메일. 비회원이면 None.
+        videofile (UploadFile): FastAPI 업로드 파일 객체.
+
+    Returns:
+        str: 저장된 비디오의 DB 기준 경로 ('/'로 시작, '\\' 정규화됨).
+
+    Raises:
+        HTTPException 500: 디렉토리 생성, 파일 쓰기, 또는 예기치 못한 오류 발생 시.
+    """
     try:
         # 1. 사용자별 하위 디렉토리 결정
         sub_dir = user_email if user_email else "anonymous"
@@ -52,8 +64,6 @@ async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
                 detail="비디오 파일을 저장하는 중 오류가 발생했습니다."
             )
 
-        print(f"Upload Succeeded: {upload_video_loc}")
-
         # 6. DB 저장용 경로 반환
         return upload_video_loc[1:].replace("\\", "/")
     
@@ -66,14 +76,23 @@ async def upload_video(user_email: str | None, videofile: UploadFile) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="비디오 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
 
-# 사용자 업로드 비디오 서버 내 삭제
-async def delete_video(video_loc: str):
+
+async def delete_video(video_loc: str) -> None:
+    """서버에서 비디오 물리 파일을 삭제한다.
+
+    파일이 존재하지 않으면 경고 로그만 출력하고 정상 종료한다.
+
+    Args:
+        video_loc (str): 삭제할 비디오의 DB 기준 경로 ('/'로 시작).
+
+    Raises:
+        HTTPException 500: 파일 삭제 중 오류 발생 시.
+    """
     try:
         file_path = "." + video_loc 
 
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"Video file removed: {file_path}")
         else:
             print(f"Video file not found: {file_path}")
 
@@ -84,8 +103,21 @@ async def delete_video(video_loc: str):
             detail="비디오 파일 삭제 중 오류가 발생했습니다."
         )
 
-# 사용자 전체 비디오 히스토리 조회
-async def get_user_histories(conn: Connection, user_id: int):
+
+async def get_user_histories(conn: Connection, user_id: int) -> list[VideoData]:
+    """사용자의 전체 비디오 분석 히스토리를 최신순으로 조회한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        user_id (int): 조회할 사용자 PK.
+
+    Returns:
+        list[VideoData]: 비디오 히스토리 스키마 리스트. 결과 없으면 빈 리스트.
+
+    Raises:
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
     try:
         query = """
             SELECT id, user_id, video_loc, status, label, 
@@ -95,8 +127,7 @@ async def get_user_histories(conn: Connection, user_id: int):
             ORDER BY created_at DESC;
         """
         stmt = text(query)
-        bind_stmt = stmt.bindparams(user_id=user_id)
-        result = await conn.execute(bind_stmt)
+        result = await conn.execute(stmt, {"user_id": user_id})
 
         video_histories = [VideoData(
             id = row.id,
@@ -120,19 +151,44 @@ async def get_user_histories(conn: Connection, user_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
- 
 
-# 사용자 개별 비디오 히스토리 조회
-async def get_user_history(conn: Connection, user_id: int, video_id: int):
+
+async def get_user_history(conn: Connection, user_id: int, video_id: int) -> VideoDetailData | None:
+    """video_id와 user_id로 비디오 개별 상세 히스토리를 조회한다.
+
+    본인 소유 데이터만 조회되도록 user_id를 함께 필터링한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        user_id (int): 요청 사용자 PK.
+        video_id (int): 조회할 비디오 레코드 PK.
+
+    Returns:
+        VideoDetailData | None: 상세 히스토리 스키마 객체. 레코드 없으면 None.
+
+    Raises:
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
     try:
-        stmt = text("""
-            SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
-                    face_brightness, version_type, model_type, domain_type, result_msg, created_at
-            FROM video_result
-            WHERE id = :video_id AND user_id = :user_id
-        """)
-        result = await conn.execute(stmt, {"video_id": video_id, "user_id": user_id})
-        
+        # user_id 있으면 본인 것만, None이면 video_id로만 조회 (비회원 상세 허용)
+        if user_id is not None:
+            stmt = text("""
+                SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
+                        face_brightness, version_type, model_type, domain_type, result_msg, created_at
+                FROM video_result
+                WHERE id = :video_id AND user_id = :user_id
+            """)
+            params = {"video_id": video_id, "user_id": user_id}
+        else:
+            stmt = text("""
+                SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
+                        face_brightness, version_type, model_type, domain_type, result_msg, created_at
+                FROM video_result
+                WHERE id = :video_id
+            """)
+            params = {"video_id": video_id}
+        result = await conn.execute(stmt, params)
         row = result.fetchone()
         if row is None:
             return None
@@ -163,53 +219,26 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
-    
-# 비회원 데이터 5분 후 자동 삭제 태스크
-@celery_app.task(name="cleanup_anonymous_video")
-def cleanup_anonymous_video(video_id: int, video_loc: str):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        async def _delete():
-            async with celery_db_conn() as conn:
-                await delete_video_db(conn, video_id)
-            await delete_video(video_loc)
-            print(f"[Cleanup] 비회원 비디오 삭제 완료 - video_id: {video_id}, video_loc: {video_loc}")
-        loop.run_until_complete(_delete())
-    except Exception as e:
-        print(f"[Cleanup Error] 비회원 비디오 삭제 실패 - video_id: {video_id}, error: {e}")
-    finally:
-        loop.close()
-
-# 비디오 DB 레코드 및 물리 파일 완전 삭제
-async def delete_video_db(conn: Connection, video_id: int):
-    try:
-        delete_query = text("DELETE FROM video_result WHERE id = :video_id")
-        result = await conn.execute(delete_query.bindparams(video_id=video_id))
-
-        if result.rowcount == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {id}는(은) 존재하지 않아 삭제할 수 없습니다.")
-            
-        await conn.commit()
-
-    
-    except SQLAlchemyError as e:
-        print(e)
-        await conn.rollback()
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
-
-    except HTTPException:
-        raise
-    
-    except Exception as e:
-        print(e)
-        await conn.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
 
-# 빈 비디오 DB 생성 이후, video_id 반환(접수 완료)
 async def register_video_result(conn: Connection, user_id: int | None, video_loc: str,
-                                version_type: str, model_type: str, domain_type: str):
+                                version_type: str, model_type: str, domain_type: str) -> int:
+    """PENDING 상태의 빈 비디오 레코드를 DB에 생성하고 video_id를 반환한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        user_id (int | None): 로그인 사용자 ID. 비회원이면 None.
+        video_loc (str): 업로드된 비디오의 DB 기준 경로.
+        version_type (str): 모델 버전 타입.
+        model_type (str): 추론 모드 ("fast" | "pro").
+        domain_type (str): 탐지 도메인.
+
+    Returns:
+        int: 생성된 비디오 레코드의 PK (auto_increment).
+
+    Raises:
+        HTTPException 400: DB INSERT 실패 시. 업로드된 물리 파일도 함께 롤백 삭제된다.
+    """
     try:
         query = """
             INSERT INTO video_result (
@@ -240,11 +269,22 @@ async def register_video_result(conn: Connection, user_id: int | None, video_loc
         await delete_video(video_loc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="요청데이터가 제대로 전달되지 않았습니다")
-        
-# 비디오 메타데이터 + 추론 결과값 DB에 저장
+
+
 async def update_video_result(conn: Connection, video_id: int, analysis: dict,
-                              result_msg: str, status: str):
-    
+                              result_msg: str, status: str) -> None:
+    """추론 완료 후 비디오 레코드에 분석 결과를 업데이트한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 업데이트할 비디오 레코드 PK.
+        analysis (dict): 추론 결과값. prob, face_conf, face_ratio, face_brightness 포함.
+        result_msg (str): 처리 결과 메세지.
+        status (str): 추론 상태 ("success" | "warning" | "failed").
+
+    Raises:
+        SQLAlchemyError: DB 업데이트 실패 시 그대로 re-raise.
+    """
     if status == 'success':
         label = "FAKE" if analysis["prob"] > 0.5 else "REAL"
     else:
@@ -264,7 +304,7 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
         """
         
         db_status = status.upper()
-        
+  
         stmt = text(query)
         await conn.execute(stmt, {
             "status": db_status,
@@ -281,10 +321,23 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
     except SQLAlchemyError as e:
         await conn.rollback()
         raise e
-    
-# 비디오 결과 값 가져오기
-async def get_video_result(conn: Connection, 
-                           video_id: int):
+
+
+async def get_video_result(conn: Connection, video_id: int) -> VideoDetailData:
+    """video_id로 비디오 분석 결과를 조회해 반환한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 조회할 비디오 레코드 PK.
+
+    Returns:
+        VideoDetailData: 비디오 분석 결과 스키마 객체.
+
+    Raises:
+        HTTPException 404: 해당 video_id 레코드가 없을 때.
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
     try:
         query = text("SELECT * FROM video_result WHERE id = :video_id")
         result = await conn.execute(query, {"video_id": video_id})
@@ -324,8 +377,19 @@ async def get_video_result(conn: Connection,
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                             detail="알수없는 이유로 문제가 발생하였습니다.")
 
-# 비디오 메타 데이터 정보 저장하기
-async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict):
+
+async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict) -> None:
+    """비디오 1개의 프레임 요약 통계를 video_meta_result 테이블에 저장한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 비디오 레코드 PK.
+        analysis (dict): 추론 결과 딕셔너리. fps, total_frames, num_sampled,
+            num_extracted, num_detected 키를 포함해야 한다.
+
+    Raises:
+        SQLAlchemyError: DB INSERT 실패 시 그대로 re-raise.
+    """
     try:
         query = """
             INSERT INTO video_meta_result (video_id, fps, total_frames, num_sampled, num_extracted, num_detected)
@@ -344,10 +408,21 @@ async def save_video_meta_result(conn: Connection, video_id: int, analysis: dict
     except SQLAlchemyError as e:
         await conn.rollback()
         raise e
-    
-# 비디오 상세 결과 값 저장하기 
-# 비디오 프레임 별 딥페이크 점수, 얼굴 신뢰도, 얼굴 비율, 얼굴 조도 반환
-async def save_video_frame_results(conn: Connection, video_id: int, frame_results: list):
+
+
+async def save_video_frame_result(conn: Connection, video_id: int, frame_results: list) -> None:
+    """비디오에 속한 모든 프레임의 분석 결과를 video_frame_result 테이블에 일괄 저장한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 비디오 레코드 PK.
+        frame_results (list): 프레임별 분석 결과 딕셔너리 리스트.
+            각 항목은 frame_index, frame_time, score, face_conf,
+            face_ratio, face_brightness 키를 포함해야 한다.
+
+    Raises:
+        SQLAlchemyError: DB INSERT 실패 시 그대로 re-raise.
+    """
     try:
         query = """
             INSERT INTO video_frame_result
@@ -373,9 +448,99 @@ async def save_video_frame_results(conn: Connection, video_id: int, frame_result
     except SQLAlchemyError as e:
         await conn.rollback()
         raise e
+
+
+async def delete_video_meta_result(conn: Connection, video_id: int) -> None:
+    """video_meta_result 테이블에서 해당 비디오의 메타 데이터를 삭제한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 삭제할 비디오 레코드 PK.
+
+    Raises:
+        HTTPException 404: 해당 video_id 레코드가 없을 때.
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
+    try:
+        delete_query = text("""
+            DELETE FROM video_meta_result
+            WHERE video_id = :video_id
+        """)
+        result = await conn.execute(delete_query, {"video_id": video_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {video_id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+
+        await conn.commit()
+
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+async def delete_video_frame_result(conn: Connection, video_id: int) -> None:
+    """video_frame_result 테이블에서 해당 비디오의 프레임 결과를 삭제한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 삭제할 비디오 레코드 PK.
+
+    Raises:
+        HTTPException 404: 해당 video_id 레코드가 없을 때.
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
+    try:
+        delete_query = text("""
+            DELETE FROM video_frame_result
+            WHERE video_id = :video_id
+        """)
+        result = await conn.execute(delete_query, {"video_id": video_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {video_id}는(은) 존재하지 않아 삭제할 수 없습니다.")
         
-# 비디오 메타 데이터 정보 가져오기
-async def get_video_meta_result(conn: Connection, video_id: int):         
+        await conn.commit()
+
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+async def get_video_meta_result(conn: Connection, video_id: int) -> VideoMetaData:
+    """video_id로 비디오 메타 데이터를 조회한다.
+
+    fps, total_frames, num_sampled, num_extracted, num_detected를 반환한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 조회할 비디오 레코드 PK.
+
+    Returns:
+        VideoMetaData: 비디오 메타 데이터 스키마 객체.
+
+    Raises:
+        HTTPException 404: 해당 video_id 메타 레코드가 없을 때.
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
     try:
         query = text("""
             SELECT fps, total_frames, num_sampled, num_extracted, num_detected
@@ -405,9 +570,24 @@ async def get_video_meta_result(conn: Connection, video_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
- 
-# 비디오 상세 결과 값 가져오기
-async def get_video_frame_results(conn: Connection, video_id: int):
+
+
+async def get_video_frame_result(conn: Connection, video_id: int) -> list[VideoFrameData]:
+    """video_id에 속한 모든 프레임 분석 결과를 frame_index 오름차순으로 조회한다.
+
+    프레임별 점수 그래프, 의심 구간 표시 등 시각화에 활용된다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 조회할 비디오 레코드 PK.
+
+    Returns:
+        list[VideoFrameData]: 프레임별 분석 결과 스키마 리스트.
+
+    Raises:
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
     try:
         query = text("""
             SELECT frame_index, frame_time, score, face_conf, face_ratio, face_brightness
@@ -429,11 +609,135 @@ async def get_video_frame_results(conn: Connection, video_id: int):
             for r in result
         ]
 
-        
-        
     except SQLAlchemyError as e:
         print(f"[Frame Query Error] {e}")
         raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index: int) -> float:
+    """video_id와 frame_index로 특정 프레임의 frame_time을 조회한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 비디오 레코드 PK.
+        frame_index (int): 조회할 프레임 인덱스.
+
+    Returns:
+        float: 해당 프레임의 타임스탬프 (초 단위).
+
+    Raises:
+        HTTPException 404: 해당 frame_index가 없을 때.
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
+    try:
+        query = text("""
+            SELECT frame_time
+            FROM video_frame_result
+            WHERE video_id = :video_id AND frame_index = :frame_index
+        """)
+        
+        result = await conn.execute(query, {"video_id": video_id, "frame_index": frame_index})        
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail=f"해당 ID: {video_id} Video 내 Frame Index {frame_index}에 해당하는 프레임을 찾을 수 없습니다")
+        
+        row = result.fetchone()
+        
+        return row.frame_time
+        
+    except SQLAlchemyError as e:
+        print(f"[Frame Query Error] {e}")
+        raise HTTPException(status_code=503, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
+
+
+@celery_app.task(name="cleanup_anonymous_video")
+def cleanup_anonymous_video(video_id: int, video_loc: str, is_success: bool) -> None:
+    """비회원 비디오 DB 레코드 및 물리 파일을 삭제하는 Celery 태스크.
+
+    추론 성공 시 meta/frame 결과도 함께 삭제한다.
+    각 삭제 단계는 독립적으로 처리되어 한쪽 실패가 다른쪽에 영향을 주지 않는다.
+
+    Args:
+        video_id (int): 삭제할 비디오 레코드 PK.
+        video_loc (str): 삭제할 비디오의 DB 기준 경로.
+        is_success (bool): 추론 성공 여부. True면 meta/frame 결과도 함께 삭제.
+    """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        async def _delete():
+            success = True
+            async with celery_db_conn() as conn:
+                if is_success:
+                    try:
+                        await delete_video_meta_result(conn, video_id)
+                    except Exception as e:
+                        print(f"[Cleanup] video meta 삭제 실패 - video_id: {video_id}, error: {e}")
+                        success=False
+
+                    try:  
+                        await delete_video_frame_result(conn, video_id)   
+                    except Exception as e:
+                        print(f"[Cleanup] video frame 삭제 실패 - video_id: {video_id}, error: {e}")
+                        success=False
+                try:
+                    await delete_video_db(conn, video_id)
+                except Exception as e:
+                    print(f"[Cleanup] video_result 삭제 실패 - video_id: {video_id}, error:{e}")
+                    success=False
+            try:
+                await delete_video(video_loc)
+            except Exception as e:
+                print(f"[Cleanup] 비디오 파일 삭제 실패 - video_loc: {video_loc}, error: {e}")
+                success=False
+
+            if success:        
+                print(f"[Cleanup] 비회원 비디오 삭제 완료 - video_id: {video_id}, video_loc: {video_loc}")
+
+        loop.run_until_complete(_delete())
+    finally:
+        loop.close()
+
+
+async def delete_video_db(conn: Connection, video_id: int) -> None:
+    """DB에서 비디오 레코드를 삭제한다.
+
+    Args:
+        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
+        video_id (int): 삭제할 비디오 레코드 PK.
+
+    Raises:
+        HTTPException 404: 해당 video_id 레코드가 없을 때.
+        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 500: 예기치 못한 오류 발생 시.
+    """
+    try:
+        delete_query = text("DELETE FROM video_result WHERE id = :video_id")
+        result = await conn.execute(delete_query, {"video_id": video_id})
+
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"해당 비디오 id {video_id}는(은) 존재하지 않아 삭제할 수 없습니다.")
+            
+        await conn.commit()
+
+    except SQLAlchemyError as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(e)
+        await conn.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")

@@ -5,6 +5,7 @@ python-multipart>=0.0.22
 pydantic[email]>=2.12.5
 aiofiles>=25.1.0
 itsdangerous>=2.2.0
+python-dotenv>=0.9.9
 
 # --- [Database & ORM] ---
 sqlalchemy>=2.0.48
@@ -16,6 +17,7 @@ redis>=7.4.0
 # --- [Security & Auth] ---
 bcrypt>=4.0.1
 passlib[bcrypt]>=1.7.4
+cryptography>=42.0.0
 
 # --- [Data Analysis & Math] ---
 numpy>=1.23.0,<3.0.0
@@ -41,3 +43,6 @@ colorama>=0.4.6
 
 # --- [Distributed Task Queue] ---
 celery>=5.6.3
+
+# --- [Linting & Formatting] ---
+ruff>=0.9.0

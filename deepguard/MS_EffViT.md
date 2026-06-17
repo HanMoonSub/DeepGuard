@@ -12,6 +12,8 @@ This Repository presents the PyTorch implementation of **Multi Scale Efficient V
 
 This model is a **frame-level** and **spatial-domain** architecture, designed to perform classification tasks on both **static images** and **video sequences**
 
+<img src="../docs/benchmarks/celeb_df_v2_vit.png" width="900">
+
 ## 💥 News 💥
 
 - [**02.03.2026**] 🔥🔥 We have released **FaceForensics++** fine-tuned **MS-Eff-ViT B5** model weightes for **384X384**
@@ -21,17 +23,31 @@ This model is a **frame-level** and **spatial-domain** architecture, designed to
 
 ## Model Performance
 
-MS_Eff_ViT achieves state-of-the-art(SOTA) results across deepfake video classification. On Celeb_DF(v2) dataset, MS_EFF_GCViT variants with `5.9M`, `52.0M` parameters achieve `0.9742`, `0.9900` Accuracy. Notably, the MS_EFF_ViT_B0 variant demonstrates exceptional efficiency, matching or exceeding SOTA performance even with a siginificantly lower parameter
+**MS-EFF-ViT achieves state-of-the-art (SOTA) results across two DeepFake benchmarks.**
+The model ships in two variants from a single architecture — **Fast (b0)** for real-time / edge
+deployment and **Pro (b5)** for enterprise-grade accuracy. Notably, **Fast** matches or exceeds
+much larger SOTA models while using a fraction of the parameters and compute.
+
+<p align="center">
+  <img src="../docs/benchmarks/vit_summary_bars.png" width="100%">
+</p>
 
 
-### Test Result of Celeb_DF(v2)
-
-<img src="../Images/celeb_df_v2_vit.png" width="900">
+> On **Celeb-DF(v2)**, Pro reaches **0.9900 Acc** (rank #2) and Fast **0.9742** (rank #4) among 20 architectures.
 
 <details>
-<summary><span style="font-size: 1.25em; font-weight: bold;">Test Result of FaceForensics++</span></summary>
-<img src="../Images/ff_vit.png" width="900">
+<summary><b>📊 Celeb-DF (v2) — Accuracy & Efficiency</b></summary>
+<br>
+<img src="../docs/benchmarks/celeb_df_v2_vit_2.png" width="100%">
+
 </details>
+
+<details>
+<summary><b>📊 FaceForensics++ — Accuracy & Efficiency</b></summary>
+<br>
+<img src="../docs/benchmarks/ff_vit.png" width="100%">
+</details>
+
 
 ## Model Introduction
 
@@ -143,3 +159,19 @@ import deepguard
 model = timm.create_model("ms_eff_vit_b0", pretrained=True, dataset="celeb_df_v2")
 model = timm.create_model("ms_eff_vit_b5", pretrained=True, dataset="ff++")
 ```
+
+## 📊 Visual Results
+
+### MS-EFF-VIT — Low-Level Branch
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
+
+### MS-Eff-ViT — High-Level Branch
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="../docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="../docs/xai-results/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |

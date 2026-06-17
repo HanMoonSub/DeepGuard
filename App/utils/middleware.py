@@ -46,7 +46,9 @@ class RedisSessionMiddleware(BaseHTTPMiddleware):
 
             response = await call_next(request)
             if request.state.session:
-                is_https = request.url.scheme == 'https'
+                is_https = (
+                    request.url.scheme == 'https'
+                    or request.headers.get('x-forwarded-proto') == 'https')
 
                 response.set_cookie(self.session_cookie, session_id, max_age=self.max_age, httponly=True,
                                     secure=is_https, samesite='None' if is_https else 'Lax')

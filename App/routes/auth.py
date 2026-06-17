@@ -1,20 +1,21 @@
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, status, Request
 from services import auth_svc, session_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn
 from fastapi.exceptions import HTTPException
+from fastapi.responses import JSONResponse
 from schemas.auth_schema import RegisterRequest, LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# --- 로그인 상태 확인 API ---
 # 프론트엔드 새로고침 시 세션 유지 여부를 확인하고 유저 정보를 반환합니다
-@router.get("/check", status_code=status.HTTP_200_OK)
+@router.get("/check", status_code=status.HTTP_200_OK, response_class=JSONResponse, summary= "로그인 상태 확인 API")
 async def check_session(session_user = Depends(session_svc.get_session_user_opt)):
     return {"user": session_user}
 
-# --- 회원가입 API ---
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+
+@router.post("/register", status_code=status.HTTP_201_CREATED,response_class=JSONResponse, summary="회원가입 API")
 async def register_user(request: Request,
                         user_info: RegisterRequest,
                         conn: Connection = Depends(context_get_conn)):
@@ -40,8 +41,7 @@ async def register_user(request: Request,
     
     return {"message": "회원가입이 성공적으로 완료되었습니다.", "status": "success"}
 
-# --- 로그인 API ---
-@router.post("/login", status_code=status.HTTP_200_OK)
+@router.post("/login", status_code=status.HTTP_200_OK,response_class=JSONResponse ,summary="로그인 API")
 async def login_user(request: Request,
                      login_info: LoginRequest,
                      conn: Connection = Depends(context_get_conn)):
@@ -73,7 +73,7 @@ async def login_user(request: Request,
         "status": "success"
     }
 
-@router.get("/logout", status_code=status.HTTP_200_OK)
+@router.get("/logout", status_code=status.HTTP_200_OK, response_class=JSONResponse, summary="로그아웃")
 async def logout_user(request: Request):
     request.state.session.clear()
     return {

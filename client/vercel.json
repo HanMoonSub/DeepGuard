@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://lagging-pavilion-skyrocket.ngrok-free.dev/api/:path*"
+    },
+    {
+      "source": "/static/uploads/:path*",
+      "destination": "https://lagging-pavilion-skyrocket.ngrok-free.dev/static/uploads/:path*"
+    },
+    {
+      "source": "/static/explain/:path*",
+      "destination": "https://lagging-pavilion-skyrocket.ngrok-free.dev/static/explain/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

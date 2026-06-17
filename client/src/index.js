@@ -6,7 +6,8 @@ import reportWebVitals from './reportWebVitals';
 import axios from 'axios';
 
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = process.env.REACT_APP_API_URL;
+axios.defaults.baseURL = '/api';
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
