@@ -250,6 +250,21 @@ model = timm.create_model("ms_eff_gcvit_b0", pretrained=True, dataset="ff++")
 model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 ```
 
+**방법 C: Hugging Face Hub**
+
+```python
+import torch
+from huggingface_hub import hf_hub_download
+from deepguard import ms_eff_gcvit_b0  # or ms_eff_gcvit_b5
+
+REPO_ID = "KoreaPeter/ms-eff-gcvit-deepfake"
+
+ckpt = hf_hub_download(REPO_ID, "ms_eff_gcvit_b0_kodf.bin")  # celeb_df_v2 | ff++ | kodf
+model = ms_eff_gcvit_b0(pretrained=False)
+model.load_state_dict(torch.load(ckpt, map_location="cpu"))
+model.eval()
+```
+
 ## 🔮 이미지 및 비디오 예측
 
 #### 딥페이크 이미지 예측
