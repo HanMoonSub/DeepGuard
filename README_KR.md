@@ -48,7 +48,6 @@
 - [💻 모델 사용법](#-모델-사용법) - Python 코드 및 timm을 통한 DeepGuard 모델 통합 방법.
 - [🔮 이미지 및 비디오 예측](#-이미지-및-비디오-예측) - 딥페이크 탐지를 위한 간단한 추론 예시.
 - [🎨 딥페이크 AI 설명가능성(XAI)](#-딥페이크-ai-설명가능성xai) - Grad-CAM 및 어텐션 맵을 통한 모델 판단 근거 시각화.
-- [📊 딥페이크 XAI 정량 평가](#-딥페이크-xai-정량-평가) - 설명의 신뢰도에 대한 정량적 평가.
 - [📬 제작자](#-제작자)
 - [📝 참고 문헌](#-참고-문헌)
 - [⚖️ 라이선스](#-라이선스)
@@ -458,8 +457,6 @@ result = explainer.display_heatmap_bbox_on_image(
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_xgradcam.JPG" width="100"> |
 | **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_xgradcam.JPG" width="100"> |
-
-## 📊 딥페이크 XAI 정량 평가
 
 
 ## 📬 제작자

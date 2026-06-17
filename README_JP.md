@@ -48,7 +48,6 @@
 - [💻 モデルの使い方](#-モデルの使い方) - Python コードおよび timm を通じた DeepGuard モデルの統合方法。
 - [🔮 画像と動画の予測](#-画像と動画の予測) - ディープフェイク検出のためのシンプルな推論例。
 - [🎨 ディープフェイクAI説明可能性(XAI)](#-ディープフェイクai説明可能性xai) - Grad-CAM およびアテンションマップによるモデル判断根拠の可視化。
-- [📊 ディープフェイクXAIの定量評価](#-ディープフェイクxaiの定量評価) - 説明の信頼性に対する定量的な評価。
 - [📬 制作者](#-制作者)
 - [📝 参考文献](#-参考文献)
 - [⚖️ ライセンス](#-ライセンス)
@@ -458,8 +457,6 @@ result = explainer.display_heatmap_bbox_on_image(
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_xgradcam.JPG" width="100"> |
 | **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_xgradcam.JPG" width="100"> |
-
-## 📊 ディープフェイクXAIの定量評価
 
 
 ## 📬 制作者

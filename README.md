@@ -48,7 +48,6 @@
 - [💻 Model Usage](#-model-usage) - How to integrate DeepGuard models into your own Python code or via timm
 - [🔮 Predict Image & Video](#-predict-image--video) - Simple Inference examples for detecting deepfakes in image and video
 - [🎨 DeepFake AI Explainability](#-deepfake-ai-explainability) - Visualizing model focus using Grad-CAM and attention maps
-- [📊 Metrics and Evaluation for DeepFake XAI](#-metrics-and-evaluation-for-deepfake-xai) - Quantitative assessment of explanation reliability
 - [📬 Authors](#-authors)
 - [📝 Reference](#-reference)
 - [⚖️ License](#-license)
@@ -468,9 +467,6 @@ result = explainer.display_heatmap_bbox_on_image(
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_xgradcam.JPG" width="100"> |
 | **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_xgradcam.JPG" width="100"> |
-
-
-## 📊 Metrics and Evaluation for DeepFake XAI 
 
 
 ## 📬 Authors
