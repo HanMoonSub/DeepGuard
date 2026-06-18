@@ -76,6 +76,69 @@ class FaceDetector:
                 
         return batch_boxes
     
+class FaceDetector2:
+    """
+    YOLO-based Face Detector.
+
+    This class performs batch inference to detect FACE bounding boxes.
+    It uses a custom YOLO model trained on face datasets (e.g., yolov8n-face.pt).
+    """
+    
+    def __init__(
+                self,
+                conf_thres: float,
+                ):
+        """
+            Args:
+                conf_thres: Confidence threshold for YOLO face detection
+        """
+        
+        weights_path = Path(__file__).resolve().parent / "yolov8n-face.pt"
+        
+        self.model = YOLO(str(weights_path), task='detect')
+        self.conf_thres = conf_thres
+        
+    def detect_batch(
+                    self, 
+                    frames: List[np.ndarray],
+                    scales: List[float]
+                    ):
+        
+        results = self.model(frames, conf=self.conf_thres, verbose=False)
+   
+        batch_boxes = []
+    
+        for i, result in enumerate(results):
+            scale_factor = scales[i]
+            
+            if len(result.boxes) == 0:
+                batch_boxes.append([])
+                continue
+            
+            # (N, 6) -> [xmin, ymin, xmax, ymax, conf, cls]
+            data = result.boxes.data.cpu().numpy()
+            
+            face_boxes = data[data[:, 5] == 0] # Category: Face
+                
+            if len(face_boxes) == 0:
+                batch_boxes.append([])
+                continue
+            
+            ws = face_boxes[:, 2] - face_boxes[:, 0]
+            hs = face_boxes[:, 3] - face_boxes[:, 1]
+            areas = ws * hs
+            
+            max_area_idx = np.argmax(areas)
+        
+            best_face_coords = face_boxes[max_area_idx, :4] / scale_factor
+        
+            conf_score = face_boxes[max_area_idx, 4]
+        
+            final_result = best_face_coords.tolist() + [float(conf_score)]
+            batch_boxes.append(final_result)
+                
+        return batch_boxes    
+
 class FaceDetector_KODF:
     """
     YOLO-based Face Detector.

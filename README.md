@@ -1,14 +1,17 @@
 # Deepfakes Detection
 
 <p align="center">
-  <img src="Images/deepfake2.png" alt="DeepGuard Banner" width="800" height="400">
+  <img src="https://img.shields.io/github/license/HanMoonSub/DeepGuard?style=flat-square&color=555555&logo=github&logoColor=white" alt="License">
+  <img src="https://img.shields.io/github/stars/HanMoonSub/DeepGuard?style=flat-square&color=FFD700&logo=github&logoColor=white" alt="Stars">
+  <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
+  <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
+  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/license/HanMoonSub/DeepGuard?style=flat-square&color=555555&logo=github&logoColor=white" alt="License">
-  <img src="https://img.shields.io/github/stars/HanMoonSub/DeepGuard?style=flat-square&color=FFD700&logo=github&logoColor=white" alt="Stars">
-  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="docs/samples/deepfake_thumbnails.png" alt="DeepGuard Banner" width="800" height="400">
 </p>
 
 <p align="center">
@@ -27,6 +30,7 @@
 
 <p align="center">
   <a href="README_KR.md"><b>🇰🇷 한국어 버전</b></a> | 
+  <a href="README_JP.md"><b>🇯🇵 日本語版</b></a> | 
   <a href="#-model-evaluation"><b>📈 Model Evaluation</b></a> | 
   <a href="#-predict-image--video"><b>🔮 Try Demo</b></a>
 </p>
@@ -43,6 +47,7 @@
 - [📈 Model Evaluation](#-model-evaluation) - Benchmarking results
 - [💻 Model Usage](#-model-usage) - How to integrate DeepGuard models into your own Python code or via timm
 - [🔮 Predict Image & Video](#-predict-image--video) - Simple Inference examples for detecting deepfakes in image and video
+- [🎨 DeepFake AI Explainability](#-deepfake-ai-explainability) - Visualizing model focus using Grad-CAM and attention maps
 - [📬 Authors](#-authors)
 - [📝 Reference](#-reference)
 - [⚖️ License](#-license)
@@ -132,13 +137,13 @@ Multi Scale Efficient Global Context Vision Transformer is an optimized multi-sc
 
 #### Explore More Details
 
-- [Model Architecture: MS-EffViT](deepguard/MS_EFFViT.md) - _**Multi Scale Efficient Vision Transformer**_
+- [Model Architecture: MS-EffViT](deepguard/MS_EffViT.md) - _**Multi Scale Efficient Vision Transformer**_
 
-- [Advanced Architecture: MS-EFFGCViT](deepguard/MS_EFFGCViT.md) - _**Multi Scale Efficient Global Context Vision Transformer**_
+- [Advanced Architecture: MS-EFFGCViT](deepguard/MS_EffGCViT.md) - _**Multi Scale Efficient Global Context Vision Transformer**_
 
 
 <p align="center">
-  <img src="Images/ms_eff_gcvit.JPG" width="100%" height="700">
+  <img src="docs/architectures/ms_eff_gcvit.JPG" width="100%" height="700">
 </p>
 
 We utilizes two distinct types of self-attention to capture both long-range and short-range information across feature maps.
@@ -149,7 +154,7 @@ We utilizes two distinct types of self-attention to capture both long-range and 
 
 
 <p align="center">
-  <img src="Images/window_attention.JPG" width="100%" height="300">
+  <img src=docs/architectures/window_attention.JPG width="100%" height="300">
 </p>
 
 ## 🧬 Model Zoo
@@ -226,7 +231,8 @@ You can load the models directly via the `DeepGuard` package or through the `tim
 **Installation**
 
 ```bash
-pip install -U git+https://github.com/HanMoonSub/DeepGuard.git
+# pip install -U git+https://github.com/HanMoonSub/DeepGuard.git
+pip install deepguard
 ```
 
 
@@ -249,13 +255,28 @@ model = timm.create_model("ms_eff_gcvit_b0", pretrained=True, dataset="ff++")
 model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 ```
 
+**Option C: Hugging Face Hub**
+
+```python
+import torch
+from huggingface_hub import hf_hub_download
+from deepguard import ms_eff_gcvit_b0  # or ms_eff_gcvit_b5
+
+REPO_ID = "KoreaPeter/ms-eff-gcvit-deepfake"
+
+ckpt = hf_hub_download(REPO_ID, "ms_eff_gcvit_b0_kodf.bin")  # celeb_df_v2 | ff++ | kodf
+model = ms_eff_gcvit_b0(pretrained=False)
+model.load_state_dict(torch.load(ckpt, map_location="cpu"))
+model.eval()
+```
+
 ## 🔮 Predict Image & Video
 
 #### Predict DeepFake Image
 
 ```python
 
-from inference import ImagePredictor
+from inference.image_predictor import ImagePredictor
 
 # Initialize the predictor
 predictor = ImagePredictor(
@@ -279,7 +300,7 @@ print(f"Deepfake Probability: {result:.4f}")
 
 ```python
 
-from inference import VideoPredictor
+from inference.video_predictor import VideoPredictor
 
 # Initialize the predictor
 predictor = VideoPredictor(
@@ -302,6 +323,151 @@ print(f"Deepfake Probability: {result:.4f}")
 
 ```
 
+## 🎨 DeepFake AI Explainability
+
+Deepfake detection is only as trustworthy as its explanations. DeepGuard integrates a production-ready XAI Toolkit that visualizes where and why the model flags a face as manipulated — turning a black-box score into actionable forensic evidence.
+
+⭐ Validated on hybrid CNN-ViT architectures, specifically `MS-EffViT` and `MS-EffGCViT`.  
+⭐ Dual-Branch Analysis: Dual-branch design mirrors the model's own multi-scale reasoning
+
+### 🧠 How Dual-Branch XAI Works
+
+<p align="center">
+  <img src="docs/architectures/dual_branch.gif" width="70%" height="300">
+</p>
+
+
+| Branch | Feature Map | Focus | Best For |
+| ------ | ----------- | ----- | -------- |
+| ![](https://img.shields.io/badge/Low_level-blue?style=flat-square)       | High Resolution | Local Forgery artifacts | Skin texture, boundary blending, compression traces |
+| ![](https://img.shields.io/badge/High_level-red?style=flat-square)       | Low Resolution  | Global Semantic Structure | Lighting inconsistency, facial geometry, Shadow artifacts | 
+
+### 📐 XAI Methods
+
+Each method is assigned to the branch where it performs best empirically.
+
+| Branch | Method | 🎯 Core Idea |
+| :--- | :--- | :--- |
+| **`low level`** | **HiResCAM** | Like GradCAM but element-wise multiply the activations with the gradients; provably guaranteed faithfulness for certain models |
+| **`low level`** | **GradCAMElementWise** | Like GradCAM but element-wise multiply the activations with the gradients then apply a ReLU operation before summing |
+| **`low level`** | **LayerCAM** | Spatially weight the activations by positive gradients. Works better especially in lower layers |
+| --- | --- | --- | --- |
+| **`high level`** | **EigenGradCAM** | Like EigenCAM but with class discrimination: First principle component of Activations*Grad. Looks like GradCAM, but cleaner |
+| **`high level`** | **GradCAM++** |  Like GradCAM but uses second order gradients |
+| **`high level`** | **XGradCAM** | Like GradCAM but scale the gradients by the normalized activations |
+
+- **`aug_smooth`** applies TTA (horizontal flips) before averaging CAMs → smoother, more object-aligned maps  
+- **`eigen_smooth`** applies PCA noise reduction → retains dominant forgery pattern only
+
+### 💡 DeepFake XAI Usage
+
+**Low-Level Branch — Local Artifact Detection**
+
+```python
+from explainability import HiResCAMExplainer, GradCAMElementWiseExplainer, LayerCAMExplainer
+
+explainer = HiResCAMExplainer(
+    model_name   = "ms_eff_gcvit_b0",  # or ms_eff_vit_b0, ms_eff_gcvit_b5, ms_eff_vit_b5
+    dataset      = "celeb_df_v2",       # or ff++, kodf
+    branch_level = "low",
+)
+```
+
+**High-Level Branch — Global Semantic Detection**
+```python
+from explainability import EigenGradCAMExplainer, GradCAMPlusPlusExplainer, XGradCAMExplainer
+
+explainer = EigenGradCAMExplainer(
+    model_name   = "ms_eff_gcvit_b0",
+    dataset      = "celeb_df_v2",
+    branch_level = "high",
+)
+```
+
+### 🎨 Visualization Modes
+
+<p align="center">
+  <img src="docs/xai-results/xai_demo.gif" width="80%" height=300>
+</p>
+
+**1. Heatmap — Continuous activation distribution**
+
+```python
+result = explainer.display_heatmap_on_image(
+    img_path     = "path/to/image.jpg",
+    category     = 1,      # 0: Real, 1: Fake
+    threshold    = 0.5,    # binarization cutoff (0.5~1.0), or "auto" for Otsu
+    image_weight = 0.5,    # 0.0: heatmap only ← → 1.0: original only
+    aug_smooth   = False,  # TTA smoothing (not supported on 'pro' models)
+    eigen_smooth = False,  # PCA noise reduction
+)
+```
+
+**2. Bounding Box — Discrete forgery region localization**
+
+```python
+result = explainer.display_bbox_on_image(
+    img_path     = "path/to/image.jpg",
+    category     = 1,
+    threshold    = 0.5,
+    thickness    = 1,
+    aug_smooth   = False,
+    eigen_smooth = False,
+)
+```
+
+**3. Heatmap + BBox — Full overlay (recommended for reporting)**
+```python
+result = explainer.display_heatmap_bbox_on_image(
+    img_path     = "path/to/image.jpg",
+    category     = 1,
+    threshold    = 0.5,
+    image_weight = 0.5,
+    aug_smooth   = False,
+    eigen_smooth = False,
+)
+```
+
+### 📊 Visual Results
+
+<p align="center">
+  <table>
+    <tr>
+      <td><img src="docs/architectures/low_branch.gif" width="100%"></td>
+      <td width="20%"></td>
+      <td><img src="docs/architectures/high_branch.gif" width="100%"></td>
+    </tr>
+  </table>
+</p>
+
+#### MS-EFF-VIT — Low-Level Branch
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
+
+#### MS-Eff-ViT — High-Level Branch
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
+
+#### MS-EFF-GCVIT — Low-Level Branch
+
+| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_low_layercam.JPG" width="100"> |
+| **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_low_layercam.JPG" width="100"> |
+
+#### MS-Eff-GCViT — High-Level Branch
+
+| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_xgradcam.JPG" width="100"> |
+| **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_xgradcam.JPG" width="100"> |
+
 
 ## 📬 Authors
 
@@ -322,6 +488,7 @@ _**This project was developed as a Senior Graduation Project by the Department o
 6. [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) - _Multiple Deep Learning Models by Ameen Caslam_
 7. [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection
 ) - _A curated list of tools, papers and code by Daisy Zhang_
+8. [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) - _Advanced Visual Explanations for PyTorch Models_
 
 ## ⚖️ License 
 
