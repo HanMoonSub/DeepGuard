@@ -48,6 +48,7 @@
 - [💻 모델 사용법](#-모델-사용법) - Python 코드 및 timm을 통한 DeepGuard 모델 통합 방법.
 - [🔮 이미지 및 비디오 예측](#-이미지-및-비디오-예측) - 딥페이크 탐지를 위한 간단한 추론 예시.
 - [🎨 딥페이크 AI 설명가능성(XAI)](#-딥페이크-ai-설명가능성xai) - Grad-CAM 및 어텐션 맵을 통한 모델 판단 근거 시각화.
+- [📓 Tutorials](#-tutorials) - 추론과 듀얼 브랜치 XAI 시각화를 위한 실습 노트북
 - [📬 제작자](#-제작자)
 - [📝 참고 문헌](#-참고-문헌)
 - [⚖️ 라이선스](#-라이선스)
@@ -458,6 +459,18 @@ result = explainer.display_heatmap_bbox_on_image(
 | **⚡ ms-eff-gcvit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b0_high_xgradcam.JPG" width="100"> |
 | **🔥 ms-eff-gcvit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_gcvit_b5_high_xgradcam.JPG" width="100"> |
 
+## 📓 Tutorials
+
+주피터 노트북은 git 저장소의 tutorials 폴더에서 확인할 수 있습니다.
+
+- [Notebook tutorial: Predict DeepFake Image with ImagePredictor](./tutorials/predict_image.ipynb)
+- [Notebook tutorial: Predict DeepFake Video with VideoPredictor](./tutorials/predict_video.ipynb)
+- [Notebook tutorial: Low-Level Branch XAI Visualization (HiResCAM, GradCAMElementWise, LayerCAM)](./tutorials/low_level_visualization.ipynb)
+- [Notebook tutorial: High-Level Branch XAI Visualization (EigenGradCAM, GradCAM++, XGradCAM)](./tutorials/high_level_visualization.ipynb)
+- [Notebook tutorial: MS-EffViT Low-Level Branch Explainability](./tutorials/ms_eff_vit_low_level.ipynb)
+- [Notebook tutorial: MS-EffViT High-Level Branch Explainability](./tutorials/ms_eff_vit_high_level.ipynb)
+- [Notebook tutorial: MS-EffGCViT Low-Level Branch Explainability](./tutorials/ms_eff_gcvit_low_level.ipynb)
+- [Notebook tutorial: MS-EffGCViT High-Level Branch Explainability](./tutorials/ms_eff_gcvit_high_level.ipynb)
 
 ## 📬 제작자
 
