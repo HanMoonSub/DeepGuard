@@ -18,6 +18,7 @@ class BaseExplainer:
         branch_level: Literal["low", "high"] = "high",
         l_stage_idx: int = -1, # gcvit low branch stage index (0~3)
         block_idx: int = -1, # vit, gcvit block index
+        model: Optional[torch.nn.Module] = None,
     ):  
         
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
@@ -34,7 +35,9 @@ class BaseExplainer:
         self.transformer_type = model_name.split("_")[-2] # vit, gcvit 
                 
         # Model & Tools setup
-        self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
+        self.model = model if model is not None else timm.create_model(
+        model_name, pretrained=True, dataset=dataset
+        )
         self.face_detector = FaceDetector2(conf_thres)
         self.img_size = [224,224] if self.model_variant == "b0" else [384,384]
         self.transforms = get_test_transforms(img_size=self.img_size)

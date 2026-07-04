@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 # ─────────────────────────────────────────────
 [project]
 name = "deepguard"           # pip install deepguard 할 때 이 이름
-version = "0.2.4"            # pip install deepguard==0.2.4 으로 버전 고정 가능
+version = "0.3.0"            # pip install deepguard==0.2.4 으로 버전 고정 가능
 description = "Multi-Scale Efficient Global Context Vision Transformer for Robust Deepfake Detection"
 readme = "README.md"         # PyPI 페이지에 표시될 설명 (마크다운)
 requires-python = ">=3.10"   # 이 버전 미만이면 pip install 자체를 막음
