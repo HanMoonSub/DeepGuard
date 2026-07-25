@@ -1,6 +1,4 @@
-drop table if exists video_frame_result;
-
-create table deepfake_db.video_frame_result (
+create table video_frame_result (
     id integer auto_increment primary key, -- 행 자체의 고유 ID (대리키)
     video_id integer not null, 
     frame_index integer not null, -- 영상 내 프레임 순번.
