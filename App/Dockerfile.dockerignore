@@ -1,0 +1,17 @@
+*
+
+!App/**
+App/.env
+App/.env.*
+App/static/uploads
+App/static/explain
+App/__pycache__
+App/**/__pycache__
+
+!deepguard/**
+!inference/**
+!explainability/**
+!preprocess/**
+!requirements.txt
+!pyproject.toml
+!README.md
