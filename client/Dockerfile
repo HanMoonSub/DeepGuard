@@ -6,6 +6,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 FROM nginx:1.27-alpine
