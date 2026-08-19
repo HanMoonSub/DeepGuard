@@ -17,7 +17,7 @@ x-app-env: &app-env
 
 services:
   mysql:
-    image: seoyunje/deepguard-mysql:1.0.0
+    image: seoyunje/deepguard-mysql:1.0.1
     container_name: deepguard-mysql
     networks: [deepguard-network]
     environment:
@@ -29,14 +29,14 @@ services:
       - deepguard-data:/var/lib/mysql
 
   redis:
-    image: seoyunje/deepguard-redis:1.0.0
+    image: seoyunje/deepguard-redis:1.0.1
     container_name: deepguard-redis
     networks: [deepguard-network]
     volumes:
       - deepguard-memory:/data
 
   fastapi:
-    image: seoyunje/deepguard-fastapi:1.0.0
+    image: seoyunje/deepguard-fastapi:1.0.1
     container_name: deepguard-fastapi
     networks: [deepguard-network]
     environment:
@@ -49,7 +49,7 @@ services:
       - redis
 
   celery:
-    image: seoyunje/deepguard-celery:1.0.0
+    image: seoyunje/deepguard-celery:1.0.1
     container_name: deepguard-celery
     networks: [deepguard-network]
     environment:
@@ -62,7 +62,7 @@ services:
       - redis
 
   react:
-    image: seoyunje/deepguard-react:1.0.0
+    image: seoyunje/deepguard-react:1.0.1
     container_name: deepguard-react
     networks: [deepguard-network]
     ports:
