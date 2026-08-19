@@ -1,0 +1,27 @@
+name: First interaction
+
+# 처음 이슈/PR을 남기는 기여자에게 자동으로 환영 댓글을 남긴다.
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v3.1.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_message: >
+            이슈를 남겨주셔서 감사합니다. 첫 이슈네요.
+            메인테이너가 확인 후 곧 답변드리겠습니다.
+          pr_message: >
+            PR을 열어주셔서 감사합니다. 첫 PR이네요.
+            리뷰 후 피드백 남기겠습니다.
