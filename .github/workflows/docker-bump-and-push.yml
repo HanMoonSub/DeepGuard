@@ -1,0 +1,126 @@
+name: Docker Image Bump & Push
+
+# Dockerfile이 main에 push되면 해당 이미지를 새 patch 버전 태그로 빌드해 Docker Hub에 푸시한다.
+# docker-compose.yml의 태그 갱신은 각 build step 로그에 찍히는 새 태그를 보고 수동으로 반영한다.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "App/Dockerfile"
+      - "client/Dockerfile"
+      - "docker/mysql/Dockerfile"
+      - "docker/redis/Dockerfile"
+  workflow_dispatch:
+
+env:
+  DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  bump-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed Dockerfiles
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            app:
+              - 'App/Dockerfile'
+            client:
+              - 'client/Dockerfile'
+            mysql:
+              - 'docker/mysql/Dockerfile'
+            redis:
+              - 'docker/redis/Dockerfile'
+
+      - name: Set up Docker Buildx
+        if: steps.changes.outputs.app == 'true' || steps.changes.outputs.client == 'true' || steps.changes.outputs.mysql == 'true' || steps.changes.outputs.redis == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: steps.changes.outputs.app == 'true' || steps.changes.outputs.client == 'true' || steps.changes.outputs.mysql == 'true' || steps.changes.outputs.redis == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ── fastapi + celery (App/Dockerfile, 같은 버전으로 동시 bump) ──────────────
+      - name: Bump & build fastapi/celery
+        if: steps.changes.outputs.app == 'true'
+        run: |
+          set -euo pipefail
+          current=$(grep -oP "seoyunje/deepguard-fastapi:\K[0-9]+\.[0-9]+\.[0-9]+" docker-compose.yml | head -1)
+          IFS='.' read -r major minor patch <<< "$current"
+          new_tag="${major}.${minor}.$((patch + 1))"
+          echo "fastapi/celery: ${current} -> ${new_tag}"
+
+          docker buildx build \
+            --target fastapi \
+            --tag "${DOCKERHUB_NAMESPACE}/deepguard-fastapi:${new_tag}" \
+            --cache-from type=gha,scope=fastapi \
+            --cache-to type=gha,mode=max,scope=fastapi \
+            --push \
+            -f App/Dockerfile .
+
+          docker buildx build \
+            --target celery \
+            --tag "${DOCKERHUB_NAMESPACE}/deepguard-celery:${new_tag}" \
+            --cache-from type=gha,scope=celery \
+            --cache-to type=gha,mode=max,scope=celery \
+            --push \
+            -f App/Dockerfile .
+
+      # ── react (client/Dockerfile) ────────────────────────────────────────────
+      - name: Bump & build react
+        if: steps.changes.outputs.client == 'true'
+        run: |
+          set -euo pipefail
+          current=$(grep -oP "seoyunje/deepguard-react:\K[0-9]+\.[0-9]+\.[0-9]+" docker-compose.yml | head -1)
+          IFS='.' read -r major minor patch <<< "$current"
+          new_tag="${major}.${minor}.$((patch + 1))"
+          echo "react: ${current} -> ${new_tag}"
+
+          docker buildx build \
+            --tag "${DOCKERHUB_NAMESPACE}/deepguard-react:${new_tag}" \
+            --cache-from type=gha,scope=react \
+            --cache-to type=gha,mode=max,scope=react \
+            --push \
+            -f client/Dockerfile client
+
+      # ── mysql (docker/mysql/Dockerfile) ──────────────────────────────────────
+      - name: Bump & build mysql
+        if: steps.changes.outputs.mysql == 'true'
+        run: |
+          set -euo pipefail
+          current=$(grep -oP "seoyunje/deepguard-mysql:\K[0-9]+\.[0-9]+\.[0-9]+" docker-compose.yml | head -1)
+          IFS='.' read -r major minor patch <<< "$current"
+          new_tag="${major}.${minor}.$((patch + 1))"
+          echo "mysql: ${current} -> ${new_tag}"
+
+          docker buildx build \
+            --tag "${DOCKERHUB_NAMESPACE}/deepguard-mysql:${new_tag}" \
+            --cache-from type=gha,scope=mysql \
+            --cache-to type=gha,mode=max,scope=mysql \
+            --push \
+            -f docker/mysql/Dockerfile .
+
+      # ── redis (docker/redis/Dockerfile) ──────────────────────────────────────
+      - name: Bump & build redis
+        if: steps.changes.outputs.redis == 'true'
+        run: |
+          set -euo pipefail
+          current=$(grep -oP "seoyunje/deepguard-redis:\K[0-9]+\.[0-9]+\.[0-9]+" docker-compose.yml | head -1)
+          IFS='.' read -r major minor patch <<< "$current"
+          new_tag="${major}.${minor}.$((patch + 1))"
+          echo "redis: ${current} -> ${new_tag}"
+
+          docker buildx build \
+            --tag "${DOCKERHUB_NAMESPACE}/deepguard-redis:${new_tag}" \
+            --cache-from type=gha,scope=redis \
+            --cache-to type=gha,mode=max,scope=redis \
+            --push \
+            -f docker/redis/Dockerfile .
