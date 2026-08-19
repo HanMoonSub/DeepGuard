@@ -1,6 +1,4 @@
-drop table if exists image_result;
-
-create table deepfake_db.image_result (
+create table image_result (
     id integer auto_increment primary key,
     user_id integer null, -- null 허용
     image_loc varchar(300) not null unique,

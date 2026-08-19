@@ -1,0 +1,28 @@
+[mysqld]
+# Character Set & Collation (UTF-8 for Korean support)
+character-set-server=utf8mb4
+collation-server=utf8mb4_unicode_ci
+
+# Timezone
+default-time-zone='+09:00'
+
+# InnoDB settings (minimal, stable defaults)
+default-storage-engine=InnoDB
+innodb_file_per_table=ON
+innodb_flush_log_at_trx_commit=2
+
+# Connection settings (moderate)
+max_connections=100
+max_allowed_packet=64M
+
+# Disable performance-heavy features for stability
+performance_schema=OFF
+skip-external-locking
+
+[mysql]
+default-character-set=utf8mb4
+
+[mysqldump]
+default-character-set=utf8mb4
+quick
+max_allowed_packet=64M

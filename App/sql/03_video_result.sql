@@ -1,7 +1,5 @@
-drop table if exists video_result;
-
 -- 딥페이크 분석 결과를 저장하는 테이블 생성
-create table deepfake_db.video_result (
+create table video_result (
     id integer auto_increment primary key, -- 시스템에서 부여하는 데이터 고유 식별 번호
     user_id integer null,                  -- 영상을 업로드한 사용자의 ID (비회원 허용을 위해 null 가능)
     video_loc varchar(300) not null unique, -- 영상 파일이 저장된 경로/URL (중복 등록 방지)

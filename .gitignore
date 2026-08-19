@@ -22,7 +22,6 @@ env/
 client/node_modules/
 client/.pnp
 client/.pnp.js
-client/package-lock.json
 
 # [Vercel - client 폴더 관련]
 client/.vercel

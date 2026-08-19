@@ -1,0 +1,4 @@
+*
+
+!App/sql/*.sql
+!docker/mysql/config/*.cnf

@@ -1,6 +1,4 @@
-drop table if exists video_meta_result;
-
-create table deepfake_db.video_meta_result (
+create table video_meta_result (
     id integer auto_increment primary key,-- 행 자체의 고유 ID (대리키).
     video_id integer not null unique,
     fps float not null, -- 초당 프레임수
