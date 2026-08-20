@@ -1,4 +1,4 @@
-FROM redis:7.4-alpine
+FROM redis:8.10-alpine
 
 COPY docker/redis/config/redis.conf /usr/local/etc/redis/redis.conf
 
