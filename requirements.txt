@@ -5,7 +5,7 @@ python-multipart>=0.0.22
 pydantic[email]>=2.12.5
 aiofiles>=25.1.0
 itsdangerous>=2.2.0
-python-dotenv>=0.9.9
+python-dotenv>=1.2.3
 
 # --- [Database & ORM] ---
 sqlalchemy>=2.0.52
