@@ -38,7 +38,7 @@ ultralytics>=8.4.41
 grad-cam>=1.5.5
 
 # --- [Visualization & Utilities] ---
-matplotlib>=3.10.0
+matplotlib>=3.10.9
 seaborn>=0.13.2
 colorama>=0.4.6
 
