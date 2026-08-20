@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
   <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://img.shields.io/github/v/release/HanMoonSub/DeepGuard?style=flat-square&color=orange&logo=github&logoColor=white" alt="Release">
   <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
 </p>
 
@@ -29,6 +29,12 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready">
+  <img src="https://img.shields.io/docker/pulls/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=fastapi%20pulls" alt="Docker Pulls">
+  <img src="https://img.shields.io/docker/v/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=version" alt="Docker Version">
+</p>
+
+<p align="center">
   <a href="README_KR.md"><b>🇰🇷 한국어 버전</b></a> | 
   <a href="README_JP.md"><b>🇯🇵 日本語版</b></a> | 
   <a href="#-model-evaluation"><b>📈 Model Evaluation</b></a> | 
@@ -37,8 +43,7 @@
 
 ## 📌 Contents
 
-- [💡 Install & Requirements](#-install--requirements)
-- [🛠 SetUp](#-setup)
+- [🐳 Docker Quick Start](#-docker-quick-start) - Run the full stack (MySQL, Redis, FastAPI, Celery, React) with Docker Compose
 - [📚 DeepFake Video BenchMark Datasets](#-deepfake-video-benchmark-datasets) — Overview of Celeb-DF-v2, FF++, and KoDF datasets used for training.
 - [⚙️ Data Preparation](#data-preparation) — Efficient face detection and landmark extraction pipeline using YOLOv8
 - [🏗 Model Architecture](#-model-architecture) — Detailed look into our hybrid CNN-ViT (MS-EffViT & MS-EffGCViT) designs.
@@ -49,26 +54,25 @@
 - [🔮 Predict Image & Video](#-predict-image--video) - Simple Inference examples for detecting deepfakes in image and video
 - [🎨 DeepFake AI Explainability](#-deepfake-ai-explainability) - Visualizing model focus using Grad-CAM and attention maps
 - [📓 Tutorials](#-tutorials) - Hands-on Colab notebooks for inference and dual-branch XAI visualization
-- [📬 Authors](#-authors)
-- [📝 Reference](#-reference)
-- [⚖️ License](#-license)
+- [📬 Authors](#-authors) - Team behind this senior graduation project at Chungbuk National University
+- [📝 Reference](#-reference) - Libraries, datasets, and prior work this project builds on
+- [⚖️ License](#-license) - MIT license
 
-## 💡 Install & Requirements
+## 🐳 Docker Quick Start
 
-To install requirements: 
+Run the full stack (MySQL + Redis + FastAPI + Celery + React) with Docker Compose — no local Python/Node setup required.
 
-```python
-pip install -r requirements.txt
-```
+**Prerequisites**: [Docker](https://www.docker.com/) with Compose v2
 
-## 🛠 SetUp
-
-Clone the repository and move into it:
-```
+```bash
 git clone https://github.com/HanMoonSub/DeepGuard.git
-
 cd DeepGuard
+docker compose up -d
 ```
+
+Once all containers are up, open **http://localhost:80** in your browser.
+
+Images are published to Docker Hub under [`seoyunje/deepguard-*`](https://hub.docker.com/u/seoyunje) (`fastapi`, `celery`, `mysql`, `redis`, `react`) and mirrored to [GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi).
 
 ## 📚 DeepFake Video BenchMark Datasets
 
@@ -166,6 +170,14 @@ We utilizes two distinct types of self-attention to capture both long-range and 
 | 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 27.3(54.3%) | 6.6(13.1%) | 16.1(32.0%) | 13.64 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 ## 🚀 Training
+
+These training scripts run against the full repo, not the `pip install deepguard` package. Clone it and install the full dev environment first:
+
+```bash
+git clone https://github.com/HanMoonSub/DeepGuard.git
+cd DeepGuard
+pip install -r requirements.txt
+```
 
 We provide training scripts for both `ms_eff_vit` and `ms_eff_gcvit`. We recommend using **Google Colab** for free GPU access and **Weightes & Biases(W&B)** for experiment tracking
 

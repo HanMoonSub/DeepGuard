@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
   <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://img.shields.io/github/v/release/HanMoonSub/DeepGuard?style=flat-square&color=orange&logo=github&logoColor=white" alt="Release">
   <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
 </p>
 
@@ -29,6 +29,12 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready">
+  <img src="https://img.shields.io/docker/pulls/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=fastapi%20pulls" alt="Docker Pulls">
+  <img src="https://img.shields.io/docker/v/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=version" alt="Docker Version">
+</p>
+
+<p align="center">
   <a href="README.md"><b>🇺🇸 English Version</b></a> | 
   <a href="README_KR.md"><b>🇰🇷 한국어 버전</b></a> | 
   <a href="#-モデル評価"><b>📈 モデル評価</b></a> | 
@@ -37,8 +43,7 @@
 
 ## 📌 目次
 
-- [💡 インストールと要件](#-インストールと要件)
-- [🛠 セットアップ](#-セットアップ)
+- [🐳 Docker Quick Start](#-docker-quick-start) - Docker Compose でフルスタック(MySQL, Redis, FastAPI, Celery, React)を起動
 - [📚 ディープフェイク動画ベンチマークデータセット](#-ディープフェイク動画ベンチマークデータセット) — 学習に使用した Celeb-DF-v2, FF++, KoDF データセットの概要。
 - [⚙️ データ準備](#データ準備) — YOLOv8 を用いた効率的な顔検出およびランドマーク抽出パイプライン。
 - [🏗 モデルアーキテクチャ](#-モデルアーキテクチャ) — ハイブリッド CNN-ViT (MS-EffViT & MS-EffGCViT) 設計の詳細。
@@ -49,27 +54,27 @@
 - [🔮 画像と動画の予測](#-画像と動画の予測) - ディープフェイク検出のためのシンプルな推論例。
 - [🎨 ディープフェイクAI説明可能性(XAI)](#-ディープフェイクai説明可能性xai) - Grad-CAM およびアテンションマップによるモデル判断根拠の可視化。
 - [📓 Tutorials](#-tutorials) - 推論とデュアルブランチXAI可視化のためのハンズオンノートブック
-- [📬 制作者](#-制作者)
-- [📝 参考文献](#-参考文献)
-- [⚖️ ライセンス](#-ライセンス)
+- [📬 制作者](#-制作者) - 忠北大学校の卒業制作を手がけたチーム紹介
+- [📝 参考文献](#-参考文献) - 本プロジェクトが参考にしたライブラリ、データセット、先行研究
+- [⚖️ ライセンス](#-ライセンス) - MIT ライセンス
 
 ---
 
-## 💡 インストールと要件
+## 🐳 Docker Quick Start
 
-必要なライブラリのインストール:
+Docker Compose でフルスタック(MySQL + Redis + FastAPI + Celery + React)を起動します — ローカルに Python/Node 環境を用意する必要はありません。
 
-```bash
-pip install -r requirements.txt
-```
+**前提条件**: Compose v2 を含む [Docker](https://www.docker.com/)
 
-## 🛠 セットアップ
-
-リポジトリをクローンし、該当ディレクトリへ移動します:
 ```bash
 git clone https://github.com/HanMoonSub/DeepGuard.git
 cd DeepGuard
+docker compose up -d
 ```
+
+すべてのコンテナが起動したら、ブラウザで **http://localhost:80** にアクセスしてください。
+
+イメージは Docker Hub の [`seoyunje/deepguard-*`](https://hub.docker.com/u/seoyunje) (`fastapi`, `celery`, `mysql`, `redis`, `react`) として公開されており、[GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi) にもミラーされています。
 
 ## 📚 ディープフェイク動画ベンチマークデータセット
 
@@ -161,6 +166,14 @@ DATA_ROOT/
 | 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 27.3(54.3%) | 6.6(13.1%) | 16.1(32.0%) | 13.64 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 ## 🚀 学習
+
+これらの学習スクリプトは `pip install deepguard` パッケージではなく、リポジトリ全体を対象に動作します。まずリポジトリをクローンし、フル開発環境をインストールしてください:
+
+```bash
+git clone https://github.com/HanMoonSub/DeepGuard.git
+cd DeepGuard
+pip install -r requirements.txt
+```
 
 `ms_eff_vit` と `ms_eff_gcvit` の両方について学習スクリプトを提供します。無料の GPU 環境として **Google Colab** を、実験の記録およびトラッキングとして **Weights & Biases(W&B)** の使用を推奨します。
 

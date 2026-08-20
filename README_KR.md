@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
   <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://img.shields.io/github/v/release/HanMoonSub/DeepGuard?style=flat-square&color=orange&logo=github&logoColor=white" alt="Release">
   <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
 </p>
 
@@ -29,6 +29,12 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready">
+  <img src="https://img.shields.io/docker/pulls/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=fastapi%20pulls" alt="Docker Pulls">
+  <img src="https://img.shields.io/docker/v/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=version" alt="Docker Version">
+</p>
+
+<p align="center">
   <a href="README.md"><b>🇺🇸 English Version</b></a> | 
   <a href="README_JP.md"><b>🇯🇵 日本語版</b></a> | 
   <a href="#-모델-평가"><b>📈 모델 평가</b></a> | 
@@ -37,8 +43,7 @@
 
 ## 📌 목차
 
-- [💡 설치 및 요구사항](#-설치-및-요구사항)
-- [🛠 설정](#-설정)
+- [🐳 Docker Quick Start](#-docker-quick-start) - Docker Compose로 전체 스택(MySQL, Redis, FastAPI, Celery, React) 실행
 - [📚 딥페이크 비디오 벤치마크 데이터셋](#-딥페이크-비디오-벤치마크-데이터셋) — 학습에 사용된 Celeb-DF-v2, FF++, KoDF 데이터셋 개요.
 - [⚙️ 데이터 준비](#데이터-준비) — YOLOv8을 이용한 효율적인 얼굴 검출 및 랜드마크 추출 파이프라인.
 - [🏗 모델 구조](#-모델-구조) — 하이브리드 CNN-ViT (MS-EffViT & MS-EffGCViT) 설계 상세.
@@ -49,27 +54,27 @@
 - [🔮 이미지 및 비디오 예측](#-이미지-및-비디오-예측) - 딥페이크 탐지를 위한 간단한 추론 예시.
 - [🎨 딥페이크 AI 설명가능성(XAI)](#-딥페이크-ai-설명가능성xai) - Grad-CAM 및 어텐션 맵을 통한 모델 판단 근거 시각화.
 - [📓 Tutorials](#-tutorials) - 추론과 듀얼 브랜치 XAI 시각화를 위한 실습 노트북
-- [📬 제작자](#-제작자)
-- [📝 참고 문헌](#-참고-문헌)
-- [⚖️ 라이선스](#-라이선스)
+- [📬 제작자](#-제작자) - 충북대학교 졸업 작품을 만든 팀 소개
+- [📝 참고 문헌](#-참고-문헌) - 이 프로젝트가 참고한 라이브러리, 데이터셋, 선행 연구
+- [⚖️ 라이선스](#-라이선스) - MIT 라이선스
 
 ---
 
-## 💡 설치 및 요구사항
+## 🐳 Docker Quick Start
 
-필수 라이브러리 설치:
+Docker Compose로 전체 스택(MySQL + Redis + FastAPI + Celery + React)을 실행합니다 — 로컬에 Python/Node 환경을 따로 설치할 필요가 없습니다.
 
-```bash
-pip install -r requirements.txt
-```
+**사전 요구사항**: Compose v2가 포함된 [Docker](https://www.docker.com/)
 
-## 🛠 설정
-
-저장소를 클론하고 해당 디렉토리로 이동합니다:
 ```bash
 git clone https://github.com/HanMoonSub/DeepGuard.git
 cd DeepGuard
+docker compose up -d
 ```
+
+모든 컨테이너가 정상적으로 실행되면 브라우저에서 **http://localhost:80**으로 접속하세요.
+
+이미지는 Docker Hub의 [`seoyunje/deepguard-*`](https://hub.docker.com/u/seoyunje) (`fastapi`, `celery`, `mysql`, `redis`, `react`)에 배포되며, [GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi)에도 미러링됩니다.
 
 ## 📚 딥페이크 비디오 벤치마크 데이터셋
 
@@ -161,6 +166,14 @@ DATA_ROOT/
 | 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 27.3(54.3%) | 6.6(13.1%) | 16.1(32.0%) | 13.64 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 ## 🚀 학습
+
+이 학습 스크립트는 `pip install deepguard` 패키지가 아니라 리포지토리 전체를 대상으로 동작합니다. 먼저 리포지토리를 클론하고 전체 개발 환경을 설치하세요:
+
+```bash
+git clone https://github.com/HanMoonSub/DeepGuard.git
+cd DeepGuard
+pip install -r requirements.txt
+```
 
 `ms_eff_vit` 및 `ms_eff_gcvit` 모두에 대한 학습 스크립트를 제공합니다. 무료 GPU 환경을 위해 **Google Colab**을, 실험 기록 및 트래킹을 위해 **Weights & Biases(W&B)** 사용을 권장합니다.
 
