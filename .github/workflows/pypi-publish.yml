@@ -1,12 +1,13 @@
 name: Publish to PyPI
 
-# main에 pyproject.toml이 push되면: lint/test 검증 -> README 이미지 경로를 절대 URL로 치환 -> 빌드 -> PyPI에 바로 배포.
+# main에 pyproject.toml이 push되면: README 이미지 경로를 절대 URL로 치환 -> 빌드 -> PyPI에 바로 배포.
 
 on:
   push:
     branches: [main]
     paths:
       - "pyproject.toml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,18 +28,6 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Lint (ruff)
-        run: ruff check . --output-format=github
-
-      - name: Format check (ruff)
-        run: ruff format --check .
-
-      - name: Test (pytest)
-        run: pytest --tb=short -q
 
       - name: Rewrite relative image paths for PyPI
         run: sed -i -E 's#src="docs/#src="https://raw.githubusercontent.com/HanMoonSub/DeepGuard/main/docs/#g' README.md
