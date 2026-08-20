@@ -1,4 +1,4 @@
-FROM mysql:9.5-oraclelinux9
+FROM mysql:26.7-oraclelinux9
 
 COPY App/sql/*.sql /docker-entrypoint-initdb.d/
 
