@@ -51,7 +51,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.changes.outputs.app == 'true' || steps.changes.outputs.client == 'true' || steps.changes.outputs.mysql == 'true' || steps.changes.outputs.redis == 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # ── fastapi + celery (App/Dockerfile) ────────────────────────────────────
       - name: Build fastapi (validate only)
