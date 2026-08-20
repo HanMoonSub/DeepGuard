@@ -15,7 +15,7 @@ mysql-connector-python>=9.6.0
 redis>=7.4.0
 
 # --- [Security & Auth] ---
-bcrypt==4.0.1  # pinned: passlib 1.7.4 breaks on bcrypt>=4.1 (72-byte length check regression)
+bcrypt==5.0.0  # pinned: passlib 1.7.4 breaks on bcrypt>=4.1 (72-byte length check regression)
 passlib[bcrypt]>=1.7.4
 cryptography>=42.0.0
 
