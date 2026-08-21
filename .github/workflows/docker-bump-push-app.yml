@@ -15,10 +15,14 @@ on:
 
 env:
   DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+  GHCR_NAMESPACE: ghcr.io/hanmoonsub
 
 jobs:
   bump-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -33,6 +37,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compute new tag from Docker Hub
         id: bump
@@ -62,7 +73,9 @@ jobs:
           context: .
           file: App/Dockerfile
           target: fastapi
-          tags: ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-fastapi:${{ steps.bump.outputs.new_tag }}
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-fastapi:${{ steps.bump.outputs.new_tag }}
+            ${{ env.GHCR_NAMESPACE }}/deepguard-fastapi:${{ steps.bump.outputs.new_tag }}
           push: true
           cache-from: type=gha,scope=fastapi
           cache-to: type=gha,mode=max,scope=fastapi
@@ -73,7 +86,9 @@ jobs:
           context: .
           file: App/Dockerfile
           target: celery
-          tags: ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-celery:${{ steps.bump.outputs.new_tag }}
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-celery:${{ steps.bump.outputs.new_tag }}
+            ${{ env.GHCR_NAMESPACE }}/deepguard-celery:${{ steps.bump.outputs.new_tag }}
           push: true
           cache-from: type=gha,scope=celery
           cache-to: type=gha,mode=max,scope=celery
