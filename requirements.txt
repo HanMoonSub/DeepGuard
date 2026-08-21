@@ -9,7 +9,7 @@ python-dotenv>=1.2.3
 
 # --- [Database & ORM] ---
 sqlalchemy>=2.0.52
-pymysql>=1.1.2
+pymysql>=1.2.0
 aiomysql>=0.3.2
 mysql-connector-python>=9.6.0
 redis>=8.1.0
