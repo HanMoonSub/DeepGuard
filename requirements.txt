@@ -1,7 +1,7 @@
 # --- [Core Backend & Server] ---
 fastapi>=0.135.1
 uvicorn>=0.52.3
-python-multipart>=0.0.22
+python-multipart>=0.0.32
 pydantic[email]>=2.13.4
 aiofiles>=25.1.0
 itsdangerous>=2.2.0
