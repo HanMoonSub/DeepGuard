@@ -38,19 +38,21 @@
   <a href="README_KR.md"><b>🇰🇷 한국어 버전</b></a> | 
   <a href="README_JP.md"><b>🇯🇵 日本語版</b></a> | 
   <a href="#-model-evaluation"><b>📈 Model Evaluation</b></a> | 
-  <a href="#-predict-image--video"><b>🔮 Try Demo</b></a>
+  <a href="#-try-it-live-hugging-face-spaces"><b>🤗 Try Demo</b></a> | 
+  <a href="https://huggingface.co/KoreaPeter"><b>🤗 Hugging Face</b></a>
 </p>
 
 ## 📌 Contents
 
 - [🐳 Docker Quick Start](#-docker-quick-start) - Run the full stack (MySQL, Redis, FastAPI, Celery, React) with Docker Compose
+- [🤗 Try It Live: Hugging Face Spaces](#-try-it-live-hugging-face-spaces) - No-install browser demos for image, video, and XAI deepfake detection
 - [📚 DeepFake Video BenchMark Datasets](#-deepfake-video-benchmark-datasets) — Overview of Celeb-DF-v2, FF++, and KoDF datasets used for training.
 - [⚙️ Data Preparation](#data-preparation) — Efficient face detection and landmark extraction pipeline using YOLOv8
 - [🏗 Model Architecture](#-model-architecture) — Detailed look into our hybrid CNN-ViT (MS-EffViT & MS-EffGCViT) designs.
 - [🧬 Model Zoo](#-model-zoo) — Comparison of model variants, parameter counts, and computational complexity (FLOPs).
 - [🚀 Training](#-training) - Step-by-step training scrips with Goolge Colab and W&B experiment tracking
 - [📈 Model Evaluation](#-model-evaluation) - Benchmarking results
-- [💻 Model Usage](#-model-usage) - How to integrate DeepGuard models into your own Python code or via timm
+- [💻 Model Usage](#-model-usage) - Load pretrained models via `pip install deepguard` or straight from the Hugging Face Hub
 - [🔮 Predict Image & Video](#-predict-image--video) - Simple Inference examples for detecting deepfakes in image and video
 - [🎨 DeepFake AI Explainability](#-deepfake-ai-explainability) - Visualizing model focus using Grad-CAM and attention maps
 - [📓 Tutorials](#-tutorials) - Hands-on Colab notebooks for inference and dual-branch XAI visualization
@@ -62,6 +64,10 @@
 
 Run the full stack (MySQL + Redis + FastAPI + Celery + React) with Docker Compose — no local Python/Node setup required.
 
+| **FastAPI** | **Celery** | **Redis** | **MySQL** | **React** |
+| --- | --- | --- | --- | --- |
+| REST API backend — routes, inference/explain services, DB access<br>[`seoyunje/deepguard-fastapi`](https://hub.docker.com/r/seoyunje/deepguard-fastapi) | Background worker for async inference, explainability, and cleanup tasks<br>[`seoyunje/deepguard-celery`](https://hub.docker.com/r/seoyunje/deepguard-celery) | Celery broker/result backend and session store<br>[`seoyunje/deepguard-redis`](https://hub.docker.com/r/seoyunje/deepguard-redis) | Primary relational database (users, analyses, etc.)<br>[`seoyunje/deepguard-mysql`](https://hub.docker.com/r/seoyunje/deepguard-mysql) | Web frontend, served on port `80`<br>[`seoyunje/deepguard-react`](https://hub.docker.com/r/seoyunje/deepguard-react) |
+
 **Prerequisites**: [Docker](https://www.docker.com/) with Compose v2
 
 ```bash
@@ -70,9 +76,62 @@ cd DeepGuard
 docker compose up -d
 ```
 
-Once all containers are up, open **http://localhost:80** in your browser.
+Once all containers are up, open **http://localhost:80** in your browser. Images are also mirrored to [GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi).
 
-Images are published to Docker Hub under [`seoyunje/deepguard-*`](https://hub.docker.com/u/seoyunje) (`fastapi`, `celery`, `mysql`, `redis`, `react`) and mirrored to [GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi).
+<p align="center">
+  <img src="docs/architectures/docker_compose_architecture.png" alt="DeepGuard Docker Compose architecture" width="800">
+</p>
+
+## 🤗 Try It Live: Hugging Face Spaces
+
+No install, no GPU, no `docker compose up` — just click and try DeepGuard straight from your browser.
+
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
+      <div>🖼️</div>
+      <b>Image Detection</b>
+      <br/>
+      <sub>Upload an image → real / fake probability</sub>
+      <br/><br/>
+      <table cellpadding="4" cellspacing="0" bgcolor="#000000"><tr><td>
+        <a href="https://huggingface.co/spaces/KoreaPeter/DeepFake-Image-Detection">
+          <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg" alt="Open Image Detection in Spaces">
+        </a>
+      </td></tr></table>
+    </td>
+    <td align="center" width="33%">
+      <div>🎬</div>
+      <b>Video Detection</b>
+      <br/>
+      <sub>Upload a video → frame-aggregated probability</sub>
+      <br/><br/>
+      <table cellpadding="4" cellspacing="0" bgcolor="#000000"><tr><td>
+        <a href="https://huggingface.co/spaces/KoreaPeter/DeepFake-Video-Detection">
+          <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg" alt="Open Video Detection in Spaces">
+        </a>
+      </td></tr></table>
+    </td>
+    <td align="center" width="33%">
+      <div>🎨</div>
+      <b>Detection XAI</b>
+      <br/>
+      <sub>See why — dual-branch Grad-CAM heatmaps</sub>
+      <br/><br/>
+      <table cellpadding="4" cellspacing="0" bgcolor="#000000"><tr><td>
+        <a href="https://huggingface.co/spaces/KoreaPeter/DeepFake-Detection-XAI">
+          <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg" alt="Open Detection XAI in Spaces">
+        </a>
+      </td></tr></table>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <sub>💛 Enjoying the demos? Please leave a ❤️ like on the Space — it means a lot to us!</sub>
+  <br/>
+  <sub>Looking for the underlying checkpoints instead of the demo UI? Jump to <a href="#-via-hugging-face-hub">🤗 Model Usage → Hugging Face Hub</a>.</sub>
+</p>
 
 ## 📚 DeepFake Video BenchMark Datasets
 
@@ -236,20 +295,17 @@ We provide training scripts for both `ms_eff_vit` and `ms_eff_gcvit`. We recomme
 
 ## 💻 Model Usage
 
-**Quick Start**
-You can load the models directly via the `DeepGuard` package or through the `timm` interface.
+Both options load the raw model only — no face detection/cropping is applied. For end-to-end inference on a real image/video file, see [🔮 Predict Image & Video](#-predict-image--video) below.
 
 **Available Datasets**: `celeb_df_v2`, `ff++`, `kodf`
 
-**Installation**
+### 📦 Via pip (`deepguard` / `timm`)
 
 ```bash
-# pip install -U git+https://github.com/HanMoonSub/DeepGuard.git
 pip install deepguard
 ```
 
-
-**Option A: Direct Import (via DeepGuard)**
+**Direct Import (via DeepGuard)**
 
 ```python
 from deepguard import ms_eff_gcvit_b0, ms_eff_gcvit_b5
@@ -258,7 +314,7 @@ model = ms_eff_gcvit_b0(pretrained=True, dataset="celeb_df_v2")
 model = ms_eff_gcvit_b5(pretrained=True, dataset="ff++")
 ```
 
-**Option B: Using timm Interface (via timm)**
+**Using timm Interface**
 
 ```python
 import timm
@@ -268,19 +324,32 @@ model = timm.create_model("ms_eff_gcvit_b0", pretrained=True, dataset="ff++")
 model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 ```
 
-**Option C: Hugging Face Hub**
+### 🤗 Via Hugging Face Hub
+
+Every checkpoint is also mirrored to the [Hugging Face Hub under `KoreaPeter`](https://huggingface.co/KoreaPeter) as its own `transformers`-compatible repo (config + custom modeling code + `safetensors` weights) — usable directly via the `transformers` `pipeline` API with `trust_remote_code=True`, no `deepguard` install required.
+
+> 💛 Find a checkpoint useful? Please leave a ❤️ like on its model card — it means a lot to us!
 
 ```python
-import torch
-from huggingface_hub import hf_hub_download
-from deepguard import ms_eff_gcvit_b0  # or ms_eff_gcvit_b5
+from transformers import pipeline
 
-REPO_ID = "KoreaPeter/ms-eff-gcvit-deepfake"
+# 🖼️ Image classification
+clf = pipeline(
+    "image-classification",
+    model="KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf",  # swap for any model card above
+    trust_remote_code=True,
+)
+result = clf("face.jpg")
+# [{'label': 'fake', 'score': 0.9712}, {'label': 'real', 'score': 0.0288}]
 
-ckpt = hf_hub_download(REPO_ID, "ms_eff_gcvit_b0_kodf.bin")  # celeb_df_v2 | ff++ | kodf
-model = ms_eff_gcvit_b0(pretrained=False)
-model.load_state_dict(torch.load(ckpt, map_location="cpu"))
-model.eval()
+# 🎬 Video classification
+clf = pipeline(
+    "video-classification",
+    model="KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf",
+    trust_remote_code=True,
+)
+result = clf("video.mp4", num_frames=20, agg_mode="conf")
+# [{'label': 'fake', 'score': 0.9634}, {'label': 'real', 'score': 0.0366}]
 ```
 
 ## 🔮 Predict Image & Video
@@ -373,6 +442,10 @@ Each method is assigned to the branch where it performs best empirically.
 - **`eigen_smooth`** applies PCA noise reduction → retains dominant forgery pattern only
 
 ### 💡 DeepFake XAI Usage
+
+```bash
+pip install deepguard
+```
 
 **Low-Level Branch — Local Artifact Detection**
 
@@ -496,24 +569,31 @@ The jupyter notebooks themselves can be found under the tutorials folder in the 
 
 ## 📬 Authors
 
-_**This project was developed as a Senior Graduation Project by the Department of Software at Chungbuk National University (CBNU), Republic of Korea.**_
+<p align="center"><sub><b>Senior Graduation Project — Department of Software, Chungbuk National University (CBNU), Republic of Korea</b></sub></p>
 
-* **한문섭**: **Data & Backend Engineering** (Data Preprocessing Pipeline, DB Schema Design) — [hanmoon3054@gmail.com](mailto:hanmoon3054@gmail.com)
-* **이예솔**: **UI/UX & Frontend Engineering** (UI/UX Design, User Dashboard, Model Visualization) — [yesol4138@chungbuk.ac.kr](mailto:yesol4138@chungbuk.ac.kr)
-* **서윤제**: **AI Engineering** (AI Model Architecture, Inference API Design, Model Serving) — [seoyunje2001@gmail.com](mailto:seoyunje2001@gmail.com)
+<div align="center">
+
+| Member | Role | Focus | Contact |
+| :---: | :--- | :--- | :---: |
+| **한문섭** | Data & Backend Engineering | Data Preprocessing Pipeline, DB Schema Design | [✉️](mailto:hanmoon3054@gmail.com) |
+| **이예솔** | UI/UX & Frontend Engineering | UI/UX Design, User Dashboard, Model Visualization | [✉️](mailto:yesol4138@chungbuk.ac.kr) |
+| **서윤제** | AI Engineering | AI Model Architecture, Inference API Design, Model Serving | [✉️](mailto:seoyunje2001@gmail.com) |
+
+</div>
 
 
 ## 📝 Reference
 
-1. [`facenet-pytorch`](https://github.com/timesler/facenet-pytorch) - _Pretrained Face Detection(MTCNN) and Recognition(InceptionResNet) Models by Tim Esler_
-2. [`face-cutout`](https://github.com/sowmen/face-cutout) - _Face Cutout Library by Sowmen_
-3. [`Celeb-DF++`](https://github.com/OUC-VAS/Celeb-DF-PP) - _Celeb-DF++ Dataset by OUC-VAS Group_
-4. [`DeeperForensics-1.0`](https://github.com/EndlessSora/DeeperForensics-1.0) - _DeeperForensics-1.0 Dataset by Endless Sora_
-5. [`Deepfake Detection`](https://github.com/abhijithjadhav/Deepfake_detection_using_deep_learning) - _Detection of Video Deepfake using ResNext and LSTM by Abhijith Jadhav_
-6. [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) - _Multiple Deep Learning Models by Ameen Caslam_
-7. [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection
-) - _A curated list of tools, papers and code by Daisy Zhang_
-8. [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) - _Advanced Visual Explanations for PyTorch Models_
+| # | Project | Description |
+| :---: | --- | --- |
+| 1 | [`facenet-pytorch`](https://github.com/timesler/facenet-pytorch) | Pretrained Face Detection (MTCNN) and Recognition (InceptionResNet) Models by Tim Esler |
+| 2 | [`face-cutout`](https://github.com/sowmen/face-cutout) | Face Cutout Library by Sowmen |
+| 3 | [`Celeb-DF++`](https://github.com/OUC-VAS/Celeb-DF-PP) | Celeb-DF++ Dataset by OUC-VAS Group |
+| 4 | [`DeeperForensics-1.0`](https://github.com/EndlessSora/DeeperForensics-1.0) | DeeperForensics-1.0 Dataset by Endless Sora |
+| 5 | [`Deepfake Detection`](https://github.com/abhijithjadhav/Deepfake_detection_using_deep_learning) | Detection of Video Deepfake using ResNext and LSTM by Abhijith Jadhav |
+| 6 | [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) | Multiple Deep Learning Models by Ameen Caslam |
+| 7 | [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) | A curated list of tools, papers and code by Daisy Zhang |
+| 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | Advanced Visual Explanations for PyTorch Models |
 
 ## ⚖️ License 
 
