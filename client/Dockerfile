@@ -9,7 +9,7 @@ COPY . .
 ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
-FROM nginx:1.30-alpine
+FROM nginx:1.31-alpine
 
 COPY --from=build /app/build /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
