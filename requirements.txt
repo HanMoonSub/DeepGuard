@@ -1,18 +1,18 @@
 # --- [Core Backend & Server] ---
-fastapi>=0.135.1
-uvicorn>=0.41.0
-python-multipart>=0.0.22
-pydantic[email]>=2.12.5
+fastapi>=0.141.1
+uvicorn>=0.52.3
+python-multipart>=0.0.32
+pydantic[email]>=2.13.4
 aiofiles>=25.1.0
 itsdangerous>=2.2.0
-python-dotenv>=0.9.9
+python-dotenv>=1.2.3
 
 # --- [Database & ORM] ---
-sqlalchemy>=2.0.48
-pymysql>=1.1.2
+sqlalchemy>=2.0.52
+pymysql>=1.2.0
 aiomysql>=0.3.2
-mysql-connector-python>=9.6.0
-redis>=7.4.0
+mysql-connector-python>=26.7.0
+redis>=8.1.0
 
 # --- [Security & Auth] ---
 bcrypt==4.0.1  # pinned: passlib 1.7.4 breaks on bcrypt>=4.1 (72-byte length check regression)
@@ -25,20 +25,20 @@ pandas>=2.2.3
 scikit-learn>=1.6.1
 
 # --- [Computer Vision & Image Processing] ---
-opencv-python>=4.11.0
-Pillow>=11.1.0
+opencv-python>=5.0.0.93
+Pillow>=12.3.0
 albumentations>=2.0.8
 
 # --- [Deep Learning Framework] ---
 torch>=2.10.0
-torchvision>=0.25.0 
+torchvision>=0.28.0 
 torchmetrics>=1.6.1
 timm>=1.0.12
 ultralytics>=8.4.41
 grad-cam>=1.5.5
 
 # --- [Visualization & Utilities] ---
-matplotlib>=3.10.0
+matplotlib>=3.10.9
 seaborn>=0.13.2
 colorama>=0.4.6
 
@@ -46,4 +46,4 @@ colorama>=0.4.6
 celery>=5.6.3
 
 # --- [Linting & Formatting] ---
-ruff>=0.9.0
+ruff>=0.16.3

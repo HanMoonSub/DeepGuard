@@ -1,0 +1,69 @@
+name: Docker Bump & Push - React
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "client/**"
+  workflow_dispatch:
+
+env:
+  DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+  GHCR_NAMESPACE: ghcr.io/hanmoonsub
+
+jobs:
+  bump-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute new tag from Docker Hub
+        id: bump
+        run: |
+          set -euo pipefail
+
+          get_latest_tag() {
+            local repo="$1"
+            local token tags_json
+            token=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${DOCKERHUB_NAMESPACE}/${repo}:pull" | python3 -c "import json,sys;print(json.load(sys.stdin).get('token',''))")
+            tags_json=$(curl -s -H "Authorization: Bearer ${token}" "https://registry-1.docker.io/v2/${DOCKERHUB_NAMESPACE}/${repo}/tags/list")
+            echo "$tags_json" | python3 -c "import json,sys; d=json.load(sys.stdin); v=sorted(tuple(int(p) for p in t.split('.')) for t in (d.get('tags') or []) if len(t.split('.'))==3 and all(p.isdigit() for p in t.split('.'))); print('%d.%d.%d'%v[-1] if v else '1.0.0')"
+          }
+
+          current=$(get_latest_tag "deepguard-react")
+          IFS='.' read -r major minor patch <<< "$current"
+          new_tag="${major}.${minor}.$((patch + 1))"
+          echo "react: 현재 최댓값 ${current} -> ${new_tag}"
+          echo "new_tag=${new_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push react
+        uses: docker/build-push-action@v7
+        with:
+          context: client
+          file: client/Dockerfile
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-react:${{ steps.bump.outputs.new_tag }}
+            ${{ env.GHCR_NAMESPACE }}/deepguard-react:${{ steps.bump.outputs.new_tag }}
+          push: true
+          cache-from: type=gha,scope=react
+          cache-to: type=gha,mode=max,scope=react

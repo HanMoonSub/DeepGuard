@@ -1,0 +1,33 @@
+name: Close Stale Issues
+
+# 일정 기간 활동 없는 이슈/PR에 stale 라벨을 붙이고, 그 후에도 방치되면 자동으로 닫는다.
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # 매일 UTC 00:00 (KST 09:00) 실행
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v11
+        with:
+          days-before-stale: 60
+          days-before-close: 7
+          stale-issue-label: "stale"
+          stale-pr-label: "stale"
+          stale-issue-message: >
+            이 이슈는 60일 동안 활동이 없어 stale 라벨이 추가되었습니다.
+            7일 내에 추가 활동이 없으면 자동으로 닫힙니다.
+          stale-pr-message: >
+            이 PR은 60일 동안 활동이 없어 stale 라벨이 추가되었습니다.
+            7일 내에 추가 활동이 없으면 자동으로 닫힙니다.
+          close-issue-message: "60일 이상 활동이 없어 자동으로 닫습니다. 필요하면 다시 열어주세요."
+          close-pr-message: "60일 이상 활동이 없어 자동으로 닫습니다. 필요하면 다시 열어주세요."
+          exempt-issue-labels: "pinned,security"
+          exempt-pr-labels: "pinned"

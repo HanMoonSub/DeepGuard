@@ -4,10 +4,19 @@ on:
   pull_request:
     branches: [main, develop]
     paths:
-      - "App/Dockerfile"
-      - "client/Dockerfile"
-      - "docker/mysql/Dockerfile"
-      - "docker/redis/Dockerfile"
+      # fastapi / celery (App/Dockerfile이 COPY하는 대상)
+      - "App/**"
+      - "requirements.txt"
+      - "deepguard/**"
+      - "inference/**"
+      - "explainability/**"
+      - "preprocess/**"
+      - "pyproject.toml"
+      # react (client/Dockerfile이 COPY하는 대상)
+      - "client/**"
+      # mysql / redis
+      - "docker/mysql/**"
+      - "docker/redis/**"
 
 permissions:
   contents: read
@@ -17,69 +26,87 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          lfs: true
 
-      - name: Detect changed Dockerfiles
+      - name: Detect changed sources
         id: changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             app:
-              - 'App/Dockerfile'
+              - 'App/**'
+              - 'requirements.txt'
+              - 'deepguard/**'
+              - 'inference/**'
+              - 'explainability/**'
+              - 'preprocess/**'
+              - 'pyproject.toml'
             client:
-              - 'client/Dockerfile'
+              - 'client/**'
             mysql:
-              - 'docker/mysql/Dockerfile'
+              - 'docker/mysql/**'
+              - 'App/sql/**'
             redis:
-              - 'docker/redis/Dockerfile'
+              - 'docker/redis/**'
 
       - name: Set up Docker Buildx
         if: steps.changes.outputs.app == 'true' || steps.changes.outputs.client == 'true' || steps.changes.outputs.mysql == 'true' || steps.changes.outputs.redis == 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # ── fastapi + celery (App/Dockerfile) ────────────────────────────────────
-      - name: Build fastapi/celery (validate only)
+      - name: Build fastapi (validate only)
         if: steps.changes.outputs.app == 'true'
-        run: |
-          set -euo pipefail
-          docker buildx build \
-            --target fastapi \
-            --cache-from type=gha,scope=fastapi \
-            --cache-to type=gha,mode=max,scope=fastapi \
-            -f App/Dockerfile .
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: App/Dockerfile
+          target: fastapi
+          push: false
+          cache-from: type=gha,scope=fastapi
+          cache-to: type=gha,mode=max,scope=fastapi
 
-          docker buildx build \
-            --target celery \
-            --cache-from type=gha,scope=celery \
-            --cache-to type=gha,mode=max,scope=celery \
-            -f App/Dockerfile .
+      - name: Build celery (validate only)
+        if: steps.changes.outputs.app == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: App/Dockerfile
+          target: celery
+          push: false
+          cache-from: type=gha,scope=celery
+          cache-to: type=gha,mode=max,scope=celery
 
       # ── react (client/Dockerfile) ─────────────────────────────────────────────
       - name: Build react (validate only)
         if: steps.changes.outputs.client == 'true'
-        run: |
-          set -euo pipefail
-          docker buildx build \
-            --cache-from type=gha,scope=react \
-            --cache-to type=gha,mode=max,scope=react \
-            -f client/Dockerfile client
+        uses: docker/build-push-action@v7
+        with:
+          context: client
+          file: client/Dockerfile
+          push: false
+          cache-from: type=gha,scope=react
+          cache-to: type=gha,mode=max,scope=react
 
       # ── mysql (docker/mysql/Dockerfile) ───────────────────────────────────────
       - name: Build mysql (validate only)
         if: steps.changes.outputs.mysql == 'true'
-        run: |
-          set -euo pipefail
-          docker buildx build \
-            --cache-from type=gha,scope=mysql \
-            --cache-to type=gha,mode=max,scope=mysql \
-            -f docker/mysql/Dockerfile .
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/mysql/Dockerfile
+          push: false
+          cache-from: type=gha,scope=mysql
+          cache-to: type=gha,mode=max,scope=mysql
 
       # ── redis (docker/redis/Dockerfile) ───────────────────────────────────────
       - name: Build redis (validate only)
         if: steps.changes.outputs.redis == 'true'
-        run: |
-          set -euo pipefail
-          docker buildx build \
-            --cache-from type=gha,scope=redis \
-            --cache-to type=gha,mode=max,scope=redis \
-            -f docker/redis/Dockerfile .
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/redis/Dockerfile
+          push: false
+          cache-from: type=gha,scope=redis
+          cache-to: type=gha,mode=max,scope=redis

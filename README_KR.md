@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
   <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/Release-v0.2.0-orange?style=flat-square&logo=github&logoColor=white" alt="Release">
+  <img src="https://img.shields.io/github/v/release/HanMoonSub/DeepGuard?style=flat-square&color=orange&logo=github&logoColor=white" alt="Release">
   <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
 </p>
 
@@ -29,47 +29,113 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready">
+  <img src="https://img.shields.io/docker/pulls/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=fastapi%20pulls" alt="Docker Pulls">
+  <img src="https://img.shields.io/docker/v/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=version" alt="Docker Version">
+</p>
+
+<p align="center">
   <a href="README.md"><b>🇺🇸 English Version</b></a> | 
   <a href="README_JP.md"><b>🇯🇵 日本語版</b></a> | 
   <a href="#-모델-평가"><b>📈 모델 평가</b></a> | 
-  <a href="#-이미지-및-비디오-예측"><b>🔮 데모 실행</b></a>
+  <a href="#-지금-바로-체험하기-hugging-face-spaces"><b>🤗 데모 체험</b></a> | 
+  <a href="https://huggingface.co/KoreaPeter"><b>🤗 Hugging Face</b></a>
 </p>
 
 ## 📌 목차
 
-- [💡 설치 및 요구사항](#-설치-및-요구사항)
-- [🛠 설정](#-설정)
+- [🐳 Docker Quick Start](#-docker-quick-start) - Docker Compose로 전체 스택(MySQL, Redis, FastAPI, Celery, React) 실행
+- [🤗 지금 바로 체험하기: Hugging Face Spaces](#-지금-바로-체험하기-hugging-face-spaces) - 설치 없이 브라우저에서 바로 체험하는 이미지/비디오/XAI 딥페이크 탐지 데모
 - [📚 딥페이크 비디오 벤치마크 데이터셋](#-딥페이크-비디오-벤치마크-데이터셋) — 학습에 사용된 Celeb-DF-v2, FF++, KoDF 데이터셋 개요.
 - [⚙️ 데이터 준비](#데이터-준비) — YOLOv8을 이용한 효율적인 얼굴 검출 및 랜드마크 추출 파이프라인.
 - [🏗 모델 구조](#-모델-구조) — 하이브리드 CNN-ViT (MS-EffViT & MS-EffGCViT) 설계 상세.
 - [🧬 모델 주(Model Zoo)](#-model-zoo) — 모델 변체별 파라미터 수 및 연산량(FLOPs) 비교.
 - [🚀 학습](#-학습) - Google Colab 및 W&B를 활용한 단계별 학습 스크립트.
 - [📈 모델 평가](#-모델-평가) - 벤치마크 결과.
-- [💻 모델 사용법](#-모델-사용법) - Python 코드 및 timm을 통한 DeepGuard 모델 통합 방법.
+- [💻 모델 사용법](#-모델-사용법) - `pip install deepguard` 또는 Hugging Face Hub를 통한 사전 학습 모델 로드
 - [🔮 이미지 및 비디오 예측](#-이미지-및-비디오-예측) - 딥페이크 탐지를 위한 간단한 추론 예시.
 - [🎨 딥페이크 AI 설명가능성(XAI)](#-딥페이크-ai-설명가능성xai) - Grad-CAM 및 어텐션 맵을 통한 모델 판단 근거 시각화.
 - [📓 Tutorials](#-tutorials) - 추론과 듀얼 브랜치 XAI 시각화를 위한 실습 노트북
-- [📬 제작자](#-제작자)
-- [📝 참고 문헌](#-참고-문헌)
-- [⚖️ 라이선스](#-라이선스)
+- [📬 제작자](#-제작자) - 충북대학교 졸업 작품을 만든 팀 소개
+- [📝 참고 문헌](#-참고-문헌) - 이 프로젝트가 참고한 라이브러리, 데이터셋, 선행 연구
+- [⚖️ 라이선스](#-라이선스) - MIT 라이선스
 
 ---
 
-## 💡 설치 및 요구사항
+## 🐳 Docker Quick Start
 
-필수 라이브러리 설치:
+Docker Compose로 전체 스택(MySQL + Redis + FastAPI + Celery + React)을 실행합니다 — 로컬에 Python/Node 환경을 따로 설치할 필요가 없습니다.
 
-```bash
-pip install -r requirements.txt
-```
+| **FastAPI** | **Celery** | **Redis** | **MySQL** | **React** |
+| --- | --- | --- | --- | --- |
+| REST API 백엔드 — 라우트, 추론/설명 서비스, DB 접근<br>[`seoyunje/deepguard-fastapi`](https://hub.docker.com/r/seoyunje/deepguard-fastapi) | 비동기 추론, 설명가능성(XAI), 정리 작업을 위한 백그라운드 워커<br>[`seoyunje/deepguard-celery`](https://hub.docker.com/r/seoyunje/deepguard-celery) | Celery 브로커/결과 저장소 및 세션 스토어<br>[`seoyunje/deepguard-redis`](https://hub.docker.com/r/seoyunje/deepguard-redis) | 주 관계형 데이터베이스 (사용자, 분석 기록 등)<br>[`seoyunje/deepguard-mysql`](https://hub.docker.com/r/seoyunje/deepguard-mysql) | 웹 프론트엔드, `80`번 포트로 서빙<br>[`seoyunje/deepguard-react`](https://hub.docker.com/r/seoyunje/deepguard-react) |
 
-## 🛠 설정
+**사전 요구사항**: Compose v2가 포함된 [Docker](https://www.docker.com/)
 
-저장소를 클론하고 해당 디렉토리로 이동합니다:
 ```bash
 git clone https://github.com/HanMoonSub/DeepGuard.git
 cd DeepGuard
+docker compose up -d
 ```
+
+모든 컨테이너가 정상적으로 실행되면 브라우저에서 **http://localhost:80**으로 접속하세요.
+
+이미지는 Docker Hub의 [`seoyunje/deepguard-*`](https://hub.docker.com/u/seoyunje) (`fastapi`, `celery`, `mysql`, `redis`, `react`)에 배포되며, [GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi)에도 미러링됩니다.
+
+<p align="center">
+  <img src="docs/architectures/docker_compose_architecture.png" alt="DeepGuard Docker Compose 아키텍처" width="800">
+</p>
+
+## 🤗 지금 바로 체험하기: Hugging Face Spaces
+
+설치도, GPU도, `docker compose up`도 필요 없습니다 — 브라우저에서 바로 DeepGuard를 체험해보세요.
+
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
+      <div>🖼️</div>
+      <b>이미지 탐지</b>
+      <br/>
+      <sub>이미지를 업로드하면 → real / fake 확률</sub>
+      <br/><br/>
+      <table cellpadding="4" cellspacing="0" bgcolor="#000000"><tr><td>
+        <a href="https://huggingface.co/spaces/KoreaPeter/DeepFake-Image-Detection">
+          <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg" alt="Open Image Detection in Spaces">
+        </a>
+      </td></tr></table>
+    </td>
+    <td align="center" width="33%">
+      <div>🎬</div>
+      <b>비디오 탐지</b>
+      <br/>
+      <sub>비디오를 업로드하면 → 프레임 집계 확률</sub>
+      <br/><br/>
+      <table cellpadding="4" cellspacing="0" bgcolor="#000000"><tr><td>
+        <a href="https://huggingface.co/spaces/KoreaPeter/DeepFake-Video-Detection">
+          <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg" alt="Open Video Detection in Spaces">
+        </a>
+      </td></tr></table>
+    </td>
+    <td align="center" width="33%">
+      <div>🎨</div>
+      <b>탐지 XAI</b>
+      <br/>
+      <sub>왜 그렇게 판단했는지 확인 — 듀얼 브랜치 Grad-CAM 히트맵</sub>
+      <br/><br/>
+      <table cellpadding="4" cellspacing="0" bgcolor="#000000"><tr><td>
+        <a href="https://huggingface.co/spaces/KoreaPeter/DeepFake-Detection-XAI">
+          <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg" alt="Open Detection XAI in Spaces">
+        </a>
+      </td></tr></table>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <sub>💛 데모가 마음에 드셨나요? Space에 ❤️ 좋아요를 남겨주세요 — 큰 힘이 됩니다!</sub>
+  <br/>
+  <sub>데모 UI 대신 실제 체크포인트를 찾고 계신가요? <a href="#-hugging-face-hub로-사용하기">🤗 모델 사용법 → Hugging Face Hub</a>로 이동하세요.</sub>
+</p>
 
 ## 📚 딥페이크 비디오 벤치마크 데이터셋
 
@@ -162,6 +228,14 @@ DATA_ROOT/
 
 ## 🚀 학습
 
+이 학습 스크립트는 `pip install deepguard` 패키지가 아니라 리포지토리 전체를 대상으로 동작합니다. 먼저 리포지토리를 클론하고 전체 개발 환경을 설치하세요:
+
+```bash
+git clone https://github.com/HanMoonSub/DeepGuard.git
+cd DeepGuard
+pip install -r requirements.txt
+```
+
 `ms_eff_vit` 및 `ms_eff_gcvit` 모두에 대한 학습 스크립트를 제공합니다. 무료 GPU 환경을 위해 **Google Colab**을, 실험 기록 및 트래킹을 위해 **Weights & Biases(W&B)** 사용을 권장합니다.
 
 #### 📊 Weight & Biases 실험 결과
@@ -218,20 +292,17 @@ DATA_ROOT/
 
 ## 💻 모델 사용법
 
-**빠른 시작**
-`DeepGuard` 패키지를 직접 임포트하거나 `timm` 인터페이스를 통해 모델을 로드할 수 있습니다.
+두 방법 모두 얼굴 검출/크롭 같은 전처리 없이 순수 모델만 로드합니다. 실제 이미지/영상 파일에 대한 end-to-end 추론은 아래 [🔮 이미지 및 비디오 예측](#-이미지-및-비디오-예측)을 참고하세요.
 
 **지원 데이터셋**: `celeb_df_v2`, `ff++`, `kodf`
 
-**설치**
+### 📦 pip으로 사용하기 (`deepguard` / `timm`)
 
 ```bash
-# pip install -U git+https://github.com/HanMoonSub/DeepGuard.git
 pip install deepguard
 ```
 
-
-**방법 A: 직접 임포트 (DeepGuard 사용)**
+**직접 임포트 (DeepGuard 사용)**
 
 ```python
 from deepguard import ms_eff_gcvit_b0, ms_eff_gcvit_b5
@@ -240,7 +311,7 @@ model = ms_eff_gcvit_b0(pretrained=True, dataset="celeb_df_v2")
 model = ms_eff_gcvit_b5(pretrained=True, dataset="ff++")
 ```
 
-**방법 B: timm 인터페이스 사용**
+**timm 인터페이스 사용**
 
 ```python
 import timm
@@ -250,19 +321,32 @@ model = timm.create_model("ms_eff_gcvit_b0", pretrained=True, dataset="ff++")
 model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 ```
 
-**방법 C: Hugging Face Hub**
+### 🤗 Hugging Face Hub로 사용하기
+
+모든 체크포인트는 [Hugging Face Hub의 `KoreaPeter`](https://huggingface.co/KoreaPeter) 계정에도 `transformers` 호환 리포(설정 + 커스텀 모델링 코드 + `safetensors` 가중치)로 미러링되어 있습니다 — `deepguard` 설치 없이 `trust_remote_code=True` 옵션의 `transformers` `pipeline` API로 바로 사용할 수 있습니다.
+
+> 💛 체크포인트가 유용하셨다면 모델 카드에 ❤️ 좋아요를 남겨주세요 — 큰 힘이 됩니다!
 
 ```python
-import torch
-from huggingface_hub import hf_hub_download
-from deepguard import ms_eff_gcvit_b0  # or ms_eff_gcvit_b5
+from transformers import pipeline
 
-REPO_ID = "KoreaPeter/ms-eff-gcvit-deepfake"
+# 🖼️ 이미지 분류
+clf = pipeline(
+    "image-classification",
+    model="KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf",  # 원하는 체크포인트로 교체 가능
+    trust_remote_code=True,
+)
+result = clf("face.jpg")
+# [{'label': 'fake', 'score': 0.9712}, {'label': 'real', 'score': 0.0288}]
 
-ckpt = hf_hub_download(REPO_ID, "ms_eff_gcvit_b0_kodf.bin")  # celeb_df_v2 | ff++ | kodf
-model = ms_eff_gcvit_b0(pretrained=False)
-model.load_state_dict(torch.load(ckpt, map_location="cpu"))
-model.eval()
+# 🎬 비디오 분류
+clf = pipeline(
+    "video-classification",
+    model="KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf",
+    trust_remote_code=True,
+)
+result = clf("video.mp4", num_frames=20, agg_mode="conf")
+# [{'label': 'fake', 'score': 0.9634}, {'label': 'real', 'score': 0.0366}]
 ```
 
 ## 🔮 이미지 및 비디오 예측
@@ -350,6 +434,10 @@ print(f"딥페이크 확률: {result:.4f}")
 - **`eigen_smooth`**: PCA 노이즈 제거를 적용 → 지배적인 위조 패턴만 유지
 
 ### 💡 딥페이크 XAI 사용법
+
+```bash
+pip install deepguard
+```
 
 **Low-Level 브랜치 — 국부적 아티팩트 탐지**
 
@@ -474,23 +562,30 @@ result = explainer.display_heatmap_bbox_on_image(
 
 ## 📬 제작자
 
-_**본 프로젝트는 충북대학교(CBNU) 소프트웨어학부 졸업 작품(Senior Graduation Project)으로 개발되었습니다.**_
+<p align="center"><sub><b>충북대학교(CBNU) 소프트웨어학부 졸업 작품(Senior Graduation Project)</b></sub></p>
 
-* **한문섭**: **Data & Backend Engineering** (데이터 전처리 파이프라인, DB 스키마 설계) — [hanmoon3054@gmail.com](mailto:hanmoon3054@gmail.com)
-* **이예솔**: **UI/UX & Frontend Engineering** (UI/UX 디자인, 사용자 대시보드, 모델 시각화) — [yesol4138@chungbuk.ac.kr](mailto:yesol4138@chungbuk.ac.kr)
-* **서윤제**: **AI Engineering** (AI 모델 구조 설계, 추론 API 설계, 모델 서빙) — [seoyunje2001@gmail.com](mailto:seoyunje2001@gmail.com)
+<div align="center">
 
+| 이름 | 역할 | 담당 업무 | 연락처 |
+| :---: | :--- | :--- | :---: |
+| **한문섭** | Data & Backend Engineering | 데이터 전처리 파이프라인, DB 스키마 설계 | [✉️](mailto:hanmoon3054@gmail.com) |
+| **이예솔** | UI/UX & Frontend Engineering | UI/UX 디자인, 사용자 대시보드, 모델 시각화 | [✉️](mailto:yesol4138@chungbuk.ac.kr) |
+| **서윤제** | AI Engineering | AI 모델 구조 설계, 추론 API 설계, 모델 서빙 | [✉️](mailto:seoyunje2001@gmail.com) |
+
+</div>
 
 ## 📝 참고 문헌
 
-1. [`facenet-pytorch`](https://github.com/timesler/facenet-pytorch) - _Tim Esler의 사전 학습된 얼굴 검출(MTCNN) 및 인식(InceptionResNet) 모델_
-2. [`face-cutout`](https://github.com/sowmen/face-cutout) - _Sowmen의 Face Cutout 라이브러리_
-3. [`Celeb-DF++`](https://github.com/OUC-VAS/Celeb-DF-PP) - _OUC-VAS Group의 Celeb-DF++ 데이터셋_
-4. [`DeeperForensics-1.0`](https://github.com/EndlessSora/DeeperForensics-1.0) - _Endless Sora의 DeeperForensics-1.0 데이터셋_
-5. [`Deepfake Detection`](https://github.com/abhijithjadhav/Deepfake_detection_using_deep_learning) - _Abhijith Jadhav의 ResNext와 LSTM을 이용한 비디오 딥페이크 탐지_
-6. [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) - _Ameen Caslam의 다중 딥러닝 모델_
-7. [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) - _Daisy Zhang이 정리한 도구, 논문, 코드 큐레이션 목록_
-8. [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) - _PyTorch 모델을 위한 고급 시각적 설명 도구_
+| # | 프로젝트 | 설명 |
+| :---: | --- | --- |
+| 1 | [`facenet-pytorch`](https://github.com/timesler/facenet-pytorch) | Tim Esler의 사전 학습된 얼굴 검출(MTCNN) 및 인식(InceptionResNet) 모델 |
+| 2 | [`face-cutout`](https://github.com/sowmen/face-cutout) | Sowmen의 Face Cutout 라이브러리 |
+| 3 | [`Celeb-DF++`](https://github.com/OUC-VAS/Celeb-DF-PP) | OUC-VAS Group의 Celeb-DF++ 데이터셋 |
+| 4 | [`DeeperForensics-1.0`](https://github.com/EndlessSora/DeeperForensics-1.0) | Endless Sora의 DeeperForensics-1.0 데이터셋 |
+| 5 | [`Deepfake Detection`](https://github.com/abhijithjadhav/Deepfake_detection_using_deep_learning) | Abhijith Jadhav의 ResNext와 LSTM을 이용한 비디오 딥페이크 탐지 |
+| 6 | [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) | Ameen Caslam의 다중 딥러닝 모델 |
+| 7 | [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) | Daisy Zhang이 정리한 도구, 논문, 코드 큐레이션 목록 |
+| 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | PyTorch 모델을 위한 고급 시각적 설명 도구 |
 
 ## ⚖️ 라이선스 
 

@@ -1,0 +1,30 @@
+name: Lock Threads
+
+# 오래전에 closed된 이슈/PR을 자동으로 잠가서, 관련 없는 새 댓글(necro-posting)을 방지한다.
+
+on:
+  schedule:
+    - cron: "0 1 * * *"  # 매일 UTC 01:00 (KST 10:00) 실행
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dessant/lock-threads@v6.0.2
+        with:
+          process-only: "issues, prs"
+          issue-inactive-days: "365"
+          pr-inactive-days: "365"
+          issue-comment: >
+            이 이슈는 closed된 지 오래되어 자동으로 잠겼습니다.
+            관련된 새 이슈가 있다면 새로 열어주세요.
+          pr-comment: >
+            이 PR은 closed된 지 오래되어 자동으로 잠겼습니다.
+            관련된 새 PR이 있다면 새로 열어주세요.
+          issue-lock-reason: "resolved"
+          pr-lock-reason: "resolved"
