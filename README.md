@@ -330,6 +330,11 @@ Every checkpoint is also mirrored to the [Hugging Face Hub under `KoreaPeter`](h
 
 > 💛 Find a checkpoint useful? Please leave a ❤️ like on its model card — it means a lot to us!
 
+| Model | Celeb-DF-v2 | FaceForensics++ | KoDF |
+| ----- | :---------: | :--------------: | :---: |
+| ⚡ ms_eff_gcvit_b0 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf) |
+| 🔥 ms_eff_gcvit_b5 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-kodf) |
+
 ```python
 from transformers import pipeline
 

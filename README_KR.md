@@ -327,6 +327,11 @@ model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 
 > 💛 체크포인트가 유용하셨다면 모델 카드에 ❤️ 좋아요를 남겨주세요 — 큰 힘이 됩니다!
 
+| Model | Celeb-DF-v2 | FaceForensics++ | KoDF |
+| ----- | :---------: | :--------------: | :---: |
+| ⚡ ms_eff_gcvit_b0 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf) |
+| 🔥 ms_eff_gcvit_b5 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-kodf) |
+
 ```python
 from transformers import pipeline
 
