@@ -16,8 +16,9 @@ jobs:
   bump-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -68,3 +69,19 @@ jobs:
           push: true
           cache-from: type=gha,scope=mysql
           cache-to: type=gha,mode=max,scope=mysql
+
+      - name: Update docker-compose.yml image tag
+        run: |
+          sed -i -E "s#(image: ${DOCKERHUB_NAMESPACE}/deepguard-mysql:)[0-9]+\.[0-9]+\.[0-9]+#\1${{ steps.bump.outputs.new_tag }}#" docker-compose.yml
+
+      - name: Open PR to bump docker-compose.yml
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "🐳 Bump mysql image tag to ${{ steps.bump.outputs.new_tag }} in docker-compose.yml"
+          title: "🐳 Bump mysql image tag to ${{ steps.bump.outputs.new_tag }}"
+          body: |
+            Docker Bump & Push - MySQL 워크플로우가 새로 push한 이미지 태그를 `docker-compose.yml`에 반영합니다.
+
+            - `${{ env.DOCKERHUB_NAMESPACE }}/deepguard-mysql:${{ steps.bump.outputs.new_tag }}`
+          branch: bump/docker-compose-mysql
+          delete-branch: true
