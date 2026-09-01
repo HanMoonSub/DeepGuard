@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 # ─────────────────────────────────────────────
 [project]
 name = "deepguard"           # pip install deepguard 할 때 이 이름
-version = "1.0.0"            
+version = "1.0.1"            
 description = "Multi-Scale Efficient Global Context Vision Transformer for Robust Deepfake Detection"
 readme = "README.md"         # PyPI 페이지에 표시될 설명 (마크다운)
 requires-python = ">=3.10"   # torch/torchvision/torchmetrics의 Requires-Python 하한이 3.10이라 이 값을 그대로 따름
