@@ -62,7 +62,7 @@ services:
       - redis
 
   react:
-    image: seoyunje/deepguard-react:1.0.8
+    image: seoyunje/deepguard-react:1.0.10
     container_name: deepguard-react
     networks: [deepguard-network]
     ports:
