@@ -36,7 +36,7 @@ services:
       - deepguard-memory:/data
 
   fastapi:
-    image: seoyunje/deepguard-fastapi:1.0.15
+    image: seoyunje/deepguard-fastapi:1.0.21
     container_name: deepguard-fastapi
     networks: [deepguard-network]
     environment:
@@ -49,7 +49,7 @@ services:
       - redis
 
   celery:
-    image: seoyunje/deepguard-celery:1.0.15
+    image: seoyunje/deepguard-celery:1.0.21
     container_name: deepguard-celery
     networks: [deepguard-network]
     environment:
