@@ -1,6 +1,6 @@
 # --- [Core Backend & Server] ---
 fastapi>=0.141.1
-uvicorn>=0.52.3
+uvicorn>=0.52.4
 python-multipart>=0.0.32
 pydantic[email]>=2.13.4
 aiofiles>=25.1.0
@@ -46,4 +46,4 @@ colorama>=0.4.6
 celery>=5.6.3
 
 # --- [Linting & Formatting] ---
-ruff>=0.16.3
+ruff>=0.16.4
