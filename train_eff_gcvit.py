@@ -180,7 +180,10 @@ class Trainer:
 
         self.model.load_state_dict(torch.load(ckpt_path, map_location=self.cfg.device))
         return self.model
-    
+
+    def _lr_for(self, component):
+        return next((g['lr'] for g in self.optimizer.param_groups if g.get('name') == component), None)
+
     def train_one_epoch(self, loader):
         self.model.train()
         
@@ -223,28 +226,28 @@ class Trainer:
             avg_metrics = self.train_metrics.compute()
         
             # ====== Learning Rate ======
-            backbone_lr = self.optimizer.param_groups[0]['lr']
-            l_gcvit_lr = self.optimizer.param_groups[2]['lr']
-            h_gcvit_lr = self.optimizer.param_groups[4]['lr']
-            head_lr = self.optimizer.param_groups[6]['lr']
-            
+            lr_by_component = {
+                'backbone_lr': self._lr_for('backbone'),
+                'l_gcvit_lr': self._lr_for('l_gcvit'),
+                'h_gcvit_lr': self._lr_for('h_gcvit'),
+                'head_lr': self._lr_for('head'),
+            }
+
             # ====== Calculate GPU Memory Usage =======
             mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0
-            
+
             # ====== Display Info ======
-            pbar.set_postfix(
-                train_loss = f'{avg_loss:.4f}',
-                train_acc = f'{avg_metrics["train_acc"]:.4f}',
-                train_auc = f'{avg_metrics["train_auc"]:.4f}',
-                train_precision = f'{avg_metrics["train_precision"]:.4f}',
-                train_recall = f'{avg_metrics["train_recall"]:.4f}',
-                train_f1 = f'{avg_metrics["train_f1"]:.4f}',
-                backbone_lr = f'{backbone_lr:.1e}',
-                l_gcvit_lr = f'{l_gcvit_lr:.1e}',
-                h_gcvit_lr = f'{h_gcvit_lr:.1e}',
-                head_lr = f'{head_lr:.1e}',
-                gpu_mem = f'{mem:.1f} GB'
-            )
+            postfix = {
+                'train_loss': f'{avg_loss:.4f}',
+                'train_acc': f'{avg_metrics["train_acc"]:.4f}',
+                'train_auc': f'{avg_metrics["train_auc"]:.4f}',
+                'train_precision': f'{avg_metrics["train_precision"]:.4f}',
+                'train_recall': f'{avg_metrics["train_recall"]:.4f}',
+                'train_f1': f'{avg_metrics["train_f1"]:.4f}',
+                **{k: f'{v:.1e}' for k, v in lr_by_component.items() if v is not None},
+                'gpu_mem': f'{mem:.1f} GB',
+            }
+            pbar.set_postfix(postfix)
             
         torch.cuda.empty_cache()
         return avg_loss, avg_metrics
@@ -300,7 +303,10 @@ def main():
     parser = argparse.ArgumentParser(description="Multi-Scale EffGCViT Training")
    
     parser.add_argument("--root-dir", required=True)
-    parser.add_argument("--model-ver", default="ms_eff_gcvit_b0", choices=['ms_eff_gcvit_b0','ms_eff_gcvit_b5'])
+    parser.add_argument("--model-ver", default="ms_eff_gcvit_b0", choices=[
+        'ms_eff_gcvit_b0', 'high_eff_gcvit_b0', 'low_eff_gcvit_b0', 'eff_b0',
+        'ms_eff_gcvit_b5', 'high_eff_gcvit_b5', 'low_eff_gcvit_b5', 'eff_b5',
+    ])
     parser.add_argument("--dataset", default="celeb_df_v2", choices=["celeb_df_v2","ff++","kodf"])
     
     parser.add_argument("--seed", default=2025, type=int)
