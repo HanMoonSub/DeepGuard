@@ -91,6 +91,10 @@ weight_registry = {
     }
 }
 
+def available_models() -> List[str]:
+    """Returns the names of available MS-EffGCViT models"""
+    return list(weight_registry.keys())
+
 class MultiScaleEffGCViT(nn.Module):
     def __init__(
             self,

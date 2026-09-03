@@ -40,6 +40,11 @@ weight_registry = {
         'ff++': 'https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_vit_b5_ff++.bin'
     }
 }
+
+def available_models() -> List[str]:
+    """Returns the names of available MS-EffViT models"""
+    return list(weight_registry.keys())
+
 class MultiScaleEffViT(nn.Module):
     def __init__(
             self,
