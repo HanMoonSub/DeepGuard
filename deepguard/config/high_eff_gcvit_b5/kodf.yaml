@@ -1,0 +1,60 @@
+dataset: "KODF"
+
+model:
+      model_name: "tf_efficientnet_b5.ns_jft_in1k"
+      img_size: [384,384]
+
+      # ===== Feature Extraction Blocks =====
+      l_block_idx: 1 # Low-level feature stage index (unused, use_low=False)
+      h_block_idx: 6 # High-level feature stage index
+
+      # ===== Ablation: high-level GCViT branch only =====
+      use_low: False
+      use_high: True
+
+      # ===== Transformer Dimensions (High) =====
+      h_dim: 512 # Dimension for high-block transformer
+      h_depths: [6] # Number of transformer layers (High)
+
+      # ===== Attention Settings (High) =====
+      h_windows: [12] # Window Size for Attention (High)
+      h_heads: [16] # Multi Head Attention (High)
+      h_ratio: [3] # MLP expansion ratio (High)
+
+      # ===== Reqularization (Dropout, High) =====
+      h_drop: 0.1 # Pos dropout, Mlp dropout, Proj dropout (High)
+      h_attn_drop: 0.0 # Attention Dropout (High)
+      h_drop_path: 0.1 # Stochastic depth rate (High)
+
+train:
+      epochs: 10
+      use_amp: True # Mixed Precision Training
+      n_accumulate: 1 # Gradient Accumulation steps
+      optimizer: "AdamW"
+      loss: "BCEWithLogitsLoss"
+      scheduler: "CosineAnnealingLR"
+
+      # Albumentation
+      mixup_alpha: 0.4
+      mixup_prob: 0.125
+      cutout_prob: 0.0
+
+      # DataLoader
+      train_bs: 64
+      valid_bs: 128
+
+      # Learning Rate
+      backbone_lr: 5e-4
+      h_block_lr: 2e-4
+      l_block_lr: 1e-4
+      head_lr: 1e-3
+
+      # Weight Decay
+      backbone_wd: 1e-3
+      h_block_wd: 5e-4
+      l_block_wd: 1e-3
+      head_wd: 1e-5
+
+      # Early Stopping
+      patience: 3
+      min_delta: 0.001
