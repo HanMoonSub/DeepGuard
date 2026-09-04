@@ -36,11 +36,7 @@ from deepguard.optimizer import (
 from deepguard.scheduler import (
     fetch_scheduler
 )
-from deepguard.models import (
-    MultiScaleEffViT,
-    ms_eff_vit_b0,
-    ms_eff_vit_b5
-)
+from deepguard.models.ms_eff_vit import MultiScaleEffViT
 from colorama import Fore, Style
 
 c_ = Fore.BLUE
