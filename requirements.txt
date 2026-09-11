@@ -2,7 +2,7 @@
 fastapi>=0.141.1
 uvicorn>=0.52.4
 python-multipart>=0.0.32
-pydantic[email]>=2.13.4
+pydantic[email]>=2.13.5
 aiofiles>=25.1.0
 itsdangerous>=2.2.0
 python-dotenv>=1.2.3
