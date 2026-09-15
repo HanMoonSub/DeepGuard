@@ -17,7 +17,7 @@ x-app-env: &app-env
 
 services:
   mysql:
-    image: seoyunje/deepguard-mysql:1.0.6
+    image: seoyunje/deepguard-mysql:1.0.7
     container_name: deepguard-mysql
     networks: [deepguard-network]
     environment:
