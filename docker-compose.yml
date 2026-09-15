@@ -29,7 +29,7 @@ services:
       - deepguard-data:/var/lib/mysql
 
   redis:
-    image: seoyunje/deepguard-redis:1.0.6
+    image: seoyunje/deepguard-redis:1.0.7
     container_name: deepguard-redis
     networks: [deepguard-network]
     volumes:
