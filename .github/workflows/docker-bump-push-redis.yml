@@ -22,6 +22,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -62,6 +65,7 @@ jobs:
         with:
           context: .
           file: docker/redis/Dockerfile
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-redis:${{ steps.bump.outputs.new_tag }}
             ${{ env.GHCR_NAMESPACE }}/deepguard-redis:${{ steps.bump.outputs.new_tag }}

@@ -30,6 +30,9 @@ jobs:
         with:
           lfs: true
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -74,6 +77,7 @@ jobs:
           context: .
           file: App/Dockerfile
           target: fastapi
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-fastapi:${{ steps.bump.outputs.new_tag }}
             ${{ env.GHCR_NAMESPACE }}/deepguard-fastapi:${{ steps.bump.outputs.new_tag }}
@@ -87,6 +91,7 @@ jobs:
           context: .
           file: App/Dockerfile
           target: celery
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-celery:${{ steps.bump.outputs.new_tag }}
             ${{ env.GHCR_NAMESPACE }}/deepguard-celery:${{ steps.bump.outputs.new_tag }}
