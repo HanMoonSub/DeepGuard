@@ -8,7 +8,7 @@ itsdangerous>=2.2.0
 python-dotenv>=1.2.3
 
 # --- [Database & ORM] ---
-sqlalchemy>=2.0.52
+sqlalchemy>=2.0.54
 pymysql>=1.2.0
 aiomysql>=0.3.2
 mysql-connector-python>=26.7.0
