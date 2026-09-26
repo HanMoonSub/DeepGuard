@@ -25,13 +25,23 @@ def load_pretrained_weights(model: nn.Module, weight_path: str) -> nn.Module:
     Args:
         weight_path: Local file path, or an http(s) URL (downloaded and
             cached via torch.hub) to a state_dict saved with torch.save().
+
+    Note:
+        Loaded with strict=False since some checkpoints (e.g. Effort's) only
+        contain the trainable subset of parameters - the rest of the model
+        (a frozen backbone) is already correctly initialized by the model's
+        own constructor. Any unexpected_keys are still surfaced as a warning,
+        since those would indicate a genuine mismatch rather than an
+        intentionally-omitted frozen parameter.
     """
     if weight_path.startswith("http://") or weight_path.startswith("https://"):
         state_dict = torch.hub.load_state_dict_from_url(weight_path, map_location="cpu")
     else:
         state_dict = torch.load(weight_path, map_location="cpu")
 
-    model.load_state_dict(state_dict)
+    result = model.load_state_dict(state_dict, strict=False)
+    if result.unexpected_keys:
+        print(f"⚠️  load_pretrained_weights: unexpected keys in checkpoint (not in model): {result.unexpected_keys}")
     return model
 
 
