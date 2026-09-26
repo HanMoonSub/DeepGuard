@@ -1,12 +1,12 @@
 import os
 import cv2
 import numpy as np
-import timm
 import torch
 from typing import Dict, List
 from preprocess.frame_extractor import FrameExtractor
 from preprocess.face_detector import FaceDetector
 from deepguard.data import get_test_transforms
+from .utils import build_model
 
 class VideoPredictor:
     def __init__(self,
@@ -15,15 +15,16 @@ class VideoPredictor:
                  min_face_ratio: float,
                  model_name: str,
                  dataset: str,
+                 weight_path: str = None,
+                 explicit_extractor_path: str = None,
                  ):
-        
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"        
+
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.margin_ratio = margin_ratio
         self.frame_extractor = FrameExtractor(jitter=0)
         self.face_detector = FaceDetector(conf_thres, min_face_ratio)
         self.model_name = model_name
-        self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
-        self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
+        self.model, self.img_size, self.mean, self.std = build_model(model_name, dataset, weight_path, explicit_extractor_path)
         
         # Model Inference Mode
         self.model.to(self.device)
@@ -166,13 +167,14 @@ class VideoPredictor:
         if not frames:
             return np.array([])
         
-        transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
+        transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip, mean=self.mean, std=self.std)
         frames_list = [transforms(image=f)['image'] for f in frames]
         batch_frames = torch.stack(frames_list).to(self.device) # (B,3,H,W)
-                            
+
         with torch.no_grad():
-            outs = self.model(batch_frames) # (B,1)
-            preds = torch.sigmoid(outs.view(-1)).cpu().numpy() # (B,)
+            outs = self.model(batch_frames) # (B,1) or {'logit': (B,1), ...}
+            logit = outs['logit'] if isinstance(outs, dict) else outs
+            preds = torch.sigmoid(logit.view(-1)).cpu().numpy() # (B,)
             
         return preds
     
