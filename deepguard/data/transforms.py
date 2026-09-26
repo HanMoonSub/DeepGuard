@@ -47,7 +47,9 @@ def get_test_transforms(
                         img_size: List[int],
                         tta_hflip: float = 0.0,
                         tta_scale: float = 1.0,
-                    ):  
+                        mean=(0.485, 0.456, 0.406),
+                        std=(0.229, 0.224, 0.225),
+                    ):
     """ Creates a pipeline for inference and Test Time Augmentation (TTA).
 
     Args:
@@ -71,5 +73,5 @@ def get_test_transforms(
         
     return A.Compose([
         *transforms,
-        *_get_normalization(),
+        *_get_normalization(mean, std),
         ])
