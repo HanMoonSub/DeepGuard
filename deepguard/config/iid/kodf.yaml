@@ -1,0 +1,36 @@
+dataset: "KoDF"
+
+model:
+      img_size: [256,256]
+      embedding_size: 512
+      explicit_extractor_path: null # set to a local pretrained ArcFace-style IResNet-50 checkpoint before training (e.g. insightface's ms1mv3_arcface_r50)
+
+train:
+      epochs: 10
+      use_amp: True # Mixed Precision Training
+      n_accumulate: 1 # Gradient Accumulation steps
+      optimizer: "AdamW"
+      loss: "BCEWithLogitsLoss"
+      scheduler: "CosineAnnealingLR"
+      loss_eic_weight: 0.1 # Explicit-Implicit identity Consistency loss weight
+
+      # Albumentation
+      mixup_alpha: 0.4
+      mixup_prob: 0.25
+      cutout_prob: 0.0 # KoDF landmarks aren't extracted in this pipeline
+
+      # DataLoader
+      train_bs: 16
+      valid_bs: 32
+
+      # Learning Rate
+      backbone_lr: 2e-4
+      head_lr: 2e-4
+
+      # Weight Decay
+      backbone_wd: 5e-4
+      head_wd: 5e-4
+
+      # Early Stopping
+      patience: 3
+      min_delta: 0.001
