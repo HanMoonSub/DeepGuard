@@ -1,0 +1,35 @@
+dataset: "KoDF"
+
+model:
+      clip_model_name: "openai/clip-vit-large-patch14"
+      img_size: [224,224]
+      svd_residual_dim: 1 # Trainable trailing singular directions per self-attn projection layer
+
+train:
+      epochs: 10
+      use_amp: True # Mixed Precision Training
+      n_accumulate: 1 # Gradient Accumulation steps
+      optimizer: "AdamW" # deliberate deviation from the paper's plain Adam - decoupled weight decay
+      loss: "BCEWithLogitsLoss"
+      scheduler: "CosineAnnealingLR"
+
+      # Albumentation
+      mixup_alpha: 0.4
+      mixup_prob: 0.25
+      cutout_prob: 0.5
+
+      # DataLoader
+      train_bs: 16
+      valid_bs: 32
+
+      # Learning Rate (same value for both groups - official Effort uses a single flat Adam group)
+      backbone_lr: 2e-4
+      head_lr: 2e-4
+
+      # Weight Decay (same value for both groups - official Effort uses a single flat Adam group)
+      backbone_wd: 5e-4
+      head_wd: 5e-4
+
+      # Early Stopping
+      patience: 3
+      min_delta: 0.001
