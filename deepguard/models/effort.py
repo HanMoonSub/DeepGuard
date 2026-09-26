@@ -116,9 +116,12 @@ class Effort(nn.Module):
         """
         super().__init__()
         clip_vision = CLIPVisionModel.from_pretrained(clip_model_name)
-        clip_vision.vision_model = apply_svd_residual_to_self_attn(
-            clip_vision.vision_model, residual_dim=svd_residual_dim
-        )
+        # Newer `transformers` releases flatten CLIPVisionModel (embeddings/encoder
+        # live directly on it); older releases nest them under `.vision_model`.
+        # apply_svd_residual_to_self_attn mutates the passed-in module in place,
+        # so this works for either layout without needing to reassign it back.
+        vision_backbone = getattr(clip_vision, "vision_model", clip_vision)
+        apply_svd_residual_to_self_attn(vision_backbone, residual_dim=svd_residual_dim)
         self.backbone = clip_vision
         hidden_size = self.backbone.config.hidden_size
         self.head = nn.Linear(hidden_size, num_classes)
