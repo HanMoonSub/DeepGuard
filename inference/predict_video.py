@@ -38,6 +38,8 @@ def main():
     parser.add_argument("--min-face-ratio", default=0.01, type=float, help="Minimum face-to-frame size ratio to process")
     parser.add_argument("--model-name", default='ms_eff_vit_b0', type=str, help="Name of the model architecture")
     parser.add_argument("--model-dataset", default='celeb_df_v2', type=str, help="Dataset used for model pre-training")
+    parser.add_argument("--weight-path", default=None, type=str, help="Local path or URL to a trained checkpoint (required when --model-name=iid, ignored for timm-registered models)")
+    parser.add_argument("--explicit-extractor-path", default=None, type=str, help="Local path to the frozen ArcFace-style IResNet-50 checkpoint (required when --model-name=iid, ignored otherwise)")
 
     # --- Inference Strategy ---
     parser.add_argument("--num-frames", default=20, type=int, help="Number of frames to sample per video")
@@ -74,7 +76,7 @@ def main():
     
     print(f"\n🤖 {s_}{c_}[2/4] 모델 로딩 중...{rs_} ({g_}{args.model_name}{rs_})")
     video_predictor = VideoPredictor(args.margin_ratio, args.conf_thres, args.min_face_ratio,
-                   args.model_name, args.model_dataset)
+                   args.model_name, args.model_dataset, args.weight_path, args.explicit_extractor_path)
     
     print(f"\n🔍 {s_}{c_}[3/4] 비디오 분석 시작{rs_} (프레임: {y_}{args.num_frames}{rs_}, 집계: {y_}{args.agg_mode}{rs_}, TTA: {y_}{args.tta_hflip}{rs_})")
     all_pred = []
