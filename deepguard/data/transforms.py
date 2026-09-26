@@ -11,14 +11,13 @@ def _get_isotropical_resize(img_size: List[int]):
                       border_mode=cv2.BORDER_CONSTANT, fill=0)
     ]
 
-def _get_normalization():
+def _get_normalization(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     return [
-        A.Normalize(mean=(0.485, 0.456, 0.406),
-                    std=(0.229, 0.224, 0.225)),
+        A.Normalize(mean=mean, std=std),
         ToTensorV2(),
     ]
 
-def get_train_transforms(img_size: List[int]):
+def get_train_transforms(img_size: List[int], mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     """
         Create a data augmentation pipeline for model training
     """
@@ -28,20 +27,20 @@ def get_train_transforms(img_size: List[int]):
         A.Affine(translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}, scale=(0.8, 1.2), rotate=(-10, 10), border_mode=cv2.BORDER_CONSTANT, p=0.5),
         A.RandomBrightnessContrast(brightness_limit=0.15, contrast_limit=0.15, p=0.25),
     ]
-    
+
     return A.Compose([
         *transforms,
-        *_get_normalization(),
+        *_get_normalization(mean, std),
     ])
 
-def get_valid_transforms(img_size: List[int]):
+def get_valid_transforms(img_size: List[int], mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     """
         Create a minimal preprocessing pipeline for validation
     """
-    
+
     return A.Compose([
         *_get_isotropical_resize(img_size),
-        *_get_normalization()
+        *_get_normalization(mean, std)
     ])
 
 def get_test_transforms(
