@@ -16,7 +16,7 @@ train:
       # Albumentation
       mixup_alpha: 0.4
       mixup_prob: 0.25
-      cutout_prob: 0.5
+      cutout_prob: 0.0 
 
       # DataLoader
       train_bs: 16
