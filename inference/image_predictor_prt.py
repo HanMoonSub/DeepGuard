@@ -1,6 +1,5 @@
 import os
 import cv2
-import timm
 import torch
 import numpy as np
 from pathlib import Path
@@ -8,24 +7,24 @@ from typing import List
 from preprocess.face_detector import FaceDetector2
 from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
-from .utils import PredictorError
+from .utils import PredictorError, build_model
 
 class ImagePredictor:
     def __init__(
         self,
         margin_ratio: float, 
-        conf_thres: float, 
-        model_name: str, 
-        dataset: str
-    ):  
+        conf_thres: float,
+        model_name: str,
+        dataset: str,
+        weight_path: str = None,
+    ):
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
         self.face_detector = FaceDetector2(conf_thres)
         self.landmark_detector = LandmarkDetector()
         self.margin_ratio = margin_ratio
         self.model_name = model_name
-        self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
-        self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
-        
+        self.model, self.img_size, self.mean, self.std = build_model(model_name, dataset, weight_path)
+
         # Model Inference Mode
         self.model.to(self.device)
         self.model.eval()
@@ -110,7 +109,7 @@ class ImagePredictor:
         try:
             img, face_conf, face_ratio, face_brightness = self._preprocess_img(img_path)
             
-            transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
+            transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip, mean=self.mean, std=self.std)
             img = transforms(image=img)['image']
         
             with torch.no_grad():
