@@ -107,7 +107,16 @@ class Trainer:
 
     def _save_checkpoint(self, ckpt_path, loss, epoch, metrics):
 
-        torch.save(self.model.state_dict(), ckpt_path)
+        # Only the trainable Xception backbone + head params are saved, not
+        # the frozen explicit_extractor (ArcFace) - that's reloaded separately
+        # from explicit_extractor_path whenever IID() is instantiated, so
+        # saving it again here would just bloat the checkpoint for nothing.
+        trainable_state_dict = {
+            name: param.detach().cpu()
+            for name, param in self.model.named_parameters()
+            if param.requires_grad
+        }
+        torch.save(trainable_state_dict, ckpt_path)
 
         artifact = wandb.Artifact(
             name = self.cfg.wandb_artifact_name,
@@ -197,7 +206,7 @@ class Trainer:
                 print(f"{c_}{s_}🛑 Early stopping triggered! Training stopped.{r_}")
                 break
 
-        self.model.load_state_dict(torch.load(ckpt_path, map_location=self.cfg.device))
+        self.model.load_state_dict(torch.load(ckpt_path, map_location=self.cfg.device), strict=False)
         return self.model
 
     def _lr_for(self, component):
