@@ -340,7 +340,7 @@ def main():
 
     # =================== Setting Weighted & Bias ======================
     wandb.login(key=args.wandb_api_key)
-    cfg.wandb_artifact_name = f"{args.model_ver}_{args.dataset}"
+    cfg.wandb_artifact_name = args.model_ver
 
     run = wandb.init(
         project = f"{args.model_ver}_{args.dataset}",
