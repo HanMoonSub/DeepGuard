@@ -1,12 +1,12 @@
 import os
 import cv2
-import timm
 import torch
 import numpy as np
 from pathlib import Path
 from typing import List
 from preprocess.face_detector import FaceDetector
 from deepguard.data import get_test_transforms
+from .utils import build_model
 
 class ImagePredictor:
     def __init__(
@@ -14,15 +14,16 @@ class ImagePredictor:
         margin_ratio: float, 
         conf_thres: float, 
         min_face_ratio: float,
-        model_name: str, 
-        dataset: str
-    ):  
+        model_name: str,
+        dataset: str,
+        weight_path: str = None,
+        explicit_extractor_path: str = None,
+    ):
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
         self.face_detector = FaceDetector(conf_thres, min_face_ratio)
         self.margin_ratio = margin_ratio
         self.model_name = model_name
-        self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
-        self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
+        self.model, self.img_size, self.mean, self.std = build_model(model_name, dataset, weight_path, explicit_extractor_path)
         
         # Model Inference Mode
         self.model.to(self.device)
@@ -93,14 +94,15 @@ class ImagePredictor:
             if img is None:
                 return 0.5
             
-            transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
+            transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip, mean=self.mean, std=self.std)
             img = transforms(image=img)['image']
-        
+
             with torch.no_grad():
                 img = img.unsqueeze(0).to(self.device)
-            
+
                 out = self.model(img)
-                pred = torch.sigmoid(out).item()
+                logit = out['logit'] if isinstance(out, dict) else out
+                pred = torch.sigmoid(logit).item()
             
             return pred
         
