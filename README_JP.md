@@ -591,6 +591,8 @@ Jupyterノートブックは、gitリポジトリのtutorialsフォルダ内に�
 | 6 | [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) | Ameen Caslam による複数のディープラーニングモデル |
 | 7 | [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) | Daisy Zhang がまとめたツール・論文・コードのキュレーションリスト |
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | PyTorch モデルのための高度な視覚的説明ツール |
+| 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | SCLBD による包括的なディープフェイク検出ベンチマーク |
+| 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | YZY-stack による Effort（ICML 2025 Oral）の公式実装 |
 
 ## ⚖️ ライセンス 
 

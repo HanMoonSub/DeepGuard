@@ -599,6 +599,8 @@ The jupyter notebooks themselves can be found under the tutorials folder in the 
 | 6 | [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) | Multiple Deep Learning Models by Ameen Caslam |
 | 7 | [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) | A curated list of tools, papers and code by Daisy Zhang |
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | Advanced Visual Explanations for PyTorch Models |
+| 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | A Comprehensive Benchmark of Deepfake Detection by SCLBD |
+| 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | Official Implementation of Effort (ICML 2025 Oral) by YZY-stack |
 
 ## ⚖️ License 
 

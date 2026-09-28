@@ -591,6 +591,8 @@ result = explainer.display_heatmap_bbox_on_image(
 | 6 | [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) | Ameen Caslam의 다중 딥러닝 모델 |
 | 7 | [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) | Daisy Zhang이 정리한 도구, 논문, 코드 큐레이션 목록 |
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | PyTorch 모델을 위한 고급 시각적 설명 도구 |
+| 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | SCLBD의 포괄적인 딥페이크 탐지 벤치마크 |
+| 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | YZY-stack의 Effort(ICML 2025 Oral) 공식 구현체 |
 
 ## ⚖️ 라이선스 
 
