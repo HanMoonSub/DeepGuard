@@ -425,7 +425,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         <div style={{ marginBottom: '25px' }}>
           <p style={{ color: '#39FF14', fontSize: '14px', marginBottom: '10px', fontWeight: 'bold' }}>버전 선택</p>
           <div style={{ display: 'flex', backgroundColor: '#000', borderRadius: '12px', padding: '5px', border: '1px solid #333' }}>
-            <button onClick={() => setVersionType('v1')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: versionType === 'v1' ? '#222' : 'transparent', color: versionType === 'v1' ? '#39FF14' : '#666', cursor: 'pointer' }}>V1</button>
+            <button onClick={() => { setVersionType('v1'); setDomainType('western'); }} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: versionType === 'v1' ? '#222' : 'transparent', color: versionType === 'v1' ? '#39FF14' : '#666', cursor: 'pointer' }}>V1</button>
             <button
               onClick={() => setVersionType('v2')}
               style={{ position: 'relative', flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: versionType === 'v2' ? '#222' : 'transparent', color: versionType === 'v2' ? '#39FF14' : '#666', cursor: 'pointer' }}
@@ -443,7 +443,12 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <p style={{ color: '#39FF14', fontSize: '14px', marginBottom: '10px', fontWeight: 'bold' }}>대상 도메인</p>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={() => setDomainType('western')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: domainType === 'western' ? '#222' : '#000', color: domainType === 'western' ? '#39FF14' : '#666', cursor: 'pointer' }}>서양인</button>
-            <button onClick={() => setDomainType('asian')} disabled={versionType === 'v1'} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: domainType === 'asian' ? '#222' : '#000', color: domainType === 'asian' ? '#39FF14' : '#666', cursor: versionType === 'v1' ? 'not-allowed' : 'pointer' }}>동양인</button>
+            <button onClick={() => setDomainType('asian')} disabled={versionType === 'v1'} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: domainType === 'asian' ? '#222' : '#000', color: domainType === 'asian' ? '#39FF14' : '#666', cursor: versionType === 'v1' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              동양인
+              {versionType === 'v1' && (
+                <span style={{ fontSize: '9px', color: '#888', background: 'rgba(255,255,255,0.08)', border: '1px solid #333', padding: '1px 6px', borderRadius: '5px', fontWeight: 'bold' }}>준비중</span>
+              )}
+            </button>
           </div>
         </div>
         <p style={{ color: '#39FF14', fontSize: '14px', marginBottom: '14px', fontWeight: 'bold' }}>모델 선택</p>
