@@ -15,11 +15,15 @@ jobs:
   bump-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -61,9 +65,26 @@ jobs:
         with:
           context: .
           file: docker/redis/Dockerfile
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/deepguard-redis:${{ steps.bump.outputs.new_tag }}
             ${{ env.GHCR_NAMESPACE }}/deepguard-redis:${{ steps.bump.outputs.new_tag }}
           push: true
           cache-from: type=gha,scope=redis
           cache-to: type=gha,mode=max,scope=redis
+
+      - name: Update docker-compose.yml image tag
+        run: |
+          sed -i -E "s#(image: ${DOCKERHUB_NAMESPACE}/deepguard-redis:)[0-9]+\.[0-9]+\.[0-9]+#\1${{ steps.bump.outputs.new_tag }}#" docker-compose.yml
+
+      - name: Open PR to bump docker-compose.yml
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "🐳 Bump redis image tag to ${{ steps.bump.outputs.new_tag }} in docker-compose.yml"
+          title: "🐳 Bump redis image tag to ${{ steps.bump.outputs.new_tag }}"
+          body: |
+            Docker Bump & Push - Redis 워크플로우가 새로 push한 이미지 태그를 `docker-compose.yml`에 반영합니다.
+
+            - `${{ env.DOCKERHUB_NAMESPACE }}/deepguard-redis:${{ steps.bump.outputs.new_tag }}`
+          branch: bump/docker-compose-redis
+          delete-branch: true

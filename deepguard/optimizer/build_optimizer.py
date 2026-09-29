@@ -1,37 +1,45 @@
 import torch
 
-def add_to_optim_groups(skip_keywords, 
-                        params_list, 
-                        base_lr, 
-                        base_wd):
-    
+def add_to_optim_groups(skip_keywords,
+                        params_list,
+                        base_lr,
+                        base_wd,
+                        component=None):
+
     """
     Filters parameters into decay and no-decay groups.
-    
+
     Args:
         skip_keywords (set): Keywords for parameters that should not have weight decay.
         params_list (list): List of (name, param) tuples.
         base_lr (float): Learning rate for this specific component.
         base_wd (float): Weight decay rate for this specific component.
+        component (str, optional): Tag identifying which model component these
+            parameters belong to (e.g. "backbone", "l_gcvit"). Stored on each
+            resulting group as 'name'/'kind' so callers can look groups up by
+            component instead of by position — needed since some components
+            (e.g. an ablated branch) may not produce any group at all.
     """
-    
+
     optim_groups = []
     decay = []
     no_decay = []
-    
+
     for name, param in params_list:
         if not param.requires_grad:
             continue
-        
+
         if any(key in name for key in skip_keywords) or name.endswith(".bias"):
             no_decay.append(param)
         else:
             decay.append(param)
-    
+
     if decay:
-        optim_groups.append({'params': decay, 'lr': base_lr, 'weight_decay': base_wd})
+        optim_groups.append({'params': decay, 'lr': base_lr, 'weight_decay': base_wd,
+                              'name': component, 'kind': 'decay'})
     if no_decay:
-        optim_groups.append({'params': no_decay, 'lr': base_lr, 'weight_decay': 0.0})
+        optim_groups.append({'params': no_decay, 'lr': base_lr, 'weight_decay': 0.0,
+                              'name': component, 'kind': 'no_decay'})
 
     return optim_groups
 
@@ -125,36 +133,35 @@ def build_ms_eff_gcvit_optimizer(model, cfg):
             head_params.append((name, param))
             
     all_optim_groups = []
-    
+
     all_optim_groups.extend(
-        add_to_optim_groups(skip_keywords, feat_params, cfg.train.backbone_lr, cfg.train.backbone_wd)
+        add_to_optim_groups(skip_keywords, feat_params, cfg.train.backbone_lr, cfg.train.backbone_wd, component="backbone")
     )
     all_optim_groups.extend(
-        add_to_optim_groups(skip_keywords, l_gcvit_params, cfg.train.l_block_lr, cfg.train.l_block_wd)
+        add_to_optim_groups(skip_keywords, l_gcvit_params, cfg.train.l_block_lr, cfg.train.l_block_wd, component="l_gcvit")
     )
     all_optim_groups.extend(
-        add_to_optim_groups(skip_keywords, h_gcvit_params, cfg.train.h_block_lr, cfg.train.h_block_wd)
+        add_to_optim_groups(skip_keywords, h_gcvit_params, cfg.train.h_block_lr, cfg.train.h_block_wd, component="h_gcvit")
     )
     all_optim_groups.extend(
-        add_to_optim_groups(skip_keywords, head_params, cfg.train.head_lr, cfg.train.head_wd)
+        add_to_optim_groups(skip_keywords, head_params, cfg.train.head_lr, cfg.train.head_wd, component="head")
     )
     print(f"\n{'='*20} 📦 Parameter Groups Summary {'='*20}")
-    names = ["Backbone (Decay)", "Backbone (No-Decay)", 
-             "L-GCViT (Decay)", "L-GCViT (No-Decay)", 
-             "H-GCViT (Decay)", "H-GCViT (No-Decay)",
-             "Head (Decay)", "Head (No-Decay)"]
-    
-    for i, group in enumerate(all_optim_groups):
-        group_name = names[i] if i < len(names) else f"Group {i}"
+    display_names = {"backbone": "Backbone", "l_gcvit": "L-GCViT", "h_gcvit": "H-GCViT", "head": "Head"}
+
+    for group in all_optim_groups:
+        label = display_names.get(group.get('name'), group.get('name'))
+        kind = "Decay" if group.get('kind') == 'decay' else "No-Decay"
+        group_name = f"{label} ({kind})"
         params = group['params']
         num_tensors = len(params)
         total_params = sum(p.numel() for p in params)
         lr = group['lr']
         wd = group.get('weight_decay', 0)
-        
+
         print(f" • {group_name:<20} | Tensors: {num_tensors:<4} | Size: {total_params/1e6:>6.2f}M | LR: {lr:.1e} | WD: {wd}")
-    
+
     print(f"{'='*65}\n")
-    
+
     opt_class = getattr(torch.optim, cfg.train.optimizer)
     return opt_class(all_optim_groups)

@@ -1,6 +1,8 @@
 name: Publish to PyPI
 
 # main에 pyproject.toml이 push되면: README 이미지 경로를 절대 URL로 치환 -> 빌드 -> PyPI에 바로 배포.
+# job에 environment를 지정하면 GitHub이 배포(Deployment)를 자동으로 생성하고
+# 진행 상태(in_progress/success/failure)까지 갱신해준다.
 
 on:
   push:
@@ -15,8 +17,12 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/deepguard/
     permissions:
-      id-token: write   # PyPI Trusted Publishing(OIDC)에 필요 - API 토큰 불필요
+      id-token: write    # PyPI Trusted Publishing(OIDC)에 필요 - API 토큰 불필요
+      deployments: write # GitHub Deployment 생성/상태 업데이트에 필요
     steps:
       - name: Checkout
         uses: actions/checkout@v7

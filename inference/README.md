@@ -168,3 +168,55 @@ To evaluate the generalization and robustness of our deepfake detection model, w
 | **ms_eff_gcvit_b5** | 20 | conf | 0 | **0.7695** | **0.8821** | **0.7635** |
 
 </details>
+
+## 🧩 Branch-Ablation Study
+
+To quantify how much each branch — the **Low-level Branch** and the **High-level Branch** — contributes to MS-EffGCViT's performance, we trained and evaluated 3 variants (`Eff`, `Low-Eff-GCViT`, `High-Eff-GCViT`) in both `b0`/`b5` sizes across all three benchmark datasets.
+
+## 🎬 Celeb DF(V2) Ablation Evaluation
+
+<details>
+<summary><span style="font-size: 1.25em; font-weight: bold;">✅ Test Data Evaluation</span></summary>
+
+| 🤖 Model | 🎯 Accuracy | 📈 AUC | 📉 Log Loss |
+| :--- | :---: | :---: | :---: |
+| EfficientNet B0 | 0.9643 | 0.9754 | 0.0977 |
+| EfficientNet B5 | 0.9768 | 0.9837 | 0.0676 |
+| low_eff_gcvit_b0 | 0.9788 | 0.9837 | 0.0658 |
+| low_eff_gcvit_b5 | 0.9865 | **0.9987** | 0.0150 |
+| high_eff_gcvit_b0 | 0.9807 | 0.9884 | 0.0343 |
+| **high_eff_gcvit_b5** | **0.9942** | 0.9977 | **0.0101** |
+
+</details>
+
+## 🎬 FaceForensics++ Ablation Evaluation
+
+<details>
+<summary><span style="font-size: 1.25em; font-weight: bold;">✅ Test Data Evaluation</span></summary>
+
+| 🤖 Model | 🎯 Accuracy | 📈 AUC | 📉 Log Loss |
+| :--- | :---: | :---: | :---: |
+| EfficientNet B0 | 0.9202 | 0.9497 | 0.1523 |
+| EfficientNet B5 | 0.9660 | 0.9831 | 0.0842 |
+| low_eff_gcvit_b0 | 0.8033 | 0.9257 | 0.4148 |
+| low_eff_gcvit_b5 | 0.8700 | 0.9486 | 0.3365 |
+| high_eff_gcvit_b0 | 0.9783 | 0.9886 | 0.0767 |
+| **high_eff_gcvit_b5** | **0.9808** | **0.9956** | **0.0606** |
+
+</details>
+
+## 🎬 Kodf Ablation Evaluation 
+
+<details>
+<summary><span style="font-size: 1.25em; font-weight: bold;">✅ Test Data Evaluation</span></summary>
+
+| 🤖 Model | 🎯 Accuracy | 📈 AUC | 📉 Log Loss |
+| :--- | :---: | :---: | :---: |
+| EfficientNet B0 | 0.9180 | 0.9520 | 0.2010 |
+| EfficientNet B5 | 0.9601 | 0.9770 | 0.1120 |
+| low_eff_gcvit_b0 | 0.8684 | 0.9481 | 0.2843 |
+| low_eff_gcvit_b5 | 0.8808 | 0.9596 | 0.2381 |
+| high_eff_gcvit_b0 | 0.9462 | 0.9696 | 0.1761 |
+| **high_eff_gcvit_b5** | **0.9745** | **0.9911** | **0.0844** |
+
+</details>

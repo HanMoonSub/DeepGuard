@@ -288,7 +288,7 @@ pip install -r requirements.txt
 | 모델 버전 | Test@Acc | Test@Auc | Test@log_loss | 다운로드 | 학습 레시피 |
 | ------------- | -------- | -------- | ---------- | -------- | ------ |
 | ms_eff_gcvit_b0 | 0.9655 | 0.9792 | 0.1237 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b0_kodf.bin) | [recipe](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
-| ms_eff_gcvit_b5 | 0.9850 | 0.9974 | 0.0492 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ms_eff_gcvit_b5 | 0.9792 | 0.9831 | 0.0692 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 ## 💻 모델 사용법
 
@@ -326,6 +326,11 @@ model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
 모든 체크포인트는 [Hugging Face Hub의 `KoreaPeter`](https://huggingface.co/KoreaPeter) 계정에도 `transformers` 호환 리포(설정 + 커스텀 모델링 코드 + `safetensors` 가중치)로 미러링되어 있습니다 — `deepguard` 설치 없이 `trust_remote_code=True` 옵션의 `transformers` `pipeline` API로 바로 사용할 수 있습니다.
 
 > 💛 체크포인트가 유용하셨다면 모델 카드에 ❤️ 좋아요를 남겨주세요 — 큰 힘이 됩니다!
+
+| Model | Celeb-DF-v2 | FaceForensics++ | KoDF |
+| ----- | :---------: | :--------------: | :---: |
+| ⚡ ms_eff_gcvit_b0 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf) |
+| 🔥 ms_eff_gcvit_b5 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-kodf) |
 
 ```python
 from transformers import pipeline
@@ -586,6 +591,8 @@ result = explainer.display_heatmap_bbox_on_image(
 | 6 | [`deepfake-detection-project-v4`](https://github.com/ameencaslam/deepfake-detection-project-v4) | Ameen Caslam의 다중 딥러닝 모델 |
 | 7 | [`Awesome-Deepfake-Detection`](https://github.com/Daisy-Zhang/Awesome-Deepfakes-Detection) | Daisy Zhang이 정리한 도구, 논문, 코드 큐레이션 목록 |
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | PyTorch 모델을 위한 고급 시각적 설명 도구 |
+| 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | SCLBD의 포괄적인 딥페이크 탐지 벤치마크 |
+| 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | YZY-stack의 Effort(ICML 2025 Oral) 공식 구현체 |
 
 ## ⚖️ 라이선스 
 

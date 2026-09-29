@@ -18,13 +18,15 @@ This model is a **frame-level** and **spatial-domain** architecture, designed to
 <img src="../docs/benchmarks/celeb_df_v2_gcvit.png" width="900">
 
 ## 💥 News 💥
-
-- [**02.28.2026**] 🔥🔥🔥 We have released **KoDF** fine-tuned **MS-Eff-GCViT B5** model weightes for **384X384**
-- [**02.28.2026**] 🔥🔥🔥 We have released **KoDF** fine-tuned **MS-Eff-GCViT B0** model weightes for **224X224**
-- [**02.03.2026**] 🔥🔥 We have released **FaceForensics++** fine-tuned **MS-Eff-GCViT B5** model weightes for **384X384**
-- [**02.03.2026**] 🔥🔥 We have released **Celeb DF(V2)** fine-tuned **MS-Eff-GCViT B5** model weightes for **384X384**
-- [**02.03.2026**] 🔥 We have released **FaceForensics++** fine-tuned **MS-Eff-GCViT B0** model weightes for **224X224**
-- [**02.03.2026**] 🔥 We have released **Celeb DF(V2)** fine-tuned **MS-Eff-GCViT B0** model weightes for **224X224**
+- [**09.05.2026**] 🔥 Released **HIGH-Eff-GCVIT-B5** (384X384) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
+- [**09.05.2026**] 🔥 Released **HIGH-Eff-GCVIT-B0** (224X224) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
+- [**09.04.2026**] 🔥 Released **LOW-Eff-GCVIT-B5** (384X384) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
+- [**09.04.2026**] 🔥 Released **LOW-Eff-GCVIT-B0** (224X224) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
+- [**09.03.2026**] 🔥 Released **Eff-B5** (384X384) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
+- [**09.03.2026**] 🔥 Released **Eff-B0** (224X224) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
+- [**02.28.2026**] 🔥🔥🔥 Released **MS-Eff-GCViT-B5** (384X384) and **MS-Eff-GCViT-B0** (224X224) weights for **KoDF**
+- [**02.03.2026**] 🔥🔥 Released **MS-Eff-GCViT-B5** (384X384) weights for **Celeb DF(V2)**, **FaceForensics++**
+- [**02.03.2026**] 🔥 Released **MS-Eff-GCViT-B0** (224X224) weights for **Celeb DF(V2)**, **FaceForensics++**
 
 ## Model Performance
 
