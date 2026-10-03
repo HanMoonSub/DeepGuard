@@ -1,0 +1,35 @@
+dataset: "Celeb_DF(V2)"
+
+# Hyperparameters follow the original CORE repo (niyunsheng/CORE, src/main.py)
+model:
+      num_classes: 2 # 2-class head + CrossEntropy, as in the original
+      img_size: [299,299]
+
+train:
+      epochs: 30
+      use_amp: False # Mixed Precision Training (original default: off)
+      n_accumulate: 1 # Gradient Accumulation steps
+      optimizer: "Adam"
+      scheduler: null # original has no LR scheduler
+
+      # CORE
+      # original CelebDF command: --aug-name RE --consistency-rate 1.0
+      aug_name: "RE"
+      consistency_rate: 1.0
+      real_weight: 1.0 # CE weight for REAL (original 4.0); 1.0 since 1:1 class balancing is used
+
+      # DataLoader
+      train_bs: 32 # per view -> 64 images per forward
+      valid_bs: 32
+
+      # Learning Rate
+      backbone_lr: 2e-4
+      head_lr: 2e-4
+
+      # Weight Decay
+      backbone_wd: 0.0
+      head_wd: 0.0
+
+      # Early Stopping
+      patience: 3
+      min_delta: 0.001

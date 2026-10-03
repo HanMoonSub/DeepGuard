@@ -105,6 +105,59 @@ def build_ms_eff_vit_optimizer(model, cfg):
     opt_class = getattr(torch.optim, cfg.train.optimizer)
     return opt_class(all_optim_groups)
 
+def build_core_optimizer(model, cfg):
+    """
+    Constructs an optimizer for CORE with backbone/head parameter groups.
+
+    This builder segments the CORE parameters into two main components:
+    1. Backbone (trainable Xception)
+    2. Head (2-class linear classifier)
+
+    The original CORE uses a single Adam over model.parameters() without weight
+    decay, so no extra no-weight-decay keywords are applied here.
+    """
+
+    skip_keywords = set()
+
+    backbone_params = []
+    head_params = []
+
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue
+        if "backbone" in name:
+            backbone_params.append((name, param))
+        elif "head" in name:
+            head_params.append((name, param))
+
+    all_optim_groups = []
+
+    all_optim_groups.extend(
+        add_to_optim_groups(skip_keywords, backbone_params, cfg.train.backbone_lr, cfg.train.backbone_wd, component="backbone")
+    )
+    all_optim_groups.extend(
+        add_to_optim_groups(skip_keywords, head_params, cfg.train.head_lr, cfg.train.head_wd, component="head")
+    )
+    print(f"\n{'='*20} 📦 Parameter Groups Summary {'='*20}")
+    display_names = {"backbone": "Backbone (Xception)", "head": "Head"}
+
+    for group in all_optim_groups:
+        label = display_names.get(group.get('name'), group.get('name'))
+        kind = "Decay" if group.get('kind') == 'decay' else "No-Decay"
+        group_name = f"{label} ({kind})"
+        params = group['params']
+        num_tensors = len(params)
+        total_params = sum(p.numel() for p in params)
+        lr = group['lr']
+        wd = group.get('weight_decay', 0)
+
+        print(f" • {group_name:<26} | Tensors: {num_tensors:<4} | Size: {total_params/1e6:>6.2f}M | LR: {lr:.1e} | WD: {wd}")
+
+    print(f"{'='*65}\n")
+
+    opt_class = getattr(torch.optim, cfg.train.optimizer)
+    return opt_class(all_optim_groups)
+
 def build_ms_eff_gcvit_optimizer(model, cfg):
     """
     Constructs an optimizer with differential learning rates and weight decay exclusion.

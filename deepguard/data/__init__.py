@@ -7,5 +7,6 @@ from .transforms import (
     get_valid_transforms,
     get_test_transforms,
 )
+from .core_transforms import get_core_train_transforms
 from .handle_imbalance import class_imbalance_handle
 from .split_data import split_data
