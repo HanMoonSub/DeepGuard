@@ -173,7 +173,20 @@ To evaluate the generalization and robustness of our deepfake detection model, w
 
 To quantify how much each branch — the **Low-level Branch** and the **High-level Branch** — contributes to MS-EffGCViT's performance, we trained and evaluated 3 variants (`Eff`, `Low-Eff-GCViT`, `High-Eff-GCViT`) in both `b0`/`b5` sizes across all three benchmark datasets.
 
+| 🤖 Model | 🖼️ Input Size | 🧮 Parameters | ⚡ FLOPs |
+| :--- | :---: | :---: | :---: |
+| EfficientNet B0 | 224 × 224 | 3.65M | 0.76G |
+| EfficientNet B5 | 384 × 384 | 27.42M | 13.79G |
+| low_eff_gcvit_b0 | 224 × 224 | 5.30M | 0.79G |
+| low_eff_gcvit_b5 | 384 × 384 | 33.92M | 10.70G |
+| high_eff_gcvit_b0 | 224 × 224 | 6.94M | 1.08G |
+| high_eff_gcvit_b5 | 384 × 384 | 43.51M | 18.59G |
+
 ## 🎬 Celeb DF(V2) Ablation Evaluation
+
+<p align="center">
+  <img src="../docs/ablation/ablation_celeb_df_v2.webp" alt="Celeb-DF(V2) Branch-Ablation Pareto plots" width="100%">
+</p>
 
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">✅ Test Data Evaluation</span></summary>
@@ -191,6 +204,10 @@ To quantify how much each branch — the **Low-level Branch** and the **High-lev
 
 ## 🎬 FaceForensics++ Ablation Evaluation
 
+<p align="center">
+  <img src="../docs/ablation/ablation_ff++.webp" alt="FaceForensics++ Branch-Ablation Pareto plots" width="100%">
+</p>
+
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">✅ Test Data Evaluation</span></summary>
 
@@ -206,6 +223,10 @@ To quantify how much each branch — the **Low-level Branch** and the **High-lev
 </details>
 
 ## 🎬 Kodf Ablation Evaluation 
+
+<p align="center">
+  <img src="../docs/ablation/ablation_kodf.webp" alt="KoDF Branch-Ablation Pareto plots" width="100%">
+</p>
 
 <details>
 <summary><span style="font-size: 1.25em; font-weight: bold;">✅ Test Data Evaluation</span></summary>
