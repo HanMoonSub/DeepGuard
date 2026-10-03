@@ -1,16 +1,16 @@
 dataset: "KoDF"
 
-# Hyperparameters follow the original CORE repo (niyunsheng/CORE, src/main.py)
+# CORE-specific settings (aug, consistency rate, 2-class CE, lr) follow the original repo (niyunsheng/CORE)
 model:
       num_classes: 2 # 2-class head + CrossEntropy, as in the original
       img_size: [299,299]
 
 train:
-      epochs: 30
-      use_amp: False # Mixed Precision Training (original default: off)
+      epochs: 10
+      use_amp: True # Mixed Precision Training
       n_accumulate: 1 # Gradient Accumulation steps
-      optimizer: "Adam"
-      scheduler: null # original has no LR scheduler
+      optimizer: "AdamW"
+      scheduler: "CosineAnnealingLR"
 
       # CORE
       # KoDF is not in the original paper -> in-dataset (CelebDF) setting
@@ -27,8 +27,8 @@ train:
       head_lr: 2e-4
 
       # Weight Decay
-      backbone_wd: 0.0
-      head_wd: 0.0
+      backbone_wd: 5e-4
+      head_wd: 5e-4
 
       # Early Stopping
       patience: 3
