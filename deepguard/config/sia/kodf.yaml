@@ -1,0 +1,33 @@
+dataset: "KoDF"
+
+# Architecture / resolution / normalization follow DeepfakeBench's sia.yaml
+model:
+      num_classes: 2 # 2-class head + CrossEntropy, as in DeepfakeBench
+      img_size: [256,256] # SIA's cross-stage pooling (32/16) assumes 256 input
+
+train:
+      epochs: 10
+      use_amp: True # Mixed Precision Training
+      n_accumulate: 1 # Gradient Accumulation steps
+      optimizer: "AdamW"
+      scheduler: "CosineAnnealingLR"
+
+      real_weight: 1.0 # CE weight for REAL; 1.0 since 1:1 class balancing is used
+
+      # DataLoader
+      train_bs: 32
+      valid_bs: 32
+
+      # Learning Rate
+      backbone_lr: 2e-4
+      attn_lr: 2e-4
+      head_lr: 2e-4
+
+      # Weight Decay
+      backbone_wd: 5e-4
+      attn_wd: 5e-4
+      head_wd: 5e-4
+
+      # Early Stopping
+      patience: 3
+      min_delta: 0.001
