@@ -593,6 +593,9 @@ result = explainer.display_heatmap_bbox_on_image(
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | PyTorch 모델을 위한 고급 시각적 설명 도구 |
 | 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | SCLBD의 포괄적인 딥페이크 탐지 벤치마크 |
 | 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | YZY-stack의 Effort(ICML 2025 Oral) 공식 구현체 |
+| 11 | [`SIA`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/sia_detector.py) | An Information Theoretic Approach for Attention-Driven Face Forgery Detection(ECCV 2022), DeepfakeBench 내 구현 |
+| 12 | [`CORE`](https://github.com/niyunsheng/CORE) | niyunsheng의 CORE: COnsistent REpresentation Learning for Face Forgery Detection(CVPRW 2022) 공식 구현체 |
+| 13 | [`IID`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/iid_detector.py) | Implicit Identity Driven Deepfake Face Swapping Detection(CVPR 2023), DeepfakeBench 내 구현 |
 
 ## ⚖️ 라이선스 
 

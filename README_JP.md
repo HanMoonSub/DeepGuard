@@ -593,6 +593,9 @@ Jupyterノートブックは、gitリポジトリのtutorialsフォルダ内に�
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | PyTorch モデルのための高度な視覚的説明ツール |
 | 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | SCLBD による包括的なディープフェイク検出ベンチマーク |
 | 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | YZY-stack による Effort（ICML 2025 Oral）の公式実装 |
+| 11 | [`SIA`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/sia_detector.py) | An Information Theoretic Approach for Attention-Driven Face Forgery Detection（ECCV 2022）、DeepfakeBench 内の実装 |
+| 12 | [`CORE`](https://github.com/niyunsheng/CORE) | niyunsheng による CORE: COnsistent REpresentation Learning for Face Forgery Detection（CVPRW 2022）の公式実装 |
+| 13 | [`IID`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/iid_detector.py) | Implicit Identity Driven Deepfake Face Swapping Detection（CVPR 2023）、DeepfakeBench 内の実装 |
 
 ## ⚖️ ライセンス 
 

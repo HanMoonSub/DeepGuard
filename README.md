@@ -601,6 +601,9 @@ The jupyter notebooks themselves can be found under the tutorials folder in the 
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | Advanced Visual Explanations for PyTorch Models |
 | 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | A Comprehensive Benchmark of Deepfake Detection by SCLBD |
 | 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | Official Implementation of Effort (ICML 2025 Oral) by YZY-stack |
+| 11 | [`SIA`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/sia_detector.py) | An Information Theoretic Approach for Attention-Driven Face Forgery Detection (ECCV 2022), implemented in DeepfakeBench |
+| 12 | [`CORE`](https://github.com/niyunsheng/CORE) | Official Implementation of CORE: COnsistent REpresentation Learning for Face Forgery Detection (CVPRW 2022) by niyunsheng |
+| 13 | [`IID`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/iid_detector.py) | Implicit Identity Driven Deepfake Face Swapping Detection (CVPR 2023), implemented in DeepfakeBench |
 
 ## ⚖️ License 
 
