@@ -109,10 +109,10 @@ Modern DeepFakes can leave very localized forgery region. To Capture this, we ad
 
 ## 📊 Model Zoo
 
-| Model | Resolution | # Total Params(M) | # Backbone(M) | # L-ViT(M) | # H-ViT(M)  | FLOPs (G) | Model Config |
-| ----- | ---------- | -------------- | ----------- |------------- | ------------- | --------------  | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 3.6(41.4%) | 1.7(19.5%) | 3.3(37.9%) | 0.87 |  [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
-| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 27.3(54.3%) | 6.6(13.1%) | 16.1(32.0%) | 13.64 | [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| Model | Resolution | # Params(M) | # FLOPS(G) | Model Config |
+| ----- | ---------- | -------------- | ----------- | ------- | 
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 | [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.34 | 13.43 | [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 
 ## 🛠 Model Variants
@@ -143,24 +143,42 @@ The model incorporates a hybrid initialization strategy to leverage pre-trained 
 
 **Celeb DF(v2) Pretrained Models**
 
-| Model Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
-| ------------- | -------- | -------- | ---------- | -------- | ----- |
-| ms_eff_gcvit_b0 | 0.9842 | 0.9965 | 0.0283 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b0_celeb_df_v2.bin) | [recipe](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
-| ms_eff_gcvit_b5 | 0.9981 | 0.9984 | 0.0089 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b5_celeb_df_v2.bin) | [recipe](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| Model Variant | Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
+| ------------- | -------- | -------- | -------- | ---------- | -------- | ----- |
+| eff_b0 | ![](https://img.shields.io/badge/No_Branch-lightgrey?style=flat-square) | 0.9643 | 0.9754 | 0.0977 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/eff_b0_celeb_df_v2.bin) | [recipe](./config/eff_b0/celeb_df_v2.yaml) |
+| eff_b5 | ![](https://img.shields.io/badge/No_Branch-lightgrey?style=flat-square) | 0.9768 | 0.9837 | 0.0676 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/eff_b5_celeb_df_v2.bin) | [recipe](./config/eff_b5/celeb_df_v2.yaml) |
+| low_eff_gcvit_b0 | ![](https://img.shields.io/badge/Low_Branch-blue?style=flat-square) | 0.9788 | 0.9837 | 0.0658 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/low_eff_gcvit_b0_celeb_df_v2.bin) | [recipe](./config/low_eff_gcvit_b0/celeb_df_v2.yaml) |
+| low_eff_gcvit_b5 | ![](https://img.shields.io/badge/Low_Branch-blue?style=flat-square) | 0.9865 | 0.9987 | 0.0150 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/low_eff_gcvit_b5_celeb_df_v2.bin) | [recipe](./config/low_eff_gcvit_b5/celeb_df_v2.yaml) |
+| high_eff_gcvit_b0 | ![](https://img.shields.io/badge/High_Branch-red?style=flat-square) | 0.9807 | 0.9884 | 0.0343 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/high_eff_gcvit_b0_celeb_df_v2.bin) | [recipe](./config/high_eff_gcvit_b0/celeb_df_v2.yaml) |
+| high_eff_gcvit_b5 | ![](https://img.shields.io/badge/High_Branch-red?style=flat-square) | 0.9942 | 0.9977 | 0.0101 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/high_eff_gcvit_b5_celeb_df_v2.bin) | [recipe](./config/high_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ms_eff_gcvit_b0 | ![](https://img.shields.io/badge/%E2%AD%90_Dual_Branch-brightgreen?style=flat-square) | 0.9842 | 0.9965 | 0.0283 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b0_celeb_df_v2.bin) | [recipe](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
+| ms_eff_gcvit_b5 | ![](https://img.shields.io/badge/%E2%AD%90_Dual_Branch-brightgreen?style=flat-square) | 0.9981 | 0.9984 | 0.0089 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b5_celeb_df_v2.bin) | [recipe](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 **FaceForensics++ Pretrained Models**
 
-| Model Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
-| ------------- | -------- | -------- | ---------- | -------- | ------ |
-| ms_eff_gcvit_b0 | 0.9808 | 0.9969 | 0.0637| [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b0_ff++.bin) | [recipe](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
-| ms_eff_gcvit_b5 | 0.9850 | 0.9974 | 0.0492 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b5_ff++.bin) | [recipe](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| Model Variant | Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
+| ------------- | -------- | -------- | -------- | ---------- | -------- | ------ |
+| eff_b0 | ![](https://img.shields.io/badge/No_Branch-lightgrey?style=flat-square) | 0.9202 | 0.9497 | 0.1523 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/eff_b0_ff++.bin) | [recipe](./config/eff_b0/ff++.yaml) |
+| eff_b5 | ![](https://img.shields.io/badge/No_Branch-lightgrey?style=flat-square) | 0.9660 | 0.9831 | 0.0842 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/eff_b5_ff++.bin) | [recipe](./config/eff_b5/ff++.yaml) |
+| low_eff_gcvit_b0 | ![](https://img.shields.io/badge/Low_Branch-blue?style=flat-square) | 0.8033 | 0.9257 | 0.4148 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/low_eff_gcvit_b0_ff++.bin) | [recipe](./config/low_eff_gcvit_b0/ff++.yaml) |
+| low_eff_gcvit_b5 | ![](https://img.shields.io/badge/Low_Branch-blue?style=flat-square) | 0.8700 | 0.9486 | 0.3365 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/low_eff_gcvit_b5_ff++.bin) | [recipe](./config/low_eff_gcvit_b5/ff++.yaml) |
+| high_eff_gcvit_b0 | ![](https://img.shields.io/badge/High_Branch-red?style=flat-square) | 0.9783 | 0.9886 | 0.0767 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/high_eff_gcvit_b0_ff++.bin) | [recipe](./config/high_eff_gcvit_b0/ff++.yaml) |
+| high_eff_gcvit_b5 | ![](https://img.shields.io/badge/High_Branch-red?style=flat-square) | 0.9808 | 0.9956 | 0.0606 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/high_eff_gcvit_b5_ff++.bin) | [recipe](./config/high_eff_gcvit_b5/ff++.yaml) |
+| ms_eff_gcvit_b0 | ![](https://img.shields.io/badge/%E2%AD%90_Dual_Branch-brightgreen?style=flat-square) | 0.9808 | 0.9969 | 0.0637| [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b0_ff++.bin) | [recipe](./config/ms_eff_gcvit_b0/ff++.yaml) |
+| ms_eff_gcvit_b5 | ![](https://img.shields.io/badge/%E2%AD%90_Dual_Branch-brightgreen?style=flat-square) | 0.9850 | 0.9974 | 0.0492 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b5_ff++.bin) | [recipe](./config/ms_eff_gcvit_b5/ff++.yaml) |
 
 **KoDF Pretrained Models**
 
-| Model Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
-| ------------- | -------- | -------- | ---------- | -------- | ------ |
-| ms_eff_gcvit_b0 | 0.9655 | 0.9792 | 0.1237 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b0_kodf.bin) | [recipe](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
-| ms_eff_gcvit_b5 | 0.9850 | 0.9974 | 0.0492 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| Model Variant | Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
+| ------------- | -------- | -------- | -------- | ---------- | -------- | ------ |
+| eff_b0 | ![](https://img.shields.io/badge/No_Branch-lightgrey?style=flat-square) | 0.9180 | 0.9520 | 0.2010 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/eff_b0_kodf.bin) | [recipe](./config/eff_b0/kodf.yaml) |
+| eff_b5 | ![](https://img.shields.io/badge/No_Branch-lightgrey?style=flat-square) | 0.9601 | 0.9770 | 0.1120 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/eff_b5_kodf.bin) | [recipe](./config/eff_b5/kodf.yaml) |
+| low_eff_gcvit_b0 | ![](https://img.shields.io/badge/Low_Branch-blue?style=flat-square) | 0.8684 | 0.9481 | 0.2843 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/low_eff_gcvit_b0_kodf.bin) | [recipe](./config/low_eff_gcvit_b0/kodf.yaml) |
+| low_eff_gcvit_b5 | ![](https://img.shields.io/badge/Low_Branch-blue?style=flat-square) | 0.8808 | 0.9596 | 0.2381 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/low_eff_gcvit_b5_kodf.bin) | [recipe](./config/low_eff_gcvit_b5/kodf.yaml) |
+| high_eff_gcvit_b0 | ![](https://img.shields.io/badge/High_Branch-red?style=flat-square) | 0.9462 | 0.9696 | 0.1761 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/high_eff_gcvit_b0_kodf.bin) | [recipe](./config/high_eff_gcvit_b0/kodf.yaml) |
+| high_eff_gcvit_b5 | ![](https://img.shields.io/badge/High_Branch-red?style=flat-square) | 0.9745 | 0.9911 | 0.0844 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v1.1.0/high_eff_gcvit_b5_kodf.bin) | [recipe](./config/high_eff_gcvit_b5/kodf.yaml) |
+| ms_eff_gcvit_b0 | ![](https://img.shields.io/badge/%E2%AD%90_Dual_Branch-brightgreen?style=flat-square) | 0.9655 | 0.9792 | 0.1237 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b0_kodf.bin) | [recipe](./config/ms_eff_gcvit_b0/kodf.yaml) |
+| ms_eff_gcvit_b5 | ![](https://img.shields.io/badge/%E2%AD%90_Dual_Branch-brightgreen?style=flat-square) | 0.9792 | 0.9831 | 0.0692 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](./config/ms_eff_gcvit_b5/kodf.yaml) |
 
 ## Usage
 
