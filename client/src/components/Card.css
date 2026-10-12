@@ -1,0 +1,56 @@
+.dg-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 34px 30px;
+  text-align: left;
+  transition: 0.25s;
+}
+.dg-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-primary-border);
+}
+
+.dg-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+
+.dg-card__title {
+  margin: 0 0 8px;
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.dg-card__body {
+  color: var(--color-muted);
+  font-size: 15.5px;
+}
+.dg-card__body p {
+  margin: 0;
+}
+
+.dg-card__action {
+  margin-top: 18px;
+}
+.dg-card__action a,
+.dg-card__action button {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+  cursor: pointer;
+}

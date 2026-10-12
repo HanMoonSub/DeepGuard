@@ -1,0 +1,47 @@
+/* DeepGuard 디자인 토큰 (기준: client/design/index.html) */
+:root {
+  /* color */
+  --color-primary: #206cfd;
+  --color-primary-hover: #1758d6;
+  --color-primary-soft: #e9f0ff;
+  --color-primary-border: #c9d9ff;
+  --color-primary-deep: #0e3fb0;
+  --color-ink: #0b1220;
+  --color-muted: #5b6577;
+  --color-line: #e6eaf2;
+  --color-bg: #ffffff;
+  --color-bg-alt: #f6f8fc;
+  --color-bg-dark: #050912;
+  --color-bg-dark-2: #0a1430;
+  --color-on-dark: #ffffff;
+  --color-on-dark-muted: #b7c2dc;
+  --color-on-dark-subtle: #8b97b3;
+  --color-accent-light: #9db8ff;
+  --color-accent: #5b95ff;
+  --color-danger: #ff4d4d;
+
+  /* typography */
+  --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, 'Segoe UI', 'Noto Sans KR', sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+  --fs-h1: 56px;
+  --fs-h2: 38px;
+  --fs-h3: 21px;
+  --fs-lead: 19px;
+  --fs-sub: 18px;
+  --fs-body: 16px;
+  --fs-sm: 14px;
+
+  /* shape */
+  --radius-btn: 10px;
+  --radius-card: 18px;
+  --radius-lg: 24px;
+  --radius-pill: 99px;
+  --shadow-card-hover: 0 18px 40px #206cfd1a;
+  --shadow-lg: 0 30px 80px #0008;
+
+  /* layout */
+  --container: 1160px;
+  --gutter: 24px;
+  --section-py: 96px;
+  --nav-h: 72px;
+}

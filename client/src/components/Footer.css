@@ -1,0 +1,17 @@
+.dg-footer {
+  background: var(--color-bg-dark);
+  color: var(--color-on-dark-subtle);
+  padding: 56px 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+
+.dg-footer__inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}

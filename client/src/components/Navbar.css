@@ -1,0 +1,131 @@
+.dg-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  font-family: var(--font-sans);
+  transition: background 0.25s, border-color 0.25s;
+  border-bottom: 1px solid transparent;
+}
+
+.dg-nav__inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
+
+/* dark: 히어로 위에서는 투명, 스크롤하면 배경 */
+.dg-nav--dark {
+  color: var(--color-on-dark);
+  background: transparent;
+}
+.dg-nav--dark.is-scrolled {
+  background: rgba(5, 9, 18, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* light: 항상 흰 배경 */
+.dg-nav--light {
+  color: var(--color-ink);
+  background: var(--color-bg);
+  border-bottom-color: var(--color-line);
+}
+
+.dg-nav__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  color: inherit;
+  text-decoration: none;
+}
+.dg-nav__logo i {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--color-primary);
+  box-shadow: 0 0 18px var(--color-primary);
+}
+
+.dg-nav__menu {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 26px;
+  font-size: 15px;
+  /* 폭이 모자라면 메뉴만 가로 스크롤 → 로그인/로그아웃 버튼이 화면 밖으로 밀리지 않음 */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dg-nav__menu::-webkit-scrollbar {
+  display: none;
+}
+.dg-nav__link {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+.dg-nav__link:hover {
+  opacity: 1;
+  color: var(--color-accent);
+}
+
+.dg-nav__logo,
+.dg-nav__actions {
+  flex-shrink: 0;
+}
+.dg-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dg-nav__user {
+  font-size: 15px;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .dg-nav__inner {
+    gap: 20px;
+  }
+  .dg-nav__menu {
+    gap: 16px;
+  }
+  .dg-nav__anchor {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .dg-nav__inner {
+    gap: 12px;
+    padding: 0 16px;
+  }
+  .dg-nav__logo {
+    font-size: 18px;
+  }
+  .dg-nav__menu {
+    gap: 12px;
+    font-size: 14px;
+  }
+  .dg-nav__user,
+  .dg-nav__cta {
+    display: none;
+  }
+  .dg-nav__actions .dg-btn {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+}

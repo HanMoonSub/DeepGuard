@@ -1,0 +1,326 @@
+/* 메인(랜딩) 페이지 전용 스타일 — 다른 페이지에 새지 않도록 .dg-landing 하위로 한정 */
+.dg-landing {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-bg);
+  line-height: 1.6;
+}
+.dg-landing *,
+.dg-landing *::before,
+.dg-landing *::after {
+  box-sizing: border-box;
+}
+/* :where()로 specificity 0 → 컴포넌트/섹션 스타일이 항상 우선 */
+:where(.dg-landing) :where(h1, h2, h3, p, ul) {
+  margin: 0;
+  padding: 0;
+}
+
+.dg-wrap {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* hero */
+.dg-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 170px 0 110px;
+  color: var(--color-on-dark);
+  background:
+    radial-gradient(900px 500px at 78% 40%, #1a3f9c55, transparent),
+    linear-gradient(180deg, var(--color-bg-dark), var(--color-bg-dark-2));
+}
+.dg-hero__grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 48px;
+  align-items: center;
+}
+.dg-pill {
+  display: inline-block;
+  font-size: 13px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-pill);
+  color: var(--color-accent-light);
+  margin-bottom: 22px;
+}
+.dg-landing h1 {
+  font-size: var(--fs-h1);
+  line-height: 1.15;
+  letter-spacing: -1.5px;
+  font-weight: 800;
+}
+.dg-landing h1 em {
+  font-style: normal;
+  color: var(--color-accent);
+}
+.dg-hero__lead {
+  margin: 22px 0 34px;
+  max-width: 520px;
+  font-size: var(--fs-lead);
+  color: var(--color-on-dark-muted);
+}
+.dg-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* face scan visual */
+.dg-scan {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 440px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, #16244d, #0b1330);
+  border: 1px solid #ffffff22;
+  box-shadow: var(--shadow-lg);
+  color: var(--color-on-dark);
+}
+.dg-scan--hero {
+  margin-left: auto;
+}
+.dg-scan--xai {
+  margin: 0 auto;
+  max-width: 400px;
+}
+.dg-scan__tag {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  font-size: 12px;
+  color: var(--color-accent-light);
+  background: #ffffff14;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.dg-scan__face {
+  position: absolute;
+  left: 24%;
+  top: 16%;
+  width: 52%;
+  height: 62%;
+  border-radius: 46% 46% 42% 42%;
+  background: radial-gradient(circle at 50% 40%, #d9b8a0, #a9836c 70%);
+  opacity: 0.85;
+}
+.dg-scan__heat {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(18px);
+}
+.dg-scan__heat--1 {
+  left: 30%;
+  top: 36%;
+  width: 22%;
+  height: 16%;
+  background: #ff3d3dcc;
+}
+.dg-scan__heat--2 {
+  left: 46%;
+  top: 56%;
+  width: 20%;
+  height: 12%;
+  background: #ffb020aa;
+}
+.dg-scan__box {
+  position: absolute;
+  left: 27%;
+  top: 30%;
+  width: 40%;
+  height: 40%;
+  border: 2px solid var(--color-danger);
+  border-radius: 6px;
+}
+.dg-scan__box b {
+  position: absolute;
+  top: -24px;
+  left: -2px;
+  background: var(--color-danger);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.dg-scan__result {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: #0b1220ee;
+  border: 1px solid #ffffff22;
+  border-radius: 14px;
+  font-size: var(--fs-sm);
+}
+.dg-scan__result strong {
+  font-size: 24px;
+  color: #ff6b6b;
+}
+
+/* sections */
+.dg-section {
+  padding: var(--section-py) 0;
+  scroll-margin-top: var(--nav-h);
+}
+.dg-section--alt {
+  background: var(--color-bg-alt);
+}
+.dg-landing h2 {
+  font-size: var(--fs-h2);
+  letter-spacing: -1px;
+  line-height: 1.25;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+.dg-sub {
+  max-width: 640px;
+  font-size: var(--fs-sub);
+  color: var(--color-muted);
+}
+.dg-center {
+  text-align: center;
+}
+.dg-center .dg-sub {
+  margin: 0 auto;
+}
+.dg-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 52px;
+}
+
+/* stats */
+.dg-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+  text-align: center;
+}
+.dg-stats b {
+  display: block;
+  font-size: 44px;
+  letter-spacing: -1px;
+  color: var(--color-primary);
+}
+.dg-stats span {
+  font-size: 15px;
+  color: var(--color-muted);
+}
+
+/* two-column rows */
+.dg-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+.dg-list {
+  list-style: none;
+  margin-top: 24px;
+}
+.dg-list li {
+  position: relative;
+  padding: 12px 0 12px 30px;
+  border-bottom: 1px solid var(--color-line);
+  font-size: var(--fs-body);
+}
+.dg-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: 800;
+}
+.dg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.dg-chips--center {
+  justify-content: center;
+  margin-top: 36px;
+}
+.dg-chips span {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.dg-api__github {
+  margin-top: 28px;
+}
+.dg-code {
+  margin: 0;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 26px 28px;
+  border-radius: 16px;
+  background: var(--color-ink);
+  color: #d5def5;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.75;
+}
+.dg-code .k {
+  color: #7fb0ff;
+}
+.dg-code .s {
+  color: #9be29b;
+}
+.dg-code .c {
+  color: #6b7896;
+}
+
+/* cta band */
+.dg-band {
+  padding: 84px 0;
+  text-align: center;
+  color: var(--color-on-dark);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-deep));
+}
+.dg-band__sub {
+  color: #dbe6ff;
+  margin: 0 auto 30px;
+}
+
+@media (max-width: 900px) {
+  .dg-hero__grid,
+  .dg-row {
+    grid-template-columns: 1fr;
+  }
+  .dg-grid3,
+  .dg-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dg-landing h1 {
+    font-size: 40px;
+  }
+  .dg-scan--hero {
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .dg-grid3,
+  .dg-stats {
+    grid-template-columns: 1fr;
+  }
+  .dg-hero {
+    padding: 130px 0 80px;
+  }
+  .dg-landing h2 {
+    font-size: 30px;
+  }
+}

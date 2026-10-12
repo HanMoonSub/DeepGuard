@@ -1,103 +1,174 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
-import logo from '../assets/logo.svg'; 
-import circle from '../assets/circle.svg';
-import bgCurve from '../assets/line.svg'; 
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import Button from '../components/Button';
+import Card from '../components/Card';
+import './mainpage.css';
+
+const NAV_LINKS = [
+  { href: '#bench', label: 'Benchmark' },
+  { href: '#xai', label: 'Explainability' },
+  { href: '#api', label: 'Docs' },
+  { href: '#team', label: 'Team' },
+];
+
+// 히어로/XAI 섹션의 얼굴 스캔 일러스트
+const ScanVisual = ({ tag, result, className = '' }) => (
+  <div className={`dg-scan ${className}`.trim()}>
+    <span className="dg-scan__tag">{tag}</span>
+    <div className="dg-scan__face" />
+    <div className="dg-scan__heat dg-scan__heat--1" />
+    <div className="dg-scan__heat dg-scan__heat--2" />
+    <div className="dg-scan__box"><b>FAKE</b></div>
+    {result && (
+      <div className="dg-scan__result">
+        <span>Deepfake Probability</span>
+        <strong>{result}</strong>
+      </div>
+    )}
+  </div>
+);
 
 const MainPage = ({ sessionUser, onLogout }) => {
   const navigate = useNavigate();
 
   const handleBasicAnalysis = () => navigate('/analysis');
-  
+
   const handleVideoAnalysis = () => navigate('/video-analysis');
 
-  const handleProAnalysis = () => {
-    if (sessionUser) {
-      navigate('/analysis');
-    } else {
-      alert("Pro 모델 분석은 로그인이 필요합니다.");
-      navigate('/login');
-    }
+  // <a href>로 렌더링된 버튼에서 새로고침 없이 이동
+  const linkTo = (handler) => (e) => {
+    e.preventDefault();
+    handler();
   };
-
-  const handleLogoutClick = async () => {
-    if (!window.confirm("로그아웃 하시겠습니까?")) return;
-    try {
-      await axios.get('/auth/logout');
-      if (onLogout) onLogout(); 
-      alert("성공적으로 로그아웃되었습니다.");
-      navigate('/main');
-    } catch (error) {
-      alert("로그아웃 처리 중 오류가 발생했습니다.");
-    }
-  };
-
-  const containerStyle = { backgroundColor: '#000000', minHeight: '100vh', width: '100vw', color: 'white', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', position: 'relative', overflowX: 'hidden' };
-  const navStyle = { position: 'sticky', top: 0, width: '100%', padding: '20px 80px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.9)', backdropFilter: 'blur(10px)', zIndex: 100, boxSizing: 'border-box', borderBottom: '1px solid #111' };
-  const sectionStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 20px', textAlign: 'center', position: 'relative', zIndex: 10 };
-  const analysisBoxStyle = { width: '420px', height: '500px', backgroundColor: '#111', borderRadius: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px', boxSizing: 'border-box', border: '1px solid #222', transition: '0.3s' };
-  const modelBtnBase = { width: '100%', padding: '14px 20px', borderRadius: '30px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', color: 'white' };
 
   return (
-    <div style={containerStyle}>
-      <img src={bgCurve} alt="" style={{ position: 'absolute', bottom: '0', right: '0', width: '80%', opacity: 0.6, zIndex: 1 }} />
+    <div className="dg-landing">
+      <Navbar variant="dark" sessionUser={sessionUser} onLogout={onLogout} links={NAV_LINKS} />
 
-      <nav style={navStyle}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img src={logo} alt="Deep Guard" style={{ height: '32px', marginRight: '40px', cursor: 'pointer' }} onClick={() => navigate('/main')} />
-          {sessionUser && (
-            <span style={{ fontSize: '18px', color: '#ccc', marginLeft: '10px' }}>
-              <strong style={{ color: '#39FF14' }}>{sessionUser.name}</strong>님 환영합니다
-            </span>
-          )}
+      <header className="dg-hero">
+        <div className="dg-wrap dg-hero__grid">
+          <div>
+            <span className="dg-pill">MS-EffGCViT · Celeb-DF-v2 AUC 0.9984</span>
+            <h1>딥페이크,<br /><em>눈으로 확인</em>하세요</h1>
+            <p className="dg-hero__lead">
+              이미지와 영상 속 조작 흔적을 탐지하고, 어디가 왜 가짜인지 시각적 근거까지 제공하는 딥페이크 탐지 서비스.
+            </p>
+            <div className="dg-hero__cta">
+              <Button variant="primary" href="/analysis" onClick={linkTo(handleBasicAnalysis)}>지금 분석해보기</Button>
+              <Button variant="ghost" href="#api">API 문서 →</Button>
+            </div>
+          </div>
+          <ScanVisual tag="SAMPLE · Fake" result="0.9873" className="dg-scan--hero" />
         </div>
-        
-        <div style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
-          <button onClick={handleBasicAnalysis} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>이미지 분석</button>
-          <button onClick={handleVideoAnalysis} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>동영상 분석</button>
-          
-          {sessionUser ? (
-            <button onClick={handleLogoutClick} style={{ backgroundColor: '#FF4B4B', color: 'white', padding: '8px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>로그아웃</button>
-          ) : (
-            <button onClick={() => navigate('/login')} style={{ backgroundColor: '#333', color: 'white', padding: '8px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>로그인</button>
-          )}
-        </div>
-      </nav>
+      </header>
 
-      <section style={{ ...sectionStyle, minHeight: '85vh' }}>
-        <div style={{ border: '1px solid #333', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', color: '#39FF14', marginBottom: '25px', letterSpacing: '1px' }}>DeepGuard AI System</div>
-        <h1 style={{ fontSize: '52px', marginBottom: '30px', fontWeight: 'bold', lineHeight: '1.3' }}>
-          Deep Guard는 사용자가 업로드한<br/>
-          이미지 또는 비디오의 <span style={{ color: '#ffffff' }}>딥페이크 변조 여부</span>와<br/>
-          상세 정보를 제공합니다.
-        </h1>
-        <p style={{ color: '#888', marginBottom: '50px', fontSize: '18px' }}>정밀한 AI 모델을 통해 지금 바로 분석을 시작해보세요.</p>
-        <button style={{ backgroundColor: '#39FF14', color: '#000', padding: '16px 45px', borderRadius: '40px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', border: 'none' }} onClick={handleBasicAnalysis}>무료 분석 시작 ❯</button>
+      <section id="features" className="dg-section">
+        <div className="dg-wrap dg-center">
+          <h2>탐지부터 설명까지, 한 번에</h2>
+          <p className="dg-sub">CNN의 국소 감각과 Vision Transformer의 전역 문맥을 결합한 하이브리드 모델로 미세한 조작을 잡아냅니다.</p>
+          <div className="dg-grid3">
+            <Card
+              icon="🖼"
+              title="이미지 탐지"
+              action={<a href="/analysis" onClick={linkTo(handleBasicAnalysis)}>자세히 보기 →</a>}
+            >
+              <p>얼굴을 자동 검출하고 딥페이크 확률을 즉시 반환합니다.</p>
+            </Card>
+            <Card
+              icon="🎬"
+              title="영상 탐지"
+              action={<a href="/video-analysis" onClick={linkTo(handleVideoAnalysis)}>자세히 보기 →</a>}
+            >
+              <p>프레임을 샘플링해 conf / mean / vote 방식으로 종합 판정합니다.</p>
+            </Card>
+            <Card icon="🔍" title="설명 가능한 AI" action={<a href="#xai">자세히 보기 →</a>}>
+              <p>Grad-CAM 계열 히트맵과 박스로 조작 의심 영역을 시각화합니다.</p>
+            </Card>
+          </div>
+        </div>
       </section>
 
-      <section style={{ ...sectionStyle, flexDirection: 'row', gap: '40px', paddingBottom: '150px' }}>
-        <div style={analysisBoxStyle} onMouseOver={(e) => e.currentTarget.style.borderColor = '#39FF14'} onMouseOut={(e) => e.currentTarget.style.borderColor = '#222'}>
-          <h3 style={{ fontSize: '28px', marginBottom: '25px' }}>이미지 분석</h3>
-          <img src={circle} alt="" style={{ width: '140px', marginBottom: '40px', opacity: 0.8 }} />
-          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleBasicAnalysis}>Fast 모델 <span>❯</span></button>
-          <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={handleProAnalysis}>
-            <span style={{ color: 'white' }}>Pro 정밀 모델</span>
-            <span style={{ color: '#39FF14' }}>❯</span>
-          </button>
-        </div>
-        
-        <div style={analysisBoxStyle} onMouseOver={(e) => e.currentTarget.style.borderColor = '#39FF14'} onMouseOut={(e) => e.currentTarget.style.borderColor = '#222'}>
-          <h3 style={{ fontSize: '28px', marginBottom: '25px' }}>비디오 분석</h3>
-          <img src={circle} alt="" style={{ width: '140px', marginBottom: '40px', opacity: 0.8 }} />
-          <button style={{ ...modelBtnBase, backgroundColor: '#333' }} onClick={handleVideoAnalysis}>Fast 모델 <span>❯</span></button>
-          <button style={{ ...modelBtnBase, backgroundColor: '#000', border: '1px solid #444' }} onClick={handleVideoAnalysis}>
-            <span style={{ color: 'white' }}>Pro 정밀 모델</span>
-            <span style={{ color: '#39FF14' }}>❯</span>
-          </button>
+      <section id="bench" className="dg-section dg-section--alt">
+        <div className="dg-wrap dg-center">
+          <h2>검증된 성능</h2>
+          <p className="dg-sub">Celeb-DF-v2, FaceForensics++, KoDF 3개 벤치마크로 학습·평가했습니다.</p>
+          <div className="dg-stats">
+            <div><b>99.84%</b><span>AUC · Celeb-DF-v2 (b5)</span></div>
+            <div><b>99.81%</b><span>Accuracy · Celeb-DF-v2 (b5)</span></div>
+            <div><b>3</b><span>벤치마크 데이터셋</span></div>
+            <div><b>62K+</b><span>KoDF 원본 영상</span></div>
+          </div>
+          <div className="dg-chips dg-chips--center">
+            <span>Celeb-DF-v2</span><span>FaceForensics++</span><span>KoDF</span>
+          </div>
         </div>
       </section>
+
+      <section id="xai" className="dg-section">
+        <div className="dg-wrap dg-row">
+          <div>
+            <h2>왜 가짜인지,<br />보여드립니다</h2>
+            <p className="dg-sub">Dual-Branch XAI가 모델의 멀티스케일 추론을 그대로 따라가며 국소 아티팩트와 전역 구조 이상을 각각 시각화합니다.</p>
+            <ul className="dg-list">
+              <li><b>Low-level</b> · 피부 질감, 경계 블렌딩, 압축 흔적</li>
+              <li><b>High-level</b> · 조명 불일치, 얼굴 기하, 그림자</li>
+              <li>HiResCAM · LayerCAM · GradCAM++ · XGradCAM 외 6종</li>
+            </ul>
+          </div>
+          <ScanVisual tag="Heatmap + BBox" className="dg-scan--xai" />
+        </div>
+      </section>
+
+      <section id="api" className="dg-section dg-section--alt">
+        <div className="dg-wrap dg-row">
+          <div>
+            <h2>코드 몇 줄이면 끝</h2>
+            <p className="dg-sub">PyTorch·timm 인터페이스와 Hugging Face Hub로 바로 불러와 쓸 수 있습니다.</p>
+            <div className="dg-chips">
+              <span>ms_eff_gcvit_b0 · 8.7M</span><span>ms_eff_gcvit_b5 · 50.3M</span>
+            </div>
+            <Button
+              variant="outline"
+              className="dg-api__github"
+              href="https://github.com/HanMoonSub/DeepGuard"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub 보기
+            </Button>
+          </div>
+          <pre className="dg-code">
+            <span className="k">from</span>{' deepguard '}<span className="k">import</span>{' ms_eff_gcvit_b0\n\nmodel = ms_eff_gcvit_b0(\n    pretrained='}
+            <span className="k">True</span>{',\n    dataset='}<span className="s">"celeb_df_v2"</span>{'\n)\n'}
+            <span className="c"># 영상 판정</span>{'\nresult = predictor.predict_video(\n    video_path='}
+            <span className="s">"video.mp4"</span>{',\n    num_frames=20, agg_mode='}<span className="s">"conf"</span>{'\n)'}
+          </pre>
+        </div>
+      </section>
+
+      <section id="team" className="dg-section">
+        <div className="dg-wrap dg-center">
+          <h2>충북대학교 소프트웨어학과 졸업 프로젝트</h2>
+          <div className="dg-grid3">
+            <Card title="한문섭"><p>Data &amp; Backend Engineering</p></Card>
+            <Card title="이예솔"><p>UI/UX &amp; Frontend Engineering</p></Card>
+            <Card title="서윤제"><p>AI Engineering</p></Card>
+          </div>
+        </div>
+      </section>
+
+      <div className="dg-band">
+        <div className="dg-wrap">
+          <h2>딥페이크 탐지, 지금 시작하세요</h2>
+          <p className="dg-sub dg-band__sub">이미지 한 장으로 바로 체험해볼 수 있어요.</p>
+          <Button variant="inverse" href="/analysis" onClick={linkTo(handleBasicAnalysis)}>Try Now</Button>
+        </div>
+      </div>
+
+      <Footer />
     </div>
   );
 };
