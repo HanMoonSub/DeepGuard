@@ -182,3 +182,11 @@ at `127.0.0.1:8000` — the backend must be running for `npm start` to work end-
 - `dataset` values are always one of the literal strings `celeb_df_v2`, `ff++`, `kodf`; `model_name`
   values are always one of `ms_eff_vit_b0`, `ms_eff_vit_b5`, `ms_eff_gcvit_b0`, `ms_eff_gcvit_b5`
   — these show up as string args across training, inference, and explainability APIs.
+
+
+# 리디자인 규칙
+- 모든 응답과 설명은 한국어로 작성
+- 백엔드 응답 스키마/API 호출 로직 변경 금지
+- 디자인 레퍼런스: client/design/index.html (색/타이포/카드 스타일 기준)
+- 공통 컴포넌트: Navbar(dark/light), Footer, Button, Card로 분리
+- 페이지 하나 끝날 때마다 npm start로 확인 후 커밋
