@@ -32,36 +32,42 @@ This model is a **frame-level** and **spatial-domain** architecture, designed to
 
 **MS-EFF-GCViT achieves state-of-the-art (SOTA) results across three DeepFake benchmarks.**
 The model ships in two variants from a single architecture — **Fast (b0)** for real-time / edge
-deployment and **Pro (b5)** for enterprise-grade accuracy. Notably, **Fast** matches or exceeds
-much larger SOTA models while using a fraction of the parameters and compute.
+deployment and **Pro (b5)** for enterprise-grade accuracy.
 
-<p align="center">
-  <img src="../docs/benchmarks/gcvit_summary_bars.png" width="100%">
-</p>
+**📊 Model Performance Results on Celeb-DF (v2) Dataset**
 
-> On **Celeb-DF(v2)**, Pro reaches **0.9981 Acc** (rank #1) and Fast **0.9842** (rank #3) among 20 architectures.
-> On the **KoDF competition** leaderboard, Pro ranks **#1** and Fast **#4** out of 49 entries.
+| Model | Test@Acc | Test@Auc | #Params(M) | Params Ratio | #FLOPS(G) | FLOPS Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ms_eff_gcvit_b0** | 98.4% | 99.7% | 8.7 | 1x | 0.85 | 1x |
+| sia (eccv,2022) | 99.0% | 99.8% | 17.57 | 2x | 2.05 | 2.4x |
+| core (cvpr,2022) | 99.6% | 99.7% | 20.81 | 2.4x | 8.40 | 9.9x |
+| **ms_eff_gcvit_b5** | **99.8%** | 99.8% | 50.34 | 5.8x | 13.43 | 15.8x |
+| iid (cvpr,2023) | **99.8%** | **99.9%** | 65.5 | 7.5x | 12.7 | 14.9x |
+| effort (icml, 2025) | **99.8%** | 99.7% | 303.4 | 34.9x | 155.9 | 183.4x |
 
-<details>
-<summary><b>📊 Celeb-DF (v2) — Accuracy & Efficiency</b></summary>
-<br>
-<img src="../docs/benchmarks/celeb_df_v2_gcvit_2.png" width="100%">
 
-</details>
+**📊 Model Performance Results on FaceForensics++ Dataset**
 
-<details>
-<summary><b>📊 FaceForensics++ — Accuracy & Efficiency</b></summary>
-<br>
-<img src="../docs/benchmarks/ff_gcvit.png" width="100%">
+| Model | Test@Acc | Test@Auc | #Params(M) | Params Ratio | #FLOPS(G) | FLOPS Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ms_eff_gcvit_b0** | 98.1% | 99.7% | 8.7 | 1x | 0.85 | 1x |
+| sia (ECCV,2022) | 95.0% | 97.5% | 17.57 | 2x | 2.05 | 2.4x |
+| core (CVPR,2022) | 98.3% | **99.8%** | 20.81 | 2.4x | 8.40 | 9.9x |
+| **ms_eff_gcvit_b5** | **98.5%** | 99.7% | 50.34 | 5.8x | 13.43 | 15.8x |
+| iid (CVPR,2023) | 97.3% | 99.6% | 65.5 | 7.5x | 12.7 | 14.9x |
+| effort (ICML, 2025) | 98.4% | **99.8%** | 303.4 | 34.9x | 155.9 | 183.4x |
 
-</details>
+**📊 Model Performance Results on KoDF Dataset**
 
-<details>
-<summary><b>📊 KoDF Competition — Accuracy Ranking</b></summary>
-<br>
-<img src="../docs/benchmarks/kodf_gcvit.png" width="100%">
+| Model | Test@Acc | Test@Auc | #Params(M) | Params Ratio | #FLOPS(G) | FLOPS Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ms_eff_gcvit_b0** | 96.6% | 97.9% | 8.7 | 1x | 0.85 | 1x |
+| sia (ECCV,2022) | 97.0% | 98.8% | 17.57 | 2x | 2.05 | 2.4x |
+| core (CVPR,2022) | 96.3% | 99.2% | 20.81 | 2.4x | 8.40 | 9.9x |
+| **ms_eff_gcvit_b5** | 97.9% | 98.3% | 50.34 | 5.8x | 13.43 | 15.8x |
+| iid (CVPR,2023) | 96.5% | 97.6% | 65.5 | 7.5x | 12.7 | 14.9x |
+| effort (ICML, 2025) | **99.0%** | **99.5%** | 303.4 | 34.9x | 155.9 | 183.4x |
 
-</details>
 
 ## Model Indroduction
 
