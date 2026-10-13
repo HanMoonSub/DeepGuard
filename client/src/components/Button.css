@@ -45,3 +45,26 @@
 .dg-btn--inverse:hover {
   background: var(--color-primary-soft);
 }
+
+.dg-btn--danger {
+  background: var(--color-danger);
+  color: var(--color-on-dark);
+}
+.dg-btn--danger:hover {
+  background: #e63e3e;
+}
+
+/* 풀폭 버튼 */
+.dg-btn--block {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.dg-btn:disabled,
+.dg-btn:disabled:hover {
+  background: var(--color-line);
+  border-color: transparent;
+  color: var(--color-muted);
+  cursor: not-allowed;
+}

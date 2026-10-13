@@ -12,6 +12,13 @@
   border-color: var(--color-primary-border);
 }
 
+/* 작업 패널용: hover 시 떠오르는 효과 없음 */
+.dg-card--static:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--color-line);
+}
+
 .dg-card__icon {
   width: 48px;
   height: 48px;

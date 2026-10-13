@@ -19,6 +19,11 @@
   --color-accent-light: #9db8ff;
   --color-accent: #5b95ff;
   --color-danger: #ff4d4d;
+  --color-danger-soft: #fff0f0;
+  --color-success: #16a34a;
+  --color-success-soft: #ecfdf3;
+  --color-warning: #f59e0b;
+  --color-warning-soft: #fff7e6;
 
   /* typography */
   --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, 'Segoe UI', 'Noto Sans KR', sans-serif;

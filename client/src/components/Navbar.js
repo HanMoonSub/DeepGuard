@@ -7,7 +7,8 @@ import './Navbar.css';
 
 // variant: dark(히어로 위 투명 → 스크롤 시 어두운 배경) | light(흰 배경)
 // links: 같은 페이지 앵커 메뉴 [{ href: '#bench', label: 'Benchmark' }]
-const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [] }) => {
+// logoutRedirect: 로그아웃 후 이동 경로
+const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRedirect = '/main' }) => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
@@ -30,7 +31,7 @@ const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [] }) => {
       await axios.get('/auth/logout');
       if (onLogout) onLogout();
       alert("성공적으로 로그아웃되었습니다.");
-      navigate('/main');
+      navigate(logoutRedirect);
     } catch (error) {
       alert("로그아웃 처리 중 오류가 발생했습니다.");
     }
