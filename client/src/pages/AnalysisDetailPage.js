@@ -2,6 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import Button from '../components/Button';
+import Card from '../components/Card';
+import './AnalysisDetailPage.css';
+
+// 공통 레이아웃: Navbar(light) + 본문 + Footer
+const DetailLayout = ({ sessionUser, children }) => (
+  <div className="dg-detail">
+    <Navbar variant="light" sessionUser={sessionUser} />
+    <main className="dg-detail__main">
+      <div className="dg-wrap">{children}</div>
+    </main>
+    <Footer />
+  </div>
+);
+
+const MetricRow = ({ label, value, width, tone }) => (
+  <div className="dg-detail__metric">
+    <div className="dg-detail__metric-head">
+      <span>{label}</span>
+      <strong className={`dg-detail__tone--${tone}`}>{value}</strong>
+    </div>
+    <div className="dg-detail__track">
+      <div className={`dg-detail__fill dg-detail__fill--${tone}`} style={{ width }} />
+    </div>
+  </div>
+);
 
 const AnalysisDetailPage = ({ sessionUser }) => {
   const { state } = useLocation();
@@ -36,18 +64,23 @@ const AnalysisDetailPage = ({ sessionUser }) => {
 
   if (loading) {
     return (
-      <div style={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
-        <p style={{ fontSize: '18px', marginBottom: '20px' }}>불러오는 중...</p>
-      </div>
+      <DetailLayout sessionUser={sessionUser}>
+        <div className="dg-detail__state">
+          <div className="dg-detail__spinner" />
+          <p>불러오는 중...</p>
+        </div>
+      </DetailLayout>
     );
   }
 
   if (!data) {
     return (
-      <div style={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
-        <p style={{ fontSize: '18px', marginBottom: '20px' }}>분석 데이터를 찾을 수 없거나 비정상적인 접근입니다.</p>
-        <button onClick={() => navigate(-1)} style={{ padding: '10px 20px', backgroundColor: '#1A2C50', color: '#39FF14', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>돌아가기</button>
-      </div>
+      <DetailLayout sessionUser={sessionUser}>
+        <div className="dg-detail__state">
+          <p>분석 데이터를 찾을 수 없거나 비정상적인 접근입니다.</p>
+          <Button variant="primary" onClick={() => navigate(-1)}>돌아가기</Button>
+        </div>
+      </DetailLayout>
     );
   }
 
@@ -55,25 +88,28 @@ const AnalysisDetailPage = ({ sessionUser }) => {
   const face_conf = data.face_conf ?? data.face_confidence ?? data.conf ?? data.analysis?.face_conf ?? 0;
   const face_ratio = data.face_ratio ?? data.ratio ?? data.analysis?.face_ratio ?? 0;
   const face_brightness = data.face_brightness ?? data.brightness ?? data.analysis?.face_brightness ?? 0;
-  
+
   let label = 'UNKNOWN';
   if (data.label && data.label !== 'UNKNOWN') {
     label = data.label.toUpperCase();
   } else if (prob !== -1) {
     label = prob > 0.5 ? 'FAKE' : 'REAL';
   }
-  
+
   const isInvalid = prob === -1;
   const displayProb = isInvalid ? 'N/A' : (Number(prob) * 100).toFixed(1) + '%';
 
-  const brightnessColor = face_brightness < 20 ? '#FF4B4B' : '#39FF14';
-  const ratioColor = face_ratio >= 3 ? '#39FF14' : '#FF4B4B';
+  const brightnessTone = face_brightness < 20 ? 'bad' : 'good';
+  const ratioTone = face_ratio >= 3 ? 'good' : 'bad';
 
   const mediaLoc = data.video_loc || data.media_loc || data.image_loc || '';
   const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : mediaLoc;
   const isVideo = !!data.video_loc || (data.score !== undefined && !data.image_loc) || window.location.pathname.includes('video');
 
   const isWarning = data.status?.toUpperCase() === 'WARNING';
+
+  // 라벨 색: FAKE=danger, REAL=success, 판정 불가=muted
+  const verdictTone = label === 'FAKE' ? 'fake' : (isInvalid ? 'unknown' : 'real');
 
   const handleImageHeatmap = () => {
     if (!sessionUser) {
@@ -97,137 +133,110 @@ const AnalysisDetailPage = ({ sessionUser }) => {
       alert("로그인이 필요한 기능이에요.");
       return;
     }
-    navigate('/video-timeline', { 
-      state: { 
-        ...data 
-      } 
+    navigate('/video-timeline', {
+      state: {
+        ...data
+      }
     });
   };
 
 
   return (
-    <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', padding: '40px 80px', boxSizing: 'border-box', fontFamily: 'sans-serif', overflowX: 'hidden' }}>
-      
-      {/* 상단 네비게이션 헤더 바 */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={() => navigate(-1)} style={{ color: '#888', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '20px' }}>
-            <span style={{ fontSize: '20px' }}>←</span> 뒤로가기
-          </button>
-          <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '20px', fontSize: '12px', color: '#39FF14', border: '1px solid #333', fontWeight: 'bold' }}>{data.version_type?.toUpperCase() || 'V1'}</span>
-          <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '20px', fontSize: '12px', color: '#39FF14', border: '1px solid #333', fontWeight: 'bold' }}>{data.domain_type || '서양인'}</span>
-          <span style={{ padding: '6px 14px', backgroundColor: '#111', borderRadius: '20px', fontSize: '12px', color: '#39FF14', border: '1px solid #333', fontWeight: 'bold' }}>{data.model_type?.toUpperCase() || 'FAST'}</span>
+    <DetailLayout sessionUser={sessionUser}>
+      {/* 상단: 뒤로가기 + 분석 조건 태그 */}
+      <header className="dg-detail__head">
+        <button type="button" className="dg-detail__back" onClick={() => navigate(-1)}>
+          <span aria-hidden="true">←</span> 뒤로가기
+        </button>
+        <div className="dg-detail__chips">
+          <span>{data.version_type?.toUpperCase() || 'V1'}</span>
+          <span>{data.domain_type || '서양인'}</span>
+          <span>{data.model_type?.toUpperCase() || 'FAST'}</span>
         </div>
       </header>
 
-      {/* 2분할 메인 그리드 레이아웃 */}
-      <div style={{ display: 'flex', gap: '40px', maxWidth: '1400px', margin: '0 auto', alignItems: 'stretch', minHeight: '580px' }}>
-        
-        {/* 왼쪽 섹션: 미디어 플레이어 전용 배치 존 */}
-        <div style={{ flex: 1.2, backgroundColor: '#050505', borderRadius: '28px', border: '1px solid #1A1A1A', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', padding: '28px', boxSizing: 'border-box', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', position: 'relative' }}>
-          <div style={{ width: '100%', height: '480px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+      <h2 className="dg-detail__title">{isVideo ? '동영상' : '이미지'} 분석 결과</h2>
+
+      <div className="dg-detail__grid">
+        {/* 왼쪽: 미디어 + 위조 흔적 분석 버튼 */}
+        <Card className="dg-card--static dg-detail__media-card">
+          <div className="dg-detail__media">
             {isVideo && mediaLoc ? (
-              <video src={mediaSrc} controls autoPlay muted style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '12px', objectFit: 'contain' }} />
+              <video src={mediaSrc} controls autoPlay muted />
             ) : mediaLoc ? (
               <img src={mediaSrc} alt="Analyzed media"
-                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '12px' }}
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/600x400?text=No+Image'; }} />
             ) : (
-              <div style={{ color: '#999', textAlign: 'center' }}>미디어가 존재하지 않습니다.</div>
+              <div className="dg-detail__media-empty">미디어가 존재하지 않습니다.</div>
             )}
           </div>
 
           {isVideo && mediaLoc && (
-            <button 
-              onClick={handleVideoHeatmap}
-              style={{ marginTop: '20px', width: '95%', padding: '15px 0', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid rgba(57, 255, 20, 0.4)', borderRadius: '6px', fontSize: '13px', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s ease-in-out', boxShadow: '0 2px 8px rgba(57, 255, 20, 0.05)' }}
-              onMouseEnter={(e) => { e.target.style.backgroundColor = 'rgba(57, 255, 20, 0.06)'; e.target.style.borderColor = '#39FF14'; e.target.style.boxShadow = '0 0 15px rgba(57, 255, 20, 0.15)'; }}
-              onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.borderColor = 'rgba(57, 255, 20, 0.4)'; e.target.style.boxShadow = '0 2px 8px rgba(57, 255, 20, 0.05)'; }}
-            >
-              비디오 위조 흔적 분석하기
-            </button>
+            <Button variant="outline" className="dg-btn--block dg-detail__xai-btn" onClick={handleVideoHeatmap}>
+              🔍 비디오 위조 흔적 분석하기
+            </Button>
           )}
 
           {!isVideo && mediaLoc && !isWarning && (
-            <button
-              onClick={handleImageHeatmap}
-              style={{ marginTop: '20px', width: '95%', padding: '15px 0', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid rgba(57, 255, 20, 0.4)', borderRadius: '6px', fontSize: '15px', fontWeight: '500', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s ease-in-out', boxShadow: '0 2px 8px rgba(57, 255, 20, 0.05)' }}
-              onMouseEnter={(e) => { e.target.style.backgroundColor = 'rgba(57, 255, 20, 0.06)'; e.target.style.borderColor = '#39FF14'; e.target.style.boxShadow = '0 0 15px rgba(57, 255, 20, 0.15)'; }}
-              onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.borderColor = 'rgba(57, 255, 20, 0.4)'; e.target.style.boxShadow = '0 2px 8px rgba(57, 255, 20, 0.05)'; }}
-            >
-              이미지 위조 흔적 분석하기
-            </button>
+            <Button variant="outline" className="dg-btn--block dg-detail__xai-btn" onClick={handleImageHeatmap}>
+              🔍 이미지 위조 흔적 분석하기
+            </Button>
           )}
-        </div>
+        </Card>
 
-        {/* 오른쪽 섹션: 스코어 보드 or WARNING 메시지 */}
-        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
+        {/* 오른쪽: 판정 카드 or WARNING */}
+        <div className="dg-detail__side">
           {isWarning ? (
-            // WARNING일 때 — 경고 메시지만, 꽉 채움
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px', backgroundColor: '#0D0D0D', borderRadius: '28px', border: '1px solid #1A1A1A', textAlign: 'center' }}>
-              <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFA500', margin: '0 0 64px' }}>분석을 완료하지 못했어요</p>
-              <p style={{ fontSize: '24px', color: '#aaa', lineHeight: '1.7', margin: 0, maxWidth: '300px' }}>
-                {data.result_msg}
-              </p>
-            </div>
+            <Card className="dg-card--static dg-detail__warning">
+              <div className="dg-detail__warn-icon" aria-hidden="true">!</div>
+              <p className="dg-detail__warn-title">분석을 완료하지 못했어요</p>
+              <p className="dg-detail__warn-msg">{data.result_msg}</p>
+            </Card>
           ) : (
             <>
-              {/* 종합 리포트 판정 카드 — flex:1로 남은 공간 채움 */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px', backgroundColor: '#0D0D0D', borderRadius: '28px', border: '1px solid #1A1A1A', textAlign: 'center', gap: '8px' }}>
-                <p style={{ color: '#aaa', fontSize: '13px', letterSpacing: '2px', margin: '0' }}>FINAL ANALYSIS</p>
-                <h1 style={{ fontSize: '84px', fontWeight: '900', color: label === 'FAKE' ? '#FF4B4B' : (isInvalid ? '#999' : '#39FF14'), margin: '8px 0 0', letterSpacing: '1px', lineHeight: 1 }}>
-                  {label}
-                </h1>
-                <div style={{ width: '40px', height: '2px', backgroundColor: label === 'FAKE' ? '#FF4B4B' : '#39FF14', borderRadius: '1px', margin: '12px 0' }} />
-                <p style={{ fontSize: '12px', color: '#bbb', letterSpacing: '1.5px', margin: '0', fontWeight: 'bold' }}>FAKE 확률</p>
-                <p style={{ fontSize: '48px', fontWeight: '900', margin: '0', color: label === 'FAKE' ? '#FF4B4B' : '#fff', letterSpacing: '1px', lineHeight: 1 }}>{displayProb}</p>
-              </div>
-
-              {/* 보조 메트릭 — 작게 고정 높이 */}
-              <div style={{ padding: '20px 24px', backgroundColor: '#0D0D0D', borderRadius: '20px', border: '1px solid #1A1A1A' }}>
-                <p style={{ color: '#999', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1.5px', margin: '0 0 14px 0' }}>DETAIL METRICS</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
-                  {/* BRIGHTNESS */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 밝기</span>
-                      <span style={{ color: brightnessColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_brightness).toFixed(1)}%</span>
-                    </div>
-                    <div style={{ width: '100%', height: '4px', backgroundColor: '#1A1A1A', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min(face_brightness, 100)}%`, height: '100%', backgroundColor: brightnessColor, transition: 'width 1s cubic-bezier(0.1, 1, 0.1, 1)' }} />
-                    </div>
-                  </div>
-
-                  {/* FACE RATIO */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>얼굴 비율</span>
-                      <span style={{ color: ratioColor, fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_ratio).toFixed(1)}%</span>
-                    </div>
-                    <div style={{ width: '100%', height: '4px', backgroundColor: '#1A1A1A', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min(face_ratio, 100)}%`, height: '100%', backgroundColor: ratioColor, transition: 'width 1s cubic-bezier(0.1, 1, 0.1, 1)' }} />
-                    </div>
-                  </div>
-
-                  {/* MODEL CONFIDENCE */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ color: '#999', fontSize: '12px', fontWeight: 'bold' }}>모델 신뢰도</span>
-                    <span style={{ color: '#39FF14', fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>{Number(face_conf).toFixed(1)}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: '4px', backgroundColor: '#1A1A1A', borderRadius: '2px', overflow: 'hidden' }}>
-                    <div style={{ width: `${face_conf}%`, height: '100%', backgroundColor: '#39FF14', transition: 'width 1s cubic-bezier(0.1, 1, 0.1, 1)' }} />
-                  </div>
-
+              <Card className="dg-card--static dg-detail__verdict-card">
+                <p className="dg-detail__eyebrow">FINAL ANALYSIS</p>
+                <h1 className={`dg-detail__verdict dg-detail__verdict--${verdictTone}`}>{label}</h1>
+                <div className="dg-detail__prob">
+                  <span>FAKE 확률</span>
+                  <strong className={label === 'FAKE' ? 'dg-detail__verdict--fake' : ''}>{displayProb}</strong>
                 </div>
-              </div>
+                {!isInvalid && (
+                  <div className="dg-detail__track dg-detail__track--lg">
+                    <div
+                      className={`dg-detail__fill dg-detail__fill--${label === 'FAKE' ? 'bad' : 'good'}`}
+                      style={{ width: `${Math.min(Number(prob) * 100, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </Card>
+
+              <Card className="dg-card--static dg-detail__metrics">
+                <p className="dg-detail__eyebrow">DETAIL METRICS</p>
+                <MetricRow
+                  label="얼굴 밝기"
+                  value={`${Number(face_brightness).toFixed(1)}%`}
+                  width={`${Math.min(face_brightness, 100)}%`}
+                  tone={brightnessTone}
+                />
+                <MetricRow
+                  label="얼굴 비율"
+                  value={`${Number(face_ratio).toFixed(1)}%`}
+                  width={`${Math.min(face_ratio, 100)}%`}
+                  tone={ratioTone}
+                />
+                <MetricRow
+                  label="모델 신뢰도"
+                  value={`${Number(face_conf).toFixed(1)}%`}
+                  width={`${face_conf}%`}
+                  tone="primary"
+                />
+              </Card>
             </>
           )}
         </div>
-
       </div>
-    </div>
+    </DetailLayout>
   );
 };
 
