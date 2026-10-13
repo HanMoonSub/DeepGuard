@@ -15,7 +15,7 @@ This Repository presents the PyTorch implementation of **Multi Scale Efficient G
 This model is a **frame-level** and **spatial-domain** architecture, designed to perform classification tasks on both **static images** and **video sequences**
 
 
-<img src="../docs/benchmarks/celeb_df_v2_gcvit.png" width="900">
+<img src="../docs/benchmarks/gcvit_params_acc.png" width="900">
 
 ## 💥 News 💥
 - [**09.05.2026**] 🔥 Released **HIGH-Eff-GCVIT-B5** (384X384) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
