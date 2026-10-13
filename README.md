@@ -43,6 +43,7 @@
 
 ## 📌 Contents
 
+- [🗂 Project Structure](#-project-structure) - Directory layout of the package, web app, and docs
 - [🐳 Docker Quick Start](#-docker-quick-start) - Run the full stack (MySQL, Redis, FastAPI, Celery, React) with Docker Compose
 - [🤗 Try It Live: Hugging Face Spaces](#-try-it-live-hugging-face-spaces) - No-install browser demos for image, video, and XAI deepfake detection
 - [📚 DeepFake Video BenchMark Datasets](#-deepfake-video-benchmark-datasets) — Overview of Celeb-DF-v2, FF++, and KoDF datasets used for training.
@@ -58,6 +59,29 @@
 - [📬 Authors](#-authors) - Team behind this senior graduation project at Chungbuk National University
 - [📝 Reference](#-reference) - Libraries, datasets, and prior work this project builds on
 - [⚖️ License](#-license) - MIT license
+
+## 🗂 Project Structure
+
+```
+DeepGuard/
+├── deepguard/                  # Core package (models, layers, data pipeline, optimizer, scheduler, utils)
+├── preprocess/                 # Face detection, cropping & landmark extraction pipeline
+├── inference/                  # Image / video prediction
+├── explainability/             # Dual-branch CAM-based XAI
+├── App/                        # FastAPI backend (excluded from PyPI package)
+├── client/                     # React frontend
+├── docker/                     # MySQL / Redis Docker images and configs
+├── tutorials/                  # Colab notebooks (prediction & XAI visualization)
+├── docs/                       # README assets (architectures, ablation, benchmarks, samples, XAI results)
+├── .github/                    # CI workflows and repository settings
+├── docker-compose.yml          # Full stack (MySQL, Redis, FastAPI, Celery, React)
+├── train_eff_vit.py            # Training entrypoint for MS-EffViT
+├── train_eff_gcvit.py          # Training entrypoint for MS-EffGCViT
+├── pyproject.toml              # Package build config
+├── requirements.txt            # Dev environment dependencies
+├── README.md, README_KR.md, README_JP.md
+└── LICENSE
+```
 
 ## 🐳 Docker Quick Start
 

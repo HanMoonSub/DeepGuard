@@ -43,6 +43,7 @@
 
 ## 📌 目次
 
+- [🗂 プロジェクト構成](#-プロジェクト構成) - ディレクトリ構成の概要 (パッケージ、Webアプリ、ドキュメント)
 - [🐳 Docker Quick Start](#-docker-quick-start) - Docker Compose でフルスタック(MySQL, Redis, FastAPI, Celery, React)を起動
 - [🤗 今すぐ体験: Hugging Face Spaces](#-今すぐ体験-hugging-face-spaces) - インストール不要、ブラウザだけで試せる画像/動画/XAI ディープフェイク検出デモ
 - [📚 ディープフェイク動画ベンチマークデータセット](#-ディープフェイク動画ベンチマークデータセット) — 学習に使用した Celeb-DF-v2, FF++, KoDF データセットの概要。
@@ -60,6 +61,29 @@
 - [⚖️ ライセンス](#-ライセンス) - MIT ライセンス
 
 ---
+
+## 🗂 プロジェクト構成
+
+```
+DeepGuard/
+├── deepguard/                  # コアパッケージ (モデル、レイヤー、データパイプライン、オプティマイザ、スケジューラ、ユーティリティ)
+├── preprocess/                 # 顔検出、クロップ、ランドマーク抽出パイプライン
+├── inference/                  # 画像 / 動画の予測
+├── explainability/             # デュアルブランチ CAM ベース XAI
+├── App/                        # FastAPI バックエンド (PyPI パッケージから除外)
+├── client/                     # React フロントエンド
+├── docker/                     # MySQL / Redis Docker イメージと設定
+├── tutorials/                  # Colab ノートブック (予測と XAI 可視化)
+├── docs/                       # README 用アセット (アーキテクチャ、ablation、ベンチマーク、サンプル、XAI 結果)
+├── .github/                    # CI ワークフローとリポジトリ設定
+├── docker-compose.yml          # フルスタック (MySQL, Redis, FastAPI, Celery, React)
+├── train_eff_vit.py            # MS-EffViT 学習エントリポイント
+├── train_eff_gcvit.py          # MS-EffGCViT 学習エントリポイント
+├── pyproject.toml              # パッケージビルド設定
+├── requirements.txt            # 開発環境の依存関係
+├── README.md, README_KR.md, README_JP.md
+└── LICENSE
+```
 
 ## 🐳 Docker Quick Start
 
