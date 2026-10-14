@@ -33,12 +33,64 @@ const normalizeFrame = (f, i) => {
   return { ...f, fake_score, frame_index: f.frame_index ?? i, timestamp: ts };
 };
 
+// /detail 응답 상태 코드 → 에러 화면 type
+const errorTypeFromStatus = (status) => {
+  if (status === 401) return 'auth';       // 로그인 필수 API
+  if (status === 400) return 'incomplete'; // 추론이 SUCCESS가 아닌 영상
+  if (status === 404) return 'notfound';   // 기록/메타 없음
+  return 'server';                         // 5xx, 네트워크 오류 등
+};
+
+// 에러 화면 문구/버튼 — actions: home(동영상 분석) | login | retry | back
+const ERROR_VIEWS = {
+  nostate: {
+    tone: 'primary',
+    title: '분석 정보가 전달되지 않았어요',
+    desc: () => '분석 상세 화면의 ‘비디오 위조 흔적 분석하기’로 들어와 주세요.',
+    actions: () => ['home', 'back'],
+  },
+  auth: {
+    tone: 'primary',
+    title: '로그인이 필요해요',
+    desc: () => '프레임별 분석은 회원만 볼 수 있어요.',
+    actions: () => ['login', 'back'],
+  },
+  incomplete: {
+    tone: 'warning',
+    title: '프레임 분석을 볼 수 없는 영상이에요',
+    desc: (data) => (data?.status === 'PENDING'
+      ? '아직 분석이 진행 중이에요. 잠시 후 다시 시도해 주세요.'
+      : '분석이 정상 완료된 영상만 프레임별 결과를 제공해요.'),
+    actions: (data) => (data?.status === 'PENDING' ? ['retry', 'back'] : ['back']),
+  },
+  notfound: {
+    tone: 'primary',
+    title: '분석 기록을 찾을 수 없어요',
+    desc: () => '삭제되었거나 보관 기간이 지난 기록일 수 있어요.',
+    actions: () => ['home', 'back'],
+  },
+  empty: {
+    tone: 'warning',
+    title: '프레임별 결과가 없어요',
+    desc: () => '이 영상은 프레임 단위 결과가 저장되지 않았어요.',
+    actions: () => ['back'],
+  },
+  server: {
+    tone: 'danger',
+    title: '결과를 불러오지 못했어요',
+    desc: () => '잠시 후 다시 시도해 주세요.',
+    actions: () => ['retry', 'back'],
+  },
+};
+
 const VideoTimelinePage = ({ sessionUser }) => {
   const { state: data } = useLocation();
   const navigate = useNavigate();
   const [timelineData, setTimelineData] = useState([]);
   const [videoMeta, setVideoMeta]       = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError]         = useState(null); // { type, detail }
+  const [retryKey, setRetryKey]   = useState(0);    // 다시 시도 시 fetch 재실행용
 
   const videoId = data?.video_id || data?.id;
   const mediaLoc = data?.video_loc || '';
@@ -53,6 +105,8 @@ const VideoTimelinePage = ({ sessionUser }) => {
   useEffect(() => {
     const fetchTimelineDetails = async () => {
       if (!videoId) { setIsLoading(false); return; }
+      setIsLoading(true);
+      setError(null);
       try {
         const response = await axios.get(`/inference/video/${videoId}/detail`);
         const d = response.data;
@@ -63,22 +117,22 @@ const VideoTimelinePage = ({ sessionUser }) => {
         if (frames.length) {
           setTimelineData(frames.map(normalizeFrame));
         } else {
-          setTimelineData(Array.from({ length: 10 }, (_, i) => normalizeFrame({
-            frame_index: i, frame_time: i * 2,
-            score: (i >= 3 && i <= 6) ? 0.855 : 0.123,
-          }, i)));
+          setTimelineData([]);
+          setError({ type: 'empty' });
         }
-      } catch {
-        setTimelineData(Array.from({ length: 10 }, (_, i) => normalizeFrame({
-          frame_index: i, frame_time: i * 2,
-          score: (i >= 3 && i <= 6) ? 0.855 : 0.123,
-        }, i)));
+      } catch (err) {
+        setTimelineData([]);
+        const detail = err.response?.data?.detail;
+        setError({
+          type: errorTypeFromStatus(err.response?.status),
+          detail: typeof detail === 'string' ? detail : null,
+        });
       } finally {
         setIsLoading(false);
       }
     };
     fetchTimelineDetails();
-  }, [videoId]);
+  }, [videoId, retryKey]);
 
   // ── fake/real 비율 (프레임 카운트 기준) ──
   const fakeCount  = timelineData.filter(f => f.fake_score > 50).length;
@@ -181,13 +235,44 @@ const VideoTimelinePage = ({ sessionUser }) => {
     return () => { clearTimeout(t1); clearTimeout(t2); ro.disconnect(); };
   }, [timelineData, isLoading, drawCanvas]);
 
-  if (!data) {
+  // 에러 화면 (state 없음 포함) — 정상 화면 외의 유일한 분기
+  const errorType = !videoId ? 'nostate' : error?.type;
+  if (errorType) {
+    const view = ERROR_VIEWS[errorType];
+    const actionButtons = {
+      home:  { label: '동영상 분석으로', onClick: () => navigate('/video-analysis') },
+      login: { label: '로그인', onClick: () => navigate('/login') },
+      retry: { label: '다시 시도', onClick: () => setRetryKey(k => k + 1) },
+      back:  { label: '뒤로가기', onClick: () => navigate(-1) },
+    };
     return (
       <TimelineLayout sessionUser={sessionUser}>
-        <div className="dg-timeline__state">
-          <p>전송된 비디오 분석 데이터가 없습니다.</p>
-          <Button variant="primary" onClick={() => navigate(-1)}>뒤로가기</Button>
-        </div>
+        <header className="dg-timeline__head">
+          <button type="button" className="dg-timeline__back" onClick={() => navigate(-1)}>
+            <span aria-hidden="true">←</span> 뒤로가기
+          </button>
+          {data && (
+            <div className="dg-timeline__chips">
+              {data.version_type && <span>{data.version_type.toUpperCase()}</span>}
+              {data.domain_type && <span>{data.domain_type}</span>}
+              {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
+            </div>
+          )}
+        </header>
+
+        <Card className={`dg-card--static dg-timeline__error dg-timeline__error--${view.tone}`}>
+          <div className="dg-timeline__error-icon" aria-hidden="true">!</div>
+          <p className="dg-timeline__error-title">{view.title}</p>
+          <p className="dg-timeline__error-desc">{view.desc(data)}</p>
+          {error?.detail && <p className="dg-timeline__error-detail">{error.detail}</p>}
+          <div className="dg-timeline__error-actions">
+            {view.actions(data).map((key, i) => (
+              <Button key={key} variant={i === 0 ? 'primary' : 'outline'} onClick={actionButtons[key].onClick}>
+                {actionButtons[key].label}
+              </Button>
+            ))}
+          </div>
+        </Card>
       </TimelineLayout>
     );
   }
