@@ -1,0 +1,561 @@
+/* 히트맵 페이지(프레임/이미지) 공용 스타일 — 다른 페이지에 새지 않도록 .dg-heatmap 하위로 한정 */
+.dg-heatmap {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-bg-alt);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.dg-heatmap *,
+.dg-heatmap *::before,
+.dg-heatmap *::after {
+  box-sizing: border-box;
+}
+/* :where()로 specificity 0 → 컴포넌트/섹션 스타일이 항상 우선 */
+:where(.dg-heatmap) :where(h1, h2, h3, p, dl, dd) {
+  margin: 0;
+  padding: 0;
+}
+
+.dg-heatmap__wrap {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+.dg-heatmap__main {
+  flex: 1;
+  padding: calc(var(--nav-h) + 32px) 0 72px;
+}
+
+/* Card 본문 기본 색/크기 덮어쓰기 */
+.dg-heatmap .dg-card {
+  padding: 28px;
+}
+.dg-heatmap .dg-card__body {
+  color: var(--color-ink);
+  font-size: var(--fs-body);
+}
+
+/* 에러 화면 (state 없음) */
+.dg-heatmap__error {
+  max-width: 560px;
+  margin: 48px auto 0;
+}
+.dg-heatmap__error .dg-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 0 8px;
+}
+.dg-heatmap__error-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 30px;
+  font-weight: 800;
+}
+.dg-heatmap__error-title {
+  margin-bottom: 10px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.dg-heatmap__error-desc {
+  max-width: 380px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+.dg-heatmap__error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+/* 상단 */
+.dg-heatmap__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-bottom: 18px;
+}
+.dg-heatmap__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.dg-heatmap__back:hover {
+  color: var(--color-primary);
+}
+.dg-heatmap__back span {
+  font-size: 18px;
+}
+.dg-heatmap__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dg-heatmap__chips span {
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.dg-heatmap__chips .dg-heatmap__chip--fake {
+  border-color: #ffc2c2;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.dg-heatmap__chips .dg-heatmap__chip--real {
+  border-color: #bbe5c9;
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.dg-heatmap__title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1.25;
+}
+.dg-heatmap__sub {
+  margin: 6px 0 28px;
+  font-size: 15px;
+  color: var(--color-muted);
+}
+.dg-heatmap__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--color-muted);
+}
+.dg-heatmap__tone--fake {
+  color: var(--color-danger);
+}
+.dg-heatmap__tone--real {
+  color: var(--color-success);
+}
+
+/* 스탯 */
+.dg-heatmap__stats {
+  margin-bottom: 24px;
+}
+.dg-heatmap__stats .dg-card__body {
+  display: grid;
+  gap: 16px 24px;
+}
+.dg-heatmap__stats--5 .dg-card__body {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.dg-heatmap__stats--3 .dg-card__body {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.dg-heatmap__stat {
+  min-width: 0;
+}
+.dg-heatmap__stat + .dg-heatmap__stat {
+  padding-left: 24px;
+  border-left: 1px solid var(--color-line);
+}
+.dg-heatmap__stat dt {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--color-muted);
+}
+.dg-heatmap__stat dd {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+}
+.dg-heatmap__stat--big dd {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+/* 2열 그리드 (이미지 페이지: 원본 | 히트맵) */
+.dg-heatmap__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+.dg-heatmap__grid--single {
+  grid-template-columns: 1fr;
+}
+
+/* 패널 */
+.dg-heatmap__panel {
+  position: relative;
+  overflow: hidden;
+}
+.dg-heatmap__panel.is-active,
+.dg-heatmap__panel.is-active.dg-card--static:hover {
+  border-color: var(--color-primary-border);
+}
+.dg-heatmap__panel .dg-card__body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.dg-heatmap__progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  animation: dg-heatmap-slide 2s linear infinite;
+}
+@keyframes dg-heatmap-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+.dg-heatmap__panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-height: 36px;
+  margin-bottom: 16px;
+}
+.dg-heatmap__panel-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.dg-heatmap__panel-tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.dg-heatmap__panel-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dg-heatmap__elapsed {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.dg-heatmap__save {
+  padding: 5px 14px;
+  font-size: 13px;
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+.dg-heatmap__save:hover {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.dg-heatmap__dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-line);
+}
+.dg-heatmap__dot.is-done {
+  background: var(--color-success);
+}
+.dg-heatmap__dot.is-active {
+  background: var(--color-primary);
+  animation: dg-heatmap-pulse 1.5s ease-in-out infinite;
+}
+@keyframes dg-heatmap-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px var(--color-primary-soft); }
+  50% { opacity: 0.4; box-shadow: 0 0 0 0 var(--color-primary-soft); }
+}
+
+/* 미디어 박스 — 고정 높이 + contain으로 원본 비율 유지 (좌우 패널 대칭) */
+.dg-heatmap__media {
+  position: relative;
+  flex: 1;
+  height: 440px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--color-bg-alt);
+}
+.dg-heatmap__media--stage {
+  height: auto;
+  min-height: 440px;
+  padding: 32px 24px;
+}
+.dg-heatmap__media img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.dg-heatmap__result {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.dg-heatmap__result .dg-heatmap__media {
+  width: 100%;
+  flex: none;
+}
+.dg-heatmap__badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  border: 1px solid var(--color-success);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+/* 옵션 선택 */
+.dg-heatmap__options {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.dg-heatmap__options .dg-heatmap__eyebrow {
+  margin-bottom: 10px;
+}
+.dg-heatmap__choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.dg-heatmap__choice {
+  padding: 12px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-btn);
+  background: var(--color-bg);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: 0.15s;
+}
+.dg-heatmap__choice small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-muted);
+}
+.dg-heatmap__choice:hover {
+  border-color: var(--color-primary-border);
+}
+.dg-heatmap__choice.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.dg-heatmap__choice.is-active small {
+  color: var(--color-primary);
+}
+.dg-heatmap__generate {
+  margin-top: 8px;
+}
+
+/* 에러 박스 (요청/폴링 실패) */
+.dg-heatmap__alert {
+  margin-bottom: 26px;
+  padding: 18px;
+  border: 1px solid #ffc2c2;
+  border-radius: 12px;
+  background: var(--color-danger-soft);
+  text-align: center;
+}
+.dg-heatmap__alert-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-danger);
+  color: var(--color-on-dark);
+  font-size: 20px;
+  font-weight: 800;
+}
+.dg-heatmap__alert-msg {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+.dg-heatmap__alert-detail {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: left;
+  word-break: break-all;
+  color: var(--color-muted);
+}
+
+/* 로딩 */
+.dg-heatmap__loading {
+  text-align: center;
+}
+.dg-heatmap__spinner {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  border: 3px solid var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+  animation: dg-heatmap-spin 0.8s linear infinite;
+}
+@keyframes dg-heatmap-spin {
+  to { transform: rotate(360deg); }
+}
+.dg-heatmap__loading-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--color-primary);
+}
+.dg-heatmap__loading-desc {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.dg-heatmap__loading-meta {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+/* 결과 하단 재선택 조합 */
+.dg-heatmap__combos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.dg-heatmap__combo {
+  padding: 5px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: 0.15s;
+}
+.dg-heatmap__combo:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.dg-heatmap__combo.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* 결과 없음 */
+.dg-heatmap__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--color-muted);
+}
+
+/* 반응형 */
+@media (max-width: 900px) {
+  .dg-heatmap__grid {
+    grid-template-columns: 1fr;
+  }
+  .dg-heatmap__stats--5 .dg-card__body {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .dg-heatmap__stat + .dg-heatmap__stat {
+    padding-left: 0;
+    border-left: none;
+  }
+  .dg-heatmap__media {
+    height: 360px;
+  }
+  .dg-heatmap__media--stage {
+    height: auto;
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dg-heatmap__wrap {
+    padding: 0 16px;
+  }
+  .dg-heatmap .dg-card {
+    padding: 20px;
+  }
+  .dg-heatmap__title {
+    font-size: 24px;
+  }
+  .dg-heatmap__stats--5 .dg-card__body,
+  .dg-heatmap__stats--3 .dg-card__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dg-heatmap__media {
+    height: 280px;
+  }
+  .dg-heatmap__media--stage {
+    height: auto;
+    min-height: 300px;
+    padding: 24px 12px;
+  }
+}
