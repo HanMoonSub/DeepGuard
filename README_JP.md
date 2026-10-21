@@ -247,8 +247,8 @@ DATA_ROOT/
 
 | モデル名 | 解像度 | パラメータ(M) | 演算量(GFLOPS) | 設定ファイル |
 | ----- | ---------- | -------------- | ----------- | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 0.87 | [spec](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
-| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 13.64 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 0.85 | [spec](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
+| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 13.43 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 ## 🕐 Model Inference Latency
 
