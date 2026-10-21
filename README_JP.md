@@ -50,6 +50,7 @@
 - [⚙️ データ準備](#データ準備) — YOLOv8 を用いた効率的な顔検出およびランドマーク抽出パイプライン。
 - [🏗 モデルアーキテクチャ](#-モデルアーキテクチャ) — ハイブリッド CNN-ViT (MS-EffViT & MS-EffGCViT) 設計の詳細。
 - [🧬 Model Zoo](#-model-zoo) — モデルバリアントごとのパラメータ数および演算量(FLOPs)の比較。
+- [🕐 Model Inference Latency](#-model-inference-latency) — Tesla T4 1基における Fast(b0)と Pro(b5)の推論速度の比較。
 - [🚀 学習](#-学習) - Google Colab および W&B を活用した段階的な学習スクリプト。
 - [📈 モデル評価](#-モデル評価) - ベンチマーク結果。
 - [💻 モデルの使い方](#-モデルの使い方) - `pip install deepguard` または Hugging Face Hub から学習済みモデルをロード
@@ -246,8 +247,17 @@ DATA_ROOT/
 
 | モデル名 | 解像度 | パラメータ(M) | 演算量(GFLOPS) | 設定ファイル |
 | ----- | ---------- | -------------- | ----------- | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 0.87 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 0.87 | [spec](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
 | 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 13.64 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+
+## 🕐 Model Inference Latency
+
+推論速度は、Tesla T4 1基でバッチサイズ 1、動画(num_frames=20)を対象に測定しています。
+
+| モデル名 | モード | 展開対象 | 推論速度(s) | 比率 |
+| ----- | ---- | -------- | ----------- | ----- |
+| ⚡ ms_eff_gcvit_b0 | Fast Mode | エッジ / オンデバイス展開向け | 0.051 | 1.00× |
+| 🔥 ms_eff_gcvit_b5 | Pro Mode | エンタープライズ展開向け | 0.479 | 9.41× |
 
 ## 🚀 学習
 

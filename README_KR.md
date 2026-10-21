@@ -50,6 +50,7 @@
 - [⚙️ 데이터 준비](#데이터-준비) — YOLOv8을 이용한 효율적인 얼굴 검출 및 랜드마크 추출 파이프라인.
 - [🏗 모델 구조](#-모델-구조) — 하이브리드 CNN-ViT (MS-EffViT & MS-EffGCViT) 설계 상세.
 - [🧬 모델 주(Model Zoo)](#-model-zoo) — 모델 변체별 파라미터 수 및 연산량(FLOPs) 비교.
+- [🕐 Model Inference Latency](#-model-inference-latency) — Tesla T4 1대 기준 Fast(b0) vs Pro(b5) 추론 속도 비교.
 - [🚀 학습](#-학습) - Google Colab 및 W&B를 활용한 단계별 학습 스크립트.
 - [📈 모델 평가](#-모델-평가) - 벤치마크 결과.
 - [💻 모델 사용법](#-모델-사용법) - `pip install deepguard` 또는 Hugging Face Hub를 통한 사전 학습 모델 로드
@@ -246,8 +247,17 @@ DATA_ROOT/
 
 | 모델명 | 해상도 | 파라미터(M) | 연산량(GFLOPS) | 설정 파일 |
 | ----- | ---------- | -------------- | ----------- | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 | [spec](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
 | 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.34 | 13.43 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+
+## 🕐 Model Inference Latency
+
+추론 속도는 Tesla T4 GPU 1대에서 배치 크기 1, 비디오(num_frames=20) 기준으로 측정했습니다.
+
+| 모델명 | 모드 | 배포 대상 | 추론 속도(s) | 비율 |
+| ----- | ---- | -------- | ----------- | ----- |
+| ⚡ ms_eff_gcvit_b0 | Fast Mode | 엣지 / 온디바이스 배포용 | 0.051 | 1.00× |
+| 🔥 ms_eff_gcvit_b5 | Pro Mode | 엔터프라이즈 배포용 | 0.479 | 9.41× |
 
 ## 🚀 학습
 

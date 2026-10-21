@@ -50,6 +50,7 @@
 - [⚙️ Data Preparation](#data-preparation) — Efficient face detection and landmark extraction pipeline using YOLOv8
 - [🏗 Model Architecture](#-model-architecture) — Detailed look into our hybrid CNN-ViT (MS-EffViT & MS-EffGCViT) designs.
 - [🧬 Model Zoo](#-model-zoo) — Comparison of model variants, parameter counts, and computational complexity (FLOPs).
+- [🕐 Model Inference Latency](#-model-inference-latency) - Fast (b0) vs Pro (b5) inference speed on a single Tesla T4
 - [🚀 Training](#-training) - Step-by-step training scrips with Goolge Colab and W&B experiment tracking
 - [📈 Model Evaluation](#-model-evaluation) - Benchmarking results
 - [💻 Model Usage](#-model-usage) - Load pretrained models via `pip install deepguard` or straight from the Hugging Face Hub
@@ -248,8 +249,17 @@ We utilizes two distinct types of self-attention to capture both long-range and 
 
 | Model | Resolution | # Params(M) | # FLOPS(G) | Model Config |
 | ----- | ---------- | -------------- | ----------- | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 |  [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 |  [spec](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
 | 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.34 | 13.43 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+
+## 🕐 Model Inference Latency
+
+Latency is measured with batch size 1 on a single Tesla T4 and video (num_frames=20).
+
+| Model | Mode | Target Deployment | Latency (s) | Ratio |
+| ----- | ---- | ----------------- | ----------- | ----- |
+| ⚡ ms_eff_gcvit_b0 | Fast Mode | Edge / on-device deployment | 0.051 | 1.00× |
+| 🔥 ms_eff_gcvit_b5 | Pro Mode | Enterprise deployment | 0.479 | 9.41× |
 
 ## 🚀 Training
 
