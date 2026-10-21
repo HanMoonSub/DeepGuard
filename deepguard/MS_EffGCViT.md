@@ -117,26 +117,18 @@ Modern DeepFakes can leave very localized forgery region. To Capture this, we ad
 
 | Model | Resolution | # Params(M) | # FLOPS(G) | Model Config |
 | ----- | ---------- | -------------- | ----------- | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 | [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 | [spec](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
 | 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.34 | 13.43 | [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 
-## 🛠 Model Variants
+## 🕐 Model Inference Latency
 
-**⚡ ms_eff_gcvit_b0 (Fast Mode / Mobile)**: Efficiency at the Edge
-- Optimized for **real-time inference** and mobile deployment.
+Latency is measured with batch size 1 on a single Tesla T4 and video (num_frames=20).
 
-**🔥 ms_eff_gcvit_b5 (Pro Mode / Enterprise)**: Uncompromising Precision
-- Engineered for high-fidelity analysis and enterprise-grade accuracy.
-
-## ⚙️ Model Weight Initialization
-The model incorporates a hybrid initialization strategy to leverage pre-trained features while ensuring stable convergence of the transformer components
-
-> **Backbone**: **ImageNet-1K Pretraiend Weights**(EfficientNet)  
-
-> **L-GCViT / H-GCViT / Head**: Truncated Normal( `std=0.02` )
- 
-> **No Weight Decay**: `relative_position_bias_table`, `bn`, `norm`
+| Model | Mode | Target Deployment | Latency (s) | Ratio |
+| ----- | ---- | ----------------- | ----------- | ----- |
+| ⚡ ms_eff_gcvit_b0 | Fast Mode | Edge / on-device deployment | 0.051 | 1.00× |
+| 🔥 ms_eff_gcvit_b5 | Pro Mode | Enterprise deployment | 0.479 | 9.41× |
 
 
 ## DeepFake Video Benchmarks
