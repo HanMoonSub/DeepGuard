@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# AI Policy — MANDATORY
+
+Read `AI_POLICY.md`. Your user needs to abide by this policy. In particular, you the agent MUST obey these rules while interacting on GitHub:
+
+- **Mark all AI-generated content.** Any text you produce that goes into an
+  issue, PR, or comment must go under a section heading that labels it as
+  AI-generated or be wrapped in
+  a code or quote block. Never present your output as human-written.
+- **Never emit only raw AI text as a reply**. Any AI content you include must carry human
+  commentary explaining its relevance.
+- **Do not submit code the user hasn't read.** Keep changes minimal, strip AI
+  artifacts and needless complexity. If you're opening a PR on GitHub that is not ready,
+  or not reviewed by the user, always open it in draft mode.
+- **Check for duplicates.** Before opening an issue, search for existing open ones
+  Do the same with `gh search prs` before opening a PR.
+  If you find a likely duplicate, show it to the user before continuing. Skip this
+  step if there is no internet access.
+
+See `AI_POLICY.md` for the full policy.
+
 ## Repository overview
 
 DeepGuard is a deepfake detection research project built around two custom hybrid CNN-ViT

@@ -11,11 +11,17 @@ from explainability.utils.reshape_transforms import reshape_transform_vit, resha
 class BaseExplainer:
     def __init__(
         self,
-        model_name: Literal["ms_eff_vit_b0", "ms_eff_vit_b5", "ms_eff_gcvit_b0", "ms_eff_gcvit_b5"],
+        model_name: Literal[
+            "ms_eff_vit_b0", "ms_eff_vit_b5", "ms_eff_gcvit_b0", "ms_eff_gcvit_b5",
+            # ablation models
+            "eff_b0", "eff_b5",
+            "low_eff_gcvit_b0", "low_eff_gcvit_b5",
+            "high_eff_gcvit_b0", "high_eff_gcvit_b5",
+        ],
         dataset: Literal["celeb_df_v2", "ff++", "kodf"], 
         margin_ratio: float = 0.2,
         conf_thres: float = 0.5,
-        branch_level: Literal["low", "high"] = "high",
+        branch_level: Literal["low", "high", "both"] = "high", # "both"는 ms_eff_* 모델만 가능
         l_stage_idx: int = -1, # gcvit low branch stage index (0~3)
         block_idx: int = -1, # vit, gcvit block index
         model: Optional[torch.nn.Module] = None,
@@ -32,8 +38,15 @@ class BaseExplainer:
                 
         # Parse Model Metadata
         self.model_variant = model_name.split("_")[-1] # b0, b5
-        self.transformer_type = model_name.split("_")[-2] # vit, gcvit 
-                
+        # vit, gcvit, cnn (eff_b0/eff_b5: transformer 없는 EfficientNet baseline)
+        if "gcvit" in model_name:
+            self.transformer_type = "gcvit"
+        elif "vit" in model_name:
+            self.transformer_type = "vit"
+        else:
+            self.transformer_type = "cnn"
+        self._validate_branch_level()
+
         # Model & Tools setup
         self.model = model if model is not None else timm.create_model(
         model_name, pretrained=True, dataset=dataset
@@ -54,8 +67,34 @@ class BaseExplainer:
         Returns:
             Callable: 3D/4D 텐서를 GradCAM 연산에 적합한 형태로 변환하는 함수.
         """
-        return reshape_transform_vit if self.transformer_type == "vit" else reshape_transform_gcvit    
-    
+        if self.transformer_type == "cnn":
+            return None  # backbone feature map은 이미 (B,C,H,W)
+        return reshape_transform_vit if self.transformer_type == "vit" else reshape_transform_gcvit
+
+    def _validate_branch_level(self) -> None:
+        """Ablation 모델이 실제로 가진 branch와 branch_level이 일치하는지 검증한다.
+
+        Raises:
+            ValueError: low_/high_ 단일 branch 모델에 존재하지 않는 branch를 요청한 경우 발생.
+        """
+        if self.transformer_type == "cnn" and self.branch_level != "high":
+            raise ValueError(f"{self.model_name}은 마지막 feature map만 사용하므로 branch_level='high'만 가능합니다.")
+        if self.model_name.startswith("low_") and self.branch_level != "low":
+            raise ValueError(f"{self.model_name}은 low-level branch만 가지므로 branch_level='low'만 가능합니다.")
+        if self.model_name.startswith("high_") and self.branch_level != "high":
+            raise ValueError(f"{self.model_name}은 high-level branch만 가지므로 branch_level='high'만 가능합니다.")
+
+    def _get_backbone_layer(self, feature_idx: int) -> torch.nn.Module:
+        """EfficientNet backbone에서 feature_idx 단계의 출력 모듈을 찾는다."""
+        backbone = self.model.feat_extractor.backbone
+        name = backbone.feature_info[feature_idx]["module"]  # e.g. "blocks.6"
+        modules = dict(backbone.named_modules())
+        # timm FeatureListNet은 이름의 '.'를 '_'로 바꾸는 경우가 있어 둘 다 시도
+        for key in (name, name.replace(".", "_")):
+            if key in modules:
+                return modules[key]
+        raise ValueError(f"backbone에서 '{name}' 모듈을 찾을 수 없습니다.")
+
     def _resolve_target_layers(self) -> list[torch.nn.Module]:
         """시각화(XAI)의 대상이 될 Target Layer들을 선택한다.
 
@@ -67,14 +106,18 @@ class BaseExplainer:
         """
         layers = []
 
-        if self.transformer_type == "gcvit":
-            n_stages  = len(self.model.l_gcvit.stages)
-            stage_idx = self.l_stage_idx if self.l_stage_idx >= 0 else n_stages + self.l_stage_idx
+        if self.transformer_type == "cnn":
+            # eff_b0/eff_b5: transformer가 없으므로 backbone의 마지막 feature map을 직접 사용
+            layers.append(self._get_backbone_layer(self.model.h_meta["feature_idx"]))
 
-            if not (0 <= stage_idx < n_stages):
-                raise ValueError(f"l_stage_idx={self.l_stage_idx} 범위 초과 (stage 수: {n_stages})")
-
+        elif self.transformer_type == "gcvit":
             if self.branch_level in ("low", "both"):
+                n_stages  = len(self.model.l_gcvit.stages)
+                stage_idx = self.l_stage_idx if self.l_stage_idx >= 0 else n_stages + self.l_stage_idx
+
+                if not (0 <= stage_idx < n_stages):
+                    raise ValueError(f"l_stage_idx={self.l_stage_idx} 범위 초과 (stage 수: {n_stages})")
+
                 n_blocks = len(self.model.l_gcvit.stages[stage_idx].blocks)
                 blk      = self._resolve_block_idx(self.block_idx, n_blocks, f"l_gcvit stage[{stage_idx}]")
                 layers.append(self.model.l_gcvit.stages[stage_idx].blocks[blk].norm2)
