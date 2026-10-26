@@ -3,6 +3,19 @@ from pathlib import Path
 from ultralytics import YOLO
 from typing import List
 import numpy as np
+import torch
+
+YOLO_FACE_URL = "https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/yolov8n-face.pt"
+
+def get_yolo_face_weights() -> Path:
+    """
+    Returns the local path of yolov8n-face.pt, downloading it from GitHub Releases on first use.
+    """
+    path = Path(torch.hub.get_dir()) / "checkpoints" / "yolov8n-face.pt"
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        torch.hub.download_url_to_file(YOLO_FACE_URL, str(path))
+    return path
 
 class FaceDetector:
     """
@@ -23,7 +36,7 @@ class FaceDetector:
                 min_face_ratio: Minimum face bounding box area ratio relative to the full frame area.
         """
         
-        weights_path = Path(__file__).resolve().parent / "yolov8n-face.pt"
+        weights_path = get_yolo_face_weights()
         
         self.model = YOLO(str(weights_path), task='detect')
         self.conf_thres = conf_thres
@@ -93,7 +106,7 @@ class FaceDetector2:
                 conf_thres: Confidence threshold for YOLO face detection
         """
         
-        weights_path = Path(__file__).resolve().parent / "yolov8n-face.pt"
+        weights_path = get_yolo_face_weights()
         
         self.model = YOLO(str(weights_path), task='detect')
         self.conf_thres = conf_thres
@@ -158,7 +171,7 @@ class FaceDetector_KODF:
                 min_face_ratio: Minimum face bounding box area ratio relative to the full frame area.
         """
         
-        weights_path = Path(__file__).resolve().parent / "yolov8n-face.pt"
+        weights_path = get_yolo_face_weights()
         
         self.model = YOLO(str(weights_path), task='detect')
         self.conf_thres = conf_thres

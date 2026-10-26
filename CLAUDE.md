@@ -149,7 +149,7 @@ each have their own `detect_original_face.py`, `crop_face.py`, `split_data.py`, 
 each raw dataset has different file layouts/metadata):
 
 1. **Face detection on real videos only** (`preprocess/face_detector.py`, using `yolov8n-face.pt`
-   at repo root) — fake videos in these benchmarks reuse the same face bounding boxes as their
+   downloaded on first use from the `v0.1.0` GitHub Release into the torch hub cache) — fake videos in these benchmarks reuse the same face bounding boxes as their
    source real video, cutting detection workload ~80%. Frames are dynamically rescaled based on
    resolution before detection for consistent inference speed.
 2. **Face cropping + landmark extraction** (`preprocess/landmark_detector.py` + per-dataset

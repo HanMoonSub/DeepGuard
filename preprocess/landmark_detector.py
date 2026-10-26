@@ -1,8 +1,8 @@
 import os
-from pathlib import Path
 from ultralytics import YOLO
 from typing import List
 import numpy as np
+from .face_detector import get_yolo_face_weights
 
 class LandmarkDetector:
     """
@@ -13,7 +13,7 @@ class LandmarkDetector:
     
     def __init__(self):
         
-        weights_path = Path(__file__).resolve().parent / "yolov8n-face.pt"
+        weights_path = get_yolo_face_weights()
         
         self.model = YOLO(str(weights_path), task='pose')
         
@@ -61,7 +61,7 @@ class LandmarkDetector_KODF:
     
     def __init__(self):
         
-        weights_path = Path(__file__).resolve().parent / "yolov8n-face.pt"
+        weights_path = get_yolo_face_weights()
         
         self.model = YOLO(str(weights_path), task='pose')
         
