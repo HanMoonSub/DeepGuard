@@ -134,6 +134,17 @@
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
 }
+/* REAL/FAKE 판정 카드 hover — 옅은 초록/빨강 테두리 (선택된 카드는 선택 스타일 우선) */
+.dg-analysis__history-item.is-real,
+.dg-analysis__history-item.is-fake {
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+.dg-analysis__history-item.is-real:hover:not(.is-selected) {
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+}
+.dg-analysis__history-item.is-fake:hover:not(.is-selected) {
+  border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+}
 .dg-analysis__thumb {
   width: 44px;
   height: 44px;
@@ -564,13 +575,6 @@
 .dg-analysis__segment button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-.dg-analysis__crown {
-  position: absolute;
-  top: -12px;
-  right: -2px;
-  line-height: 0;
-  transform: rotate(18deg);
 }
 
 .dg-analysis__models {

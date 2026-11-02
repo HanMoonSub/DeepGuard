@@ -149,7 +149,6 @@ const AnalysisDetailPage = ({ sessionUser }) => {
           <span aria-hidden="true">←</span> 뒤로가기
         </button>
         <div className="dg-detail__chips">
-          <span>{data.version_type?.toUpperCase() || 'V1'}</span>
           <span>{data.domain_type || '서양인'}</span>
           <span>{data.model_type?.toUpperCase() || 'FAST'}</span>
         </div>

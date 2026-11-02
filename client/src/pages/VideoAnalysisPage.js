@@ -15,6 +15,9 @@ const SAMPLE_VIDEOS = [
   { name: 'western_real.mp4', src: '/samples/videos/western_real.mp4', domain: 'western', label: '서양인 Real' },
 ];
 
+// V1 지원 종료 — 항상 V2 모델 사용 (요청 필드 version_type은 유지)
+const VERSION_TYPE = 'v2';
+
 // FAKE/REAL/UNKNOWN → 배지 modifier
 const labelTone = (label) => (label === 'FAKE' ? 'fake' : label === 'REAL' ? 'real' : 'unknown');
 
@@ -41,7 +44,6 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedSample, setSelectedSample] = useState(null);
 
-  const [versionType, setVersionType] = useState('v2');
   const [modelType, setModelType] = useState('fast');
   const [domainType, setDomainType] = useState('western');
 
@@ -144,7 +146,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     formData.append('videofile', file);
     formData.append('model_type', modelType);
     formData.append('domain_type', domainType === 'western' ? '서양인' : '동양인');
-    formData.append('version_type', versionType);
+    formData.append('version_type', VERSION_TYPE);
 
     setIsAnalyzing(true);
     setStatusMessage('서버 접수 중...');
@@ -178,7 +180,6 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       const res = await fetch(sample.src);
       const blob = await res.blob();
       const file = new File([blob], sample.name, { type: blob.type });
-      if (sample.domain === 'asian') setVersionType('v2'); // 동양인은 v2 전용
       setDomainType(sample.domain);
       handleFileSelect(file);
       setSelectedSample(sample.name); // handleFileSelect 리셋 이후 선택 표시
@@ -321,7 +322,6 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 history.map((item, index) => {
                   const currentId = item.video_id || item.id;
                   const isSelected = selectedIds.includes(currentId);
-                  const vType = item.version_type ? item.version_type.toUpperCase() : 'V2';
                   const dType = item.domain_type || '서양인';
                   const mType = item.model_type ? item.model_type.toUpperCase() : 'FAST';
 
@@ -332,7 +332,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                         onClick={() => !isEditMode && navigate('/video-detail', {
                           state: { video_id: currentId }
                         })}
-                        className={`dg-analysis__history-item${isSelected ? ' is-selected' : ''}${isEditMode ? ' is-editing' : ''}`}
+                        className={`dg-analysis__history-item${isSelected ? ' is-selected' : ''}${isEditMode ? ' is-editing' : ''}${labelTone(item.label) === 'real' ? ' is-real' : ''}${labelTone(item.label) === 'fake' ? ' is-fake' : ''}`}
                       >
                         <div className="dg-analysis__thumb">
                           {item.video_loc ? (
@@ -340,7 +340,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                           ) : '📹'}
                         </div>
                         <div className="dg-analysis__history-meta">
-                          <div className="dg-analysis__history-type">{vType} | {dType} | {mType}</div>
+                          <div className="dg-analysis__history-type">{dType} | {mType}</div>
                           <div className="dg-analysis__history-date">
                             {item.created_at?.slice(0, 10)}
                             <span>{item.created_at?.slice(11, 16)}</span>
@@ -442,25 +442,10 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <h3 className="dg-analysis__settings-title">분석 설정</h3>
 
           <div className="dg-analysis__field">
-            <p className="dg-analysis__field-label">버전 선택</p>
-            <div className="dg-analysis__segment">
-              <button type="button" className={versionType === 'v1' ? 'is-on' : ''} onClick={() => setVersionType('v1')}>V1</button>
-              <button type="button" className={versionType === 'v2' ? 'is-on' : ''} onClick={() => setVersionType('v2')}>
-                V2
-                <span className="dg-analysis__crown">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFC21A">
-                    <path d="M5 16L3 5l5.5 4L12 4l3.5 5L21 5l-2 11H5zm0 2.5h14v1.5H5z" />
-                  </svg>
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <div className="dg-analysis__field">
             <p className="dg-analysis__field-label">대상 도메인</p>
             <div className="dg-analysis__segment">
               <button type="button" className={domainType === 'western' ? 'is-on' : ''} onClick={() => setDomainType('western')}>서양인</button>
-              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} onClick={() => setDomainType('asian')} disabled={versionType === 'v1'}>동양인</button>
+              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} onClick={() => setDomainType('asian')}>동양인</button>
             </div>
           </div>
 

@@ -253,7 +253,6 @@ const VideoTimelinePage = ({ sessionUser }) => {
           </button>
           {data && (
             <div className="dg-timeline__chips">
-              {data.version_type && <span>{data.version_type.toUpperCase()}</span>}
               {data.domain_type && <span>{data.domain_type}</span>}
               {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
             </div>
@@ -298,7 +297,6 @@ const VideoTimelinePage = ({ sessionUser }) => {
           <span aria-hidden="true">←</span> 뒤로가기
         </button>
         <div className="dg-timeline__chips">
-          {data.version_type && <span>{data.version_type.toUpperCase()}</span>}
           {data.domain_type && <span>{data.domain_type}</span>}
           {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
         </div>
