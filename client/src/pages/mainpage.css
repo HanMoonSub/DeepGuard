@@ -34,9 +34,135 @@
 }
 .dg-hero__grid {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: 48px;
   align-items: center;
+}
+/* 히어로 비주얼: 벡터 스캔 배경 + 결과 카드 + 글래스 칩 (dg-hero-visual__* 로 격리) */
+.dg-landing .dg-hero-visual {
+  position: relative;
+  isolation: isolate; /* 배경 레이어(z-index:-1)가 히어로 배경 뒤로 빠지지 않게 */
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 480px;
+  min-height: 460px; /* 왼쪽 텍스트 블록과 비슷한 높이 */
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* 배경 레이어 — 순수 CSS라 해상도와 무관하게 선명 */
+.dg-landing .dg-hero-visual__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.dg-landing .dg-hero-visual__bg > span {
+  position: absolute;
+  inset: 0;
+}
+.dg-landing .dg-hero-visual__glow {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--color-primary) 40%, transparent), transparent);
+  filter: blur(30px);
+}
+.dg-landing .dg-hero-visual__grid {
+  --grid-line: color-mix(in srgb, var(--color-accent-light) 14%, transparent);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent);
+  mask-image: radial-gradient(closest-side, #000 30%, transparent);
+}
+/* 스캔 라인 (정적) */
+.dg-landing .dg-hero-visual__scan::before {
+  content: '';
+  position: absolute;
+  top: 38%;
+  left: 6%;
+  right: 6%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--color-primary) 55%, transparent);
+  opacity: 0.7;
+}
+
+/* 메인 카드 — 원본의 절반 이하 크기로 표시해 선명하게 */
+.dg-landing .dg-hero-visual__card {
+  /* 원본 772px 기준 크롭: 오른쪽 잘린 라벨/검은 띠, 아래쪽 파란 줄 */
+  --hero-src-w: 772;
+  --hero-crop-r: 59;
+  --hero-crop-b: 10;
+  --hero-visible-w: calc(var(--hero-src-w) - var(--hero-crop-r));
+  position: relative;
+  width: min(320px, 100%);
+  border: 1px solid color-mix(in srgb, var(--color-on-dark) 18%, transparent);
+  border-radius: 20px;
+  background: var(--color-bg-dark-2);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+/* 비율 그대로 확대 후 오른쪽·아래만 카드 밖으로 밀어내 크롭 (늘림/찌그러짐 없음) */
+.dg-landing .dg-hero-visual__img {
+  display: block;
+  width: calc(100% * var(--hero-src-w) / var(--hero-visible-w));
+  max-width: none;
+  height: auto;
+  margin-bottom: calc(-100% * var(--hero-crop-b) / var(--hero-visible-w));
+}
+
+/* 글래스 칩 — 데스크톱에서는 카드 주변에 겹쳐 배치 */
+.dg-landing .dg-hero-visual__chips {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.dg-landing .dg-hero-visual__chip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-on-dark) 28%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-on-dark) 10%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--color-bg-dark) 50%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-dark);
+  white-space: nowrap;
+}
+.dg-landing .dg-hero-visual__chip::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dg-landing .dg-hero-visual__chip--low {
+  top: 12%;
+  left: 0;
+}
+.dg-landing .dg-hero-visual__chip--low::before {
+  background: var(--color-warning);
+}
+.dg-landing .dg-hero-visual__chip--high {
+  top: 46%;
+  right: 0;
+}
+.dg-landing .dg-hero-visual__chip--high::before {
+  background: var(--color-accent);
+}
+.dg-landing .dg-hero-visual__chip--cam {
+  bottom: 10%;
+  left: 4%;
+}
+.dg-landing .dg-hero-visual__chip--cam::before {
+  background: var(--color-danger);
 }
 .dg-pill {
   display: inline-block;
@@ -80,9 +206,6 @@
   border: 1px solid #ffffff22;
   box-shadow: var(--shadow-lg);
   color: var(--color-on-dark);
-}
-.dg-scan--hero {
-  margin-left: auto;
 }
 .dg-scan--xai {
   margin: 0 auto;
@@ -144,24 +267,6 @@
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 4px;
-}
-.dg-scan__result {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 18px;
-  background: #0b1220ee;
-  border: 1px solid #ffffff22;
-  border-radius: 14px;
-  font-size: var(--fs-sm);
-}
-.dg-scan__result strong {
-  font-size: 24px;
-  color: #ff6b6b;
 }
 
 /* sections */
@@ -307,8 +412,24 @@
   .dg-landing h1 {
     font-size: 40px;
   }
-  .dg-scan--hero {
-    margin: 0 auto;
+  /* 1열: 카드 아래로 칩을 내려 줄바꿈 배치 */
+  .dg-landing .dg-hero-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 0;
+    padding: 36px 0 8px;
+  }
+  .dg-landing .dg-hero-visual__chips {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 28px;
+  }
+  .dg-landing .dg-hero-visual__chip {
+    position: static;
   }
 }
 
@@ -319,6 +440,13 @@
   }
   .dg-hero {
     padding: 130px 0 80px;
+  }
+  .dg-landing .dg-hero-visual__card {
+    width: min(280px, 100%);
+  }
+  .dg-landing .dg-hero-visual__chip {
+    padding: 6px 12px;
+    font-size: 12px;
   }
   .dg-landing h2 {
     font-size: 30px;

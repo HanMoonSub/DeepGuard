@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import heroHeatmap from '../assets/hero-heatmap.png';
 import './mainpage.css';
 
 const NAV_LINKS = [
@@ -14,20 +15,14 @@ const NAV_LINKS = [
   { href: '#team', label: 'Team' },
 ];
 
-// 히어로/XAI 섹션의 얼굴 스캔 일러스트
-const ScanVisual = ({ tag, result, className = '' }) => (
+// XAI 섹션의 얼굴 스캔 일러스트
+const ScanVisual = ({ tag, className = '' }) => (
   <div className={`dg-scan ${className}`.trim()}>
     <span className="dg-scan__tag">{tag}</span>
     <div className="dg-scan__face" />
     <div className="dg-scan__heat dg-scan__heat--1" />
     <div className="dg-scan__heat dg-scan__heat--2" />
     <div className="dg-scan__box"><b>FAKE</b></div>
-    {result && (
-      <div className="dg-scan__result">
-        <span>Deepfake Probability</span>
-        <strong>{result}</strong>
-      </div>
-    )}
   </div>
 );
 
@@ -61,7 +56,30 @@ const MainPage = ({ sessionUser, onLogout }) => {
               <Button variant="ghost" href="#api">API 문서 →</Button>
             </div>
           </div>
-          <ScanVisual tag="SAMPLE · Fake" result="0.9873" className="dg-scan--hero" />
+          {/* 히어로 비주얼: 벡터 스캔 배경 + 결과 카드 + 글래스 칩 */}
+          <figure className="dg-hero-visual">
+            <div className="dg-hero-visual__bg" aria-hidden="true">
+              <span className="dg-hero-visual__glow" />
+              <span className="dg-hero-visual__grid" />
+              <span className="dg-hero-visual__scan" />
+            </div>
+            <div className="dg-hero-visual__card">
+              {/* 이미지 교체 시 width/height와 CSS --hero-src-w / --hero-crop-* 함께 수정 */}
+              <img
+                className="dg-hero-visual__img"
+                src={heroHeatmap}
+                alt="딥페이크 의심 얼굴 위에 조작 의심 영역 히트맵과 확률 박스가 표시된 분석 예시"
+                width={772}
+                height={924}
+                decoding="async"
+              />
+            </div>
+            <figcaption className="dg-hero-visual__chips">
+              <span className="dg-hero-visual__chip dg-hero-visual__chip--low">Low-level · Local Artifacts</span>
+              <span className="dg-hero-visual__chip dg-hero-visual__chip--high">High-level · Global Structure</span>
+              <span className="dg-hero-visual__chip dg-hero-visual__chip--cam">CAM-based Attribution</span>
+            </figcaption>
+          </figure>
         </div>
       </header>
 
