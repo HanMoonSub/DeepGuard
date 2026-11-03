@@ -56,29 +56,16 @@ const MainPage = ({ sessionUser, onLogout }) => {
               <Button variant="ghost" href="#api">API 문서 →</Button>
             </div>
           </div>
-          {/* 히어로 비주얼: 벡터 스캔 배경 + 결과 카드 + 글래스 칩 */}
+          {/* 히어로 비주얼: 히트맵 예시 이미지 한 장 */}
           <figure className="dg-hero-visual">
-            <div className="dg-hero-visual__bg" aria-hidden="true">
-              <span className="dg-hero-visual__glow" />
-              <span className="dg-hero-visual__grid" />
-              <span className="dg-hero-visual__scan" />
-            </div>
-            <div className="dg-hero-visual__card">
-              {/* 이미지 교체 시 width/height와 CSS --hero-src-w / --hero-crop-* 함께 수정 */}
-              <img
-                className="dg-hero-visual__img"
-                src={heroHeatmap}
-                alt="딥페이크 의심 얼굴 위에 조작 의심 영역 히트맵과 확률 박스가 표시된 분석 예시"
-                width={772}
-                height={924}
-                decoding="async"
-              />
-            </div>
-            <figcaption className="dg-hero-visual__chips">
-              <span className="dg-hero-visual__chip dg-hero-visual__chip--low">Low-level · Local Artifacts</span>
-              <span className="dg-hero-visual__chip dg-hero-visual__chip--high">High-level · Global Structure</span>
-              <span className="dg-hero-visual__chip dg-hero-visual__chip--cam">CAM-based Attribution</span>
-            </figcaption>
+            <img
+              className="dg-hero-visual__img"
+              src={heroHeatmap}
+              alt="딥페이크 의심 얼굴 위에 위조 의심 영역 히트맵과 확률 박스가 표시된 분석 예시"
+              width={772}
+              height={924}
+              decoding="async"
+            />
           </figure>
         </div>
       </header>
