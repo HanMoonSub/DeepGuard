@@ -314,7 +314,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
         </Card>
 
         <Card className="dg-card--static dg-timeline__ratio-card">
-          <p className="dg-timeline__eyebrow">FORGERY RATIO</p>
+          <p className="dg-timeline__eyebrow">위조 비율</p>
 
           <div className="dg-timeline__ratio">
             {/* 도넛 차트 */}
@@ -370,7 +370,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
       {/* 하단: 타임라인 그래프 & 프레임 데이터 보드 */}
       <Card className="dg-card--static dg-timeline__board">
         <div className="dg-timeline__board-head">
-          <p className="dg-timeline__eyebrow">CHRONOLOGICAL FORGERY RISK</p>
+          <p className="dg-timeline__eyebrow">타임라인</p>
           <div className="dg-timeline__board-legend">
             <span><i className="dg-timeline__swatch dg-timeline__swatch--fake" />변조 의심 (50% 초과)</span>
             <span><i className="dg-timeline__swatch dg-timeline__swatch--real" />정상</span>
@@ -435,7 +435,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                 const tone = isFake ? 'fake' : 'real';
                 return (
                   <div key={idx} className="dg-timeline__frame">
-                    <span className="dg-timeline__frame-time">TIMESTAMP {frame.timestamp}</span>
+                    <span className="dg-timeline__frame-time">타임스탬프 {frame.timestamp}</span>
                     <div className="dg-timeline__frame-info">
                       <span className="dg-timeline__frame-prob">
                         변조 확률 <b className={`dg-timeline__tone--${tone}`}>{Number(frame.fake_score).toFixed(1)}%</b>
