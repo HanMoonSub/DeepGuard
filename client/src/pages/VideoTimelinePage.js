@@ -91,6 +91,8 @@ const VideoTimelinePage = ({ sessionUser }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError]         = useState(null); // { type, detail }
   const [retryKey, setRetryKey]   = useState(0);    // 다시 시도 시 fetch 재실행용
+  const [thumbs, setThumbs]       = useState({});   // { frame_index: dataURL } 그래프 hover 미리보기용
+  const [hoverIdx, setHoverIdx]   = useState(null); // 그래프에서 커서가 올라간 프레임 순번
 
   const videoId = data?.video_id || data?.id;
   const mediaLoc = data?.video_loc || '';
@@ -235,6 +237,54 @@ const VideoTimelinePage = ({ sessionUser }) => {
     return () => { clearTimeout(t1); clearTimeout(t2); ro.disconnect(); };
   }, [timelineData, isLoading, drawCanvas]);
 
+  // ── 프레임 썸네일 추출 ──
+  // 숨은 video로 각 frame_time에 seek → canvas에 그려 작은 jpg로 저장 (동일 출처라 canvas 오염 없음)
+  useEffect(() => {
+    if (!mediaSrc || !timelineData.length) return;
+    let cancelled = false;
+    const video = document.createElement('video');
+    video.muted = true;
+    video.preload = 'auto';
+    video.src = mediaSrc;
+    const canvas = document.createElement('canvas');
+
+    const seek = (t) => new Promise((resolve, reject) => {
+      const onSeeked = () => { cleanup(); resolve(); };
+      const onError = () => { cleanup(); reject(new Error('seek failed')); };
+      const cleanup = () => { video.removeEventListener('seeked', onSeeked); video.removeEventListener('error', onError); };
+      video.addEventListener('seeked', onSeeked);
+      video.addEventListener('error', onError);
+      video.currentTime = t;
+    });
+
+    const run = async () => {
+      try {
+        await new Promise((resolve, reject) => {
+          if (video.readyState >= 1) return resolve();
+          video.addEventListener('loadedmetadata', resolve, { once: true });
+          video.addEventListener('error', reject, { once: true });
+        });
+        const W = 192;
+        canvas.width = W;
+        canvas.height = Math.round(W * (video.videoHeight / video.videoWidth || 9 / 16));
+        const ctx = canvas.getContext('2d');
+        for (const frame of timelineData) {
+          if (cancelled) return;
+          if (frame.frame_time == null) continue;
+          await seek(Math.min(frame.frame_time + 0.01, Math.max(video.duration - 0.05, 0)));
+          if (cancelled) return;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const url = canvas.toDataURL('image/jpeg', 0.75);
+          setThumbs(prev => ({ ...prev, [frame.frame_index]: url }));
+        }
+      } catch (e) {
+        // 썸네일은 부가 기능 — 실패해도 시각/확률 툴팁은 그대로 표시
+      }
+    };
+    run();
+    return () => { cancelled = true; video.removeAttribute('src'); video.load(); };
+  }, [mediaSrc, timelineData]);
+
   // 에러 화면 (state 없음 포함) — 정상 화면 외의 유일한 분기
   const errorType = !videoId ? 'nostate' : error?.type;
   if (errorType) {
@@ -352,7 +402,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                 <strong className="dg-timeline__tone--real">{realRatio.toFixed(1)}%</strong>
               </div>
               <div className="dg-timeline__legend-count">
-                {fakeCount} / {totalCount} FRAMES
+                {totalCount}개 프레임 중 {fakeCount}개 위조
               </div>
             </div>
           </div>
@@ -388,11 +438,12 @@ const VideoTimelinePage = ({ sessionUser }) => {
             <div className="dg-timeline__chart">
 
               {/* 막대 그래프 (치수는 drawCanvas 기준선 계산과 맞물려 있으므로 유지) */}
-              <div ref={barsRef} className="dg-timeline__bars">
+              <div ref={barsRef} className="dg-timeline__bars" onMouseLeave={() => setHoverIdx(null)}>
                 {timelineData.map((frame, i) => {
                   const isFakeUnit = frame.fake_score > 50;
                   return (
-                    <div key={i} className="dg-timeline__bar-col">
+                    <div key={i} className={`dg-timeline__bar-col${hoverIdx === i ? ' is-hover' : ''}`}
+                      onMouseEnter={() => setHoverIdx(i)}>
                       {/* 막대 div — ref 배열로 각각 잡음 */}
                       <div
                         ref={el => barRefs.current[i] = el}
@@ -407,25 +458,42 @@ const VideoTimelinePage = ({ sessionUser }) => {
 
               {/* Canvas: barsRef와 완전히 동일한 위치/크기 */}
               <canvas ref={canvasRef} className="dg-timeline__canvas" />
-            </div>
 
-            {/* 구간별 히트맵 버튼 행 */}
-            <div className="dg-timeline__heat-row">
-              {timelineData.map((frame, i) => {
-                const isFake = frame.fake_score > 50;
+              {/* hover 프레임 미리보기 (그래프 위) */}
+              {hoverIdx != null && timelineData[hoverIdx] && (() => {
+                const frame = timelineData[hoverIdx];
+                const barEl = barRefs.current[hoverIdx];
+                const barsEl = barsRef.current;
+                // 그래프 영역 상단에 작게, 해당 구간과 가로 가운데 정렬
+                const PREVIEW_W = 96;
+                const PREVIEW_H = Math.round(PREVIEW_W * 9 / 16) + 20; // 썸네일 + 정보 줄
+                const GAP = 6;
+                const TOP = 10;
+                let left = 0;
+                let top = TOP;
+                if (barEl && barsEl) {
+                  const chartRect = barsEl.getBoundingClientRect();
+                  const barRect = barEl.getBoundingClientRect();
+                  const centerX = barRect.left - chartRect.left + barRect.width / 2;
+                  const pointY = barRect.top - chartRect.top; // 꺾은선 점 위치 = 막대 상단
+                  left = Math.min(Math.max(centerX - PREVIEW_W / 2, GAP), chartRect.width - GAP - PREVIEW_W);
+                  // 점이 높아 미리보기와 겹치면 점 바로 아래로
+                  if (pointY < TOP + PREVIEW_H + 8) top = pointY + 12;
+                }
+                const tone = frame.fake_score > 50 ? 'fake' : 'real';
+                const thumb = thumbs[frame.frame_index];
                 return (
-                  <div key={i} className="dg-timeline__heat-cell">
-                    <button
-                      type="button"
-                      onClick={() => goHeatmap(frame)}
-                      title={`${frame.timestamp} 히트맵`}
-                      className={`dg-timeline__heat dg-timeline__heat--${isFake ? 'fake' : 'real'}`}
-                    >
-                      HEAT
-                    </button>
+                  <div className="dg-timeline__preview" style={{ left, top, width: PREVIEW_W }}>
+                    {thumb
+                      ? <img src={thumb} alt={`${frame.timestamp} 장면`} />
+                      : <div className="dg-timeline__preview-empty">장면 불러오는 중...</div>}
+                    <div className="dg-timeline__preview-info">
+                      <span>{frame.timestamp}</span>
+                      <b className={`dg-timeline__tone--${tone}`}>{Number(frame.fake_score).toFixed(1)}%</b>
+                    </div>
                   </div>
                 );
-              })}
+              })()}
             </div>
 
             {/* 구간별 텍스트 그리드 */}

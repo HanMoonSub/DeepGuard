@@ -378,45 +378,54 @@
   pointer-events: none;
 }
 
-/* 구간별 HEAT 버튼 */
-.dg-timeline__heat-row {
+/* 그래프 hover 프레임 미리보기 */
+.dg-timeline__bar-col {
+  border-radius: 6px;
+  transition: background-color 0.15s;
+}
+.dg-timeline__bar-col.is-hover {
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+/* 그래프 영역(.dg-timeline__chart) 안쪽, hover 구간 꼭짓점 바로 위에 작게 (위치는 JS 계산) */
+.dg-timeline__preview {
+  position: absolute;
+  z-index: 5;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-bg);
+  box-shadow: 0 8px 24px #0b122026;
+  pointer-events: none;
+  animation: dg-timeline-preview-in 0.12s ease-out;
+}
+.dg-timeline__preview img,
+.dg-timeline__preview-empty {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--color-ink);
+}
+.dg-timeline__preview-empty {
+  display: grid;
+  place-items: center;
+  color: var(--color-on-dark-subtle);
+  font-size: 9px;
+}
+.dg-timeline__preview-info {
   display: flex;
   justify-content: space-between;
-  gap: 6px;
-  margin-top: 10px;
-}
-.dg-timeline__heat-cell {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-.dg-timeline__heat {
-  width: 100%;
-  padding: 5px 0;
-  border-radius: 6px;
-  background: var(--color-bg);
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  cursor: pointer;
-  transition: 0.15s;
+  font-weight: 600;
+  color: var(--color-muted);
 }
-.dg-timeline__heat--fake {
-  border: 1px solid #ffc2c2;
-  color: var(--color-danger);
-}
-.dg-timeline__heat--fake:hover {
-  background: var(--color-danger-soft);
-  border-color: var(--color-danger);
-}
-.dg-timeline__heat--real {
-  border: 1px solid #bbe5c9;
-  color: var(--color-success);
-}
-.dg-timeline__heat--real:hover {
-  background: var(--color-success-soft);
-  border-color: var(--color-success);
+@keyframes dg-timeline-preview-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* 구간별 리스트 */
