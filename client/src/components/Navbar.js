@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import Button from './Button';
+import logoMark from '../assets/logo-shield.svg';
 import './Navbar.css';
 
 // variant: dark(히어로 위 투명 → 스크롤 시 어두운 배경) | light(흰 배경)
 // links: 같은 페이지 앵커 메뉴 [{ href: '#bench', label: 'Benchmark' }]
 // logoutRedirect: 로그아웃 후 이동 경로
-const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRedirect = '/main' }) => {
+// solid: dark 변형에서 스크롤 전에도 어두운 배경 유지 (흰 히어로 위에서 사용)
+const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRedirect = '/main', solid = false }) => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
@@ -40,15 +42,19 @@ const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRed
   const subtleBtn = variant === 'dark' ? 'ghost' : 'outline';
 
   return (
-    <nav className={`dg-nav dg-nav--${variant}${scrolled ? ' is-scrolled' : ''}`}>
+    <nav className={`dg-nav dg-nav--${variant}${solid ? ' dg-nav--solid' : ''}${scrolled ? ' is-scrolled' : ''}`}>
       <div className="dg-nav__inner">
         <a className="dg-nav__logo" href="/main" onClick={go('/main')}>
-          <i aria-hidden="true" />DeepGuard
+          <img className="dg-nav__mark" src={logoMark} alt="" aria-hidden="true" />DeepGuard
         </a>
 
         <div className="dg-nav__menu">
-          <a className="dg-nav__link" href="/analysis" onClick={go('/analysis')}>이미지 분석</a>
-          <a className="dg-nav__link" href="/video-analysis" onClick={go('/video-analysis')}>동영상 분석</a>
+          <a className="dg-nav__link" href="/analysis" onClick={go('/analysis')}>
+            이미지 분석
+          </a>
+          <a className="dg-nav__link" href="/video-analysis" onClick={go('/video-analysis')}>
+            동영상 분석<span className="dg-nav__badge">HOT</span>
+          </a>
           {links.map(({ href, label }) => (
             <a key={href} className="dg-nav__link dg-nav__anchor" href={href}>{label}</a>
           ))}
