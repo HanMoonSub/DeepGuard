@@ -8,6 +8,7 @@ import Button from '../components/Button';
 // 레이아웃(사이드바 | 중앙 | 설정)은 이미지 분석 페이지와 동일 → .dg-analysis 스타일 재사용
 import './analysispage.css';
 import WebcamCapture, { MediaSourceBar } from '../components/WebcamCapture';
+import AnalysisWarning from '../components/AnalysisWarning';
 import './VideoAnalysisPage.css';
 
 // 예시 비디오 (public/samples/videos/ 하위에 실제 파일 배치 필요 / 파일명 다르면 이 배열만 수정)
@@ -280,15 +281,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
     if (result.status === 'WARNING') {
       return (
-        <div className="dg-analysis__result">
-          <div className="dg-analysis__warn-icon">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="11" /><line x1="11" y1="14" x2="11.01" y2="14" />
-            </svg>
-          </div>
-          <p className="dg-analysis__warn-title">분석을 완료하지 못했어요</p>
-          <p className="dg-analysis__warn-msg">{result.result_msg}</p>
-        </div>
+        <AnalysisWarning mode="video" onRetry={handleNewAnalysis} />
       );
     }
 
@@ -363,7 +356,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                             <span>{item.created_at?.slice(11, 16)}</span>
                           </div>
                         </div>
-                        <span className={`dg-analysis__badge dg-analysis__badge--${labelTone(item.label)}`}>{item.label}</span>
+                        <span className={`dg-analysis__badge dg-analysis__badge--${labelTone(item.label)}`}>{labelTone(item.label) === 'unknown' ? '판정 불가' : item.label}</span>
                       </div>
                     </div>
                   );

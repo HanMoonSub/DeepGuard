@@ -190,6 +190,7 @@
   color: var(--color-on-dark-subtle);
 }
 .dg-analysis__history-date {
+  white-space: nowrap;
   font-size: 11px;
   color: var(--color-muted);
 }
@@ -441,27 +442,78 @@
 .dg-analysis__verdict--unknown {
   color: var(--color-muted);
 }
-.dg-analysis__warn-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 18px;
+/* 판정 불가(WARNING) 결과 */
+/* 결과 칸 높이를 꽉 채워 제목은 맨 위, 다시 시도 버튼은 맨 아래 */
+.dg-analysis__warn {
+  flex: 1;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: dg-analysis-rise 0.4s ease-out both;
+}
+/* 제목 자리 아이콘 (검정) */
+.dg-analysis__warn-title {
+  display: grid;
+  place-items: center;
+  color: var(--color-ink);
+}
+/* 제목과 버튼 사이 세로 가운데 */
+.dg-analysis__warn-tips {
+  width: 100%;
+  margin: auto 0;
+  padding: 16px 0;
+  text-align: left;
+}
+.dg-analysis__warn-tips > p {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.dg-analysis__warn-tips ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dg-analysis__warn-tips li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+.dg-analysis__warn-tips li i {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
-.dg-analysis__warn-title {
-  margin-bottom: 10px;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--color-warning);
+.dg-analysis__warn-retry {
+  width: 100%;
+  background: transparent;
+  transition: border-color 0.2s, color 0.2s;
 }
-.dg-analysis__warn-msg {
-  max-width: 300px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--color-muted);
+.dg-analysis__warn-retry:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg-analysis__warn {
+    animation: none;
+  }
 }
 
 /* 분석 중 (메인 dg-scan 톤의 다크 패널) */
