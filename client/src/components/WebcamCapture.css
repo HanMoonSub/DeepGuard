@@ -1,0 +1,184 @@
+/* 업로드 영역 하단 아이콘 바 (파일 업로드 / 웹캠) */
+.dg-webcam-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  cursor: default;
+}
+.dg-webcam-bar__btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.dg-webcam-bar__btn:hover:not(:disabled) {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.dg-webcam-bar__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.dg-webcam-bar__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 웹캠 미리보기 + 컨트롤 */
+.dg-webcam {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-ink);
+  cursor: default;
+  z-index: 2;
+}
+.dg-webcam__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+.dg-webcam__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scaleX(-1); /* 거울 모드 미리보기 (촬영 결과는 원본 방향) */
+}
+.dg-webcam__loading {
+  position: absolute;
+  color: var(--color-on-dark-muted);
+  font-size: 14px;
+}
+.dg-webcam__rec {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #0b1220b3;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+.dg-webcam__rec::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  animation: dg-webcam-blink 1s step-end infinite;
+}
+
+.dg-webcam__controls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px;
+  background: #0b1220;
+}
+.dg-webcam__controls .dg-webcam__ghost {
+  position: absolute;
+  left: 16px;
+}
+.dg-webcam__hint {
+  position: absolute;
+  right: 16px;
+  color: var(--color-on-dark-subtle);
+  font-size: 12px;
+}
+.dg-webcam__ghost {
+  padding: 6px 12px;
+  border: 1px solid #ffffff33;
+  border-radius: 8px;
+  background: none;
+  color: var(--color-on-dark-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dg-webcam__ghost:hover:not(:disabled) {
+  color: #fff;
+  border-color: #ffffff66;
+}
+.dg-webcam__ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 셔터: 사진은 흰 원, 녹화는 빨간 원 → 녹화 중 빨간 사각형 */
+.dg-webcam__shutter {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.dg-webcam__shutter::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #fff;
+  transition: inset 0.2s, border-radius 0.2s;
+}
+.dg-webcam__shutter--video::after {
+  background: var(--color-danger);
+}
+.dg-webcam__shutter--video.is-recording::after {
+  inset: 14px;
+  border-radius: 4px;
+}
+.dg-webcam__shutter:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dg-webcam__shutter:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.dg-webcam__error {
+  margin: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  color: var(--color-on-dark-muted);
+  font-size: 14px;
+}
+
+@keyframes dg-webcam-blink {
+  50% { opacity: 0; }
+}
+
+@media (max-width: 560px) {
+  .dg-webcam__hint {
+    display: none;
+  }
+}

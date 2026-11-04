@@ -172,13 +172,13 @@ const AnalysisDetailPage = ({ sessionUser }) => {
 
           {isVideo && mediaLoc && (
             <Button variant="outline" className="dg-btn--block dg-detail__xai-btn" onClick={handleVideoHeatmap}>
-              🔍 비디오 위조 흔적 분석하기
+              비디오 위조 흔적 분석하기
             </Button>
           )}
 
           {!isVideo && mediaLoc && !isWarning && (
             <Button variant="outline" className="dg-btn--block dg-detail__xai-btn" onClick={handleImageHeatmap}>
-              🔍 이미지 위조 흔적 분석하기
+              이미지 위조 흔적 분석하기
             </Button>
           )}
         </Card>
@@ -194,10 +194,9 @@ const AnalysisDetailPage = ({ sessionUser }) => {
           ) : (
             <>
               <Card className="dg-card--static dg-detail__verdict-card">
-                <p className="dg-detail__eyebrow">FINAL ANALYSIS</p>
+                <p className="dg-detail__eyebrow">최종 분석</p>
                 <h1 className={`dg-detail__verdict dg-detail__verdict--${verdictTone}`}>{label}</h1>
                 <div className="dg-detail__prob">
-                  <span>FAKE 확률</span>
                   <strong className={label === 'FAKE' ? 'dg-detail__verdict--fake' : ''}>{displayProb}</strong>
                 </div>
                 {!isInvalid && (
