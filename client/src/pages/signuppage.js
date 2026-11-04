@@ -4,7 +4,8 @@ import axios from 'axios';
 
 import Button from '../components/Button';
 import Card from '../components/Card';
-import Footer from '../components/Footer';
+import NodeNetwork from '../components/NodeNetwork';
+import logoMark from '../assets/logo-shield.svg';
 import './AuthPage.css';
 
 const SignupPage = () => {
@@ -69,13 +70,14 @@ const SignupPage = () => {
     <div className="dg-auth">
       <div className="dg-auth__split">
         <aside className="dg-auth__hero">
+          {/* 격자 + 노드 네트워크 (장식용) */}
+          <NodeNetwork />
           <a className="dg-auth__logo" href="/main" onClick={go('/main')}>
-            <i aria-hidden="true" />DeepGuard
+            <img className="dg-auth__mark" src={logoMark} alt="" aria-hidden="true" />DeepGuard
           </a>
           <div className="dg-auth__copy">
-            <p className="dg-auth__eyebrow">GET STARTED</p>
             <h1 className="dg-auth__title">Deep Guard에 오신 걸 환영합니다!</h1>
-            <p className="dg-auth__lead">계정을 생성하고 딥가드를 시작하세요</p>
+            <p className="dg-auth__lead">간단한 가입만으로 이미지와 영상 속 딥페이크를 바로 분석하고, 위조 의심 영역까지 확인해 보세요.</p>
           </div>
         </aside>
 
@@ -116,7 +118,6 @@ const SignupPage = () => {
           </Card>
         </main>
       </div>
-      <Footer />
     </div>
   );
 };
