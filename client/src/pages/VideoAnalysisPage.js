@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import Button from '../components/Button';
 // 레이아웃(사이드바 | 중앙 | 설정)은 이미지 분석 페이지와 동일 → .dg-analysis 스타일 재사용
 import './analysispage.css';
+import WebcamCapture, { MediaSourceBar } from '../components/WebcamCapture';
 import './VideoAnalysisPage.css';
 
 // 예시 비디오 (public/samples/videos/ 하위에 실제 파일 배치 필요 / 파일명 다르면 이 배열만 수정)
@@ -39,7 +40,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [history, setHistory] = useState([]);
 
-  const [showOptions, setShowOptions] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedSample, setSelectedSample] = useState(null);
@@ -55,8 +56,20 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   // 진행 표시 전용: 분석 경과 시간(초). 폴링/API와 무관
   const [elapsed, setElapsed] = useState(0);
 
+  // 방금 분석이 끝난 video_id — 완료 이펙트(결과 팝 + 새 기록 하이라이트)용
+  const [freshId, setFreshId] = useState(null);
+
   const pollingTimer = useRef(null);
+  const freshTimer = useRef(null);
   const isMounted = useRef(true);
+
+  useEffect(() => () => clearTimeout(freshTimer.current), []);
+
+  const markFresh = useCallback((videoId) => {
+    clearTimeout(freshTimer.current);
+    setFreshId(String(videoId));
+    freshTimer.current = setTimeout(() => setFreshId(null), 3000);
+  }, []);
 
   const fetchHistory = useCallback(async () => {
     if (!sessionUser) return;
@@ -113,6 +126,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           setResult({ ...data, video_id: videoId });
           setIsAnalyzing(false);
           setStatusMessage('');
+          markFresh(videoId);
           fetchHistory();
         } else if (data.status === 'FAILED' || data.status === 'ERROR') {
           clearInterval(pollingTimer.current);
@@ -132,7 +146,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
         }
       } catch (err) { setStatusMessage("결과 확인 중..."); }
     }, 2000);
-  }, [fetchHistory]);
+  }, [fetchHistory, markFresh]);
 
   const handlePredict = async () => {
     if (modelType === 'pro' && !sessionUser) {
@@ -170,7 +184,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setPreviewUrl(URL.createObjectURL(selectedFile));
     setResult(null);
     setStatusMessage('');
-    setShowOptions(false);
+    setIsCameraOpen(false);
     setSelectedSample(null); // 샘플 외 경로로 들어오면 선택 해제
   };
 
@@ -212,7 +226,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   };
 
   const handleNewAnalysis = () => {
-    setFile(null); setPreviewUrl(null); setResult(null); setStatusMessage(''); setShowOptions(false); setSelectedSample(null);
+    setFile(null); setPreviewUrl(null); setResult(null); setStatusMessage(''); setIsCameraOpen(false); setSelectedSample(null);
     if (pollingTimer.current) clearInterval(pollingTimer.current);
   };
 
@@ -229,8 +243,8 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       return (
         <div className="dg-analysis__scanning">
           <div className="dg-analysis__scanline" />
-          <p className="dg-analysis__eyebrow">VIDEO ENGINE</p>
-          <h3 className="dg-analysis__scan-title">SCANNING FRAMES...</h3>
+          <p className="dg-analysis__eyebrow">딥페이크 탐지 엔진</p>
+          <h3 className="dg-analysis__scan-title">AI가 영상을 분석하고 있어요</h3>
 
           <ol className="dg-video__steps">
             {steps.map((step, i) => (
@@ -243,7 +257,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
           <div className="dg-analysis__progress">
             <div className="dg-analysis__progress-head">
-              <span>{statusMessage || "PROCESSING..."}</span>
+              <span>{statusMessage || "분석 준비 중..."}</span>
               <span className="dg-analysis__live">LIVE</span>
             </div>
             <div className="dg-analysis__bar"><div /></div>
@@ -280,8 +294,8 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
     const label = result.label || (result.score > 0.5 ? 'FAKE' : 'REAL');
     return (
-      <div className="dg-analysis__result">
-        <p className="dg-analysis__eyebrow">RESULT</p>
+      <div className={`dg-analysis__result${freshId === String(result.video_id) ? ' is-fresh' : ''}`}>
+        <p className="dg-analysis__eyebrow">분석 결과</p>
         <p className={`dg-analysis__verdict dg-analysis__verdict--${labelTone(label)}`}>{label}</p>
         <Button
           variant="outline"
@@ -332,7 +346,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                         onClick={() => !isEditMode && navigate('/video-detail', {
                           state: { video_id: currentId }
                         })}
-                        className={`dg-analysis__history-item${isSelected ? ' is-selected' : ''}${isEditMode ? ' is-editing' : ''}${labelTone(item.label) === 'real' ? ' is-real' : ''}${labelTone(item.label) === 'fake' ? ' is-fake' : ''}`}
+                        className={`dg-analysis__history-item${isSelected ? ' is-selected' : ''}${isEditMode ? ' is-editing' : ''}${labelTone(item.label) === 'real' ? ' is-real' : ''}${labelTone(item.label) === 'fake' ? ' is-fake' : ''}${freshId === String(currentId) ? ' is-new' : ''}`}
                       >
                         <div className="dg-analysis__thumb">
                           {item.video_loc ? (
@@ -340,7 +354,10 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                           ) : '📹'}
                         </div>
                         <div className="dg-analysis__history-meta">
-                          <div className="dg-analysis__history-type">{dType} | {mType}</div>
+                          <div className="dg-analysis__history-type">
+                            <span className="dg-analysis__tag">{dType}</span>
+                            <span className="dg-analysis__tag">{mType}</span>
+                          </div>
                           <div className="dg-analysis__history-date">
                             {item.created_at?.slice(0, 10)}
                             <span>{item.created_at?.slice(11, 16)}</span>
@@ -409,10 +426,12 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
           <div className="dg-analysis__panes">
             <div
-              className={`dg-analysis__pane dg-analysis__drop${showOptions ? ' is-active' : ''}${previewUrl ? ' has-preview' : ''}`}
-              onClick={() => { if (!previewUrl) setShowOptions(!showOptions); }}
+              className={`dg-analysis__pane dg-analysis__drop${previewUrl ? ' has-preview' : ''}${isCameraOpen ? ' is-camera' : ''}`}
+              onClick={() => { if (!previewUrl && !isCameraOpen) document.getElementById('vIn').click(); }}
             >
-              {previewUrl ? (
+              {isCameraOpen ? (
+                <WebcamCapture mode="video" onCapture={handleFileSelect} onClose={() => setIsCameraOpen(false)} />
+              ) : previewUrl ? (
                 <>
                   <video className="dg-video__preview" src={previewUrl} controls />
                   {isAnalyzing && <span className="dg-video__preview-badge">분석 중</span>}
@@ -421,15 +440,16 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <div className="dg-analysis__drop-body">
                   <div className="dg-analysis__drop-icon">+</div>
                   <p className="dg-analysis__drop-title">동영상 업로드</p>
-                  <p className="dg-analysis__drop-desc">클릭해서 분석할 동영상을 선택하세요</p>
-                  {showOptions && (
-                    <div className="dg-analysis__drop-options">
-                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); document.getElementById('vIn').click(); }}>내 PC 파일</Button>
-                    </div>
-                  )}
+                  <p className="dg-analysis__drop-desc">클릭해서 동영상을 선택하거나 웹캠으로 녹화하세요</p>
                 </div>
               )}
-              <input id="vIn" type="file" accept="video/*" hidden onChange={(e) => handleFileSelect(e.target.files[0])} />
+              {!isCameraOpen && (
+                <MediaSourceBar mode="video" disabled={isAnalyzing}
+                  onUpload={() => document.getElementById('vIn').click()}
+                  onWebcam={() => setIsCameraOpen(true)} />
+              )}
+              <input id="vIn" type="file" accept="video/*" hidden
+                onChange={(e) => { handleFileSelect(e.target.files[0]); e.target.value = ''; }} />
             </div>
 
             <div className={`dg-analysis__pane dg-analysis__output${isAnalyzing ? ' is-analyzing' : ''}`}>
