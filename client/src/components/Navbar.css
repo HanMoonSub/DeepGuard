@@ -9,9 +9,8 @@
   border-bottom: 1px solid transparent;
 }
 
+/* 전체 폭: 로고·메뉴는 왼쪽 가장자리, 로그인·Try Now는 오른쪽 가장자리 */
 .dg-nav__inner {
-  max-width: var(--container);
-  margin: 0 auto;
   padding: 0 var(--gutter);
   height: var(--nav-h);
   display: flex;
@@ -19,11 +18,12 @@
   gap: 36px;
 }
 
-/* dark: 히어로 위에서는 투명, 스크롤하면 배경 */
+/* dark: 히어로 위에서는 투명, 스크롤하면 배경 (solid면 처음부터 배경) */
 .dg-nav--dark {
   color: var(--color-on-dark);
   background: transparent;
 }
+.dg-nav--dark.dg-nav--solid,
 .dg-nav--dark.is-scrolled {
   background: rgba(5, 9, 18, 0.85);
   backdrop-filter: blur(10px);
@@ -41,20 +41,17 @@
 .dg-nav__logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-weight: 800;
   font-size: 22px;
   letter-spacing: -0.5px;
   color: inherit;
   text-decoration: none;
 }
-.dg-nav__logo i {
-  display: inline-block;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: var(--color-primary);
-  box-shadow: 0 0 18px var(--color-primary);
+.dg-nav__mark {
+  display: block;
+  height: 28px;
+  width: auto;
 }
 
 .dg-nav__menu {
@@ -79,6 +76,17 @@
 .dg-nav__link:hover {
   opacity: 1;
   color: var(--color-accent);
+}
+
+/* 메뉴 강조 배지 (Sale 표시처럼 빨간 위첨자) — 메뉴가 overflow로 잘리지 않도록 줄 박스 안에서 상단 정렬 */
+.dg-nav__badge {
+  margin-left: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  vertical-align: top;
+  color: var(--color-danger);
 }
 
 .dg-nav__logo,
@@ -115,6 +123,9 @@
   }
   .dg-nav__logo {
     font-size: 18px;
+  }
+  .dg-nav__mark {
+    height: 24px;
   }
   .dg-nav__menu {
     gap: 12px;

@@ -4,7 +4,8 @@ import axios from 'axios';
 
 import Button from '../components/Button';
 import Card from '../components/Card';
-import Footer from '../components/Footer';
+import Eclipse from '../components/Eclipse';
+import logoMark from '../assets/logo-shield.svg';
 import './AuthPage.css';
 
 
@@ -45,13 +46,13 @@ const LoginPage = ({ setSessionUser }) => {
     <div className="dg-auth">
       <div className="dg-auth__split">
         <aside className="dg-auth__hero">
+          {/* 메인 히어로와 같은 이클립스 링 (장식용) */}
+          <Eclipse />
           <a className="dg-auth__logo" href="/main" onClick={go('/main')}>
-            <i aria-hidden="true" />DeepGuard
+            <img className="dg-auth__mark" src={logoMark} alt="" aria-hidden="true" />DeepGuard
           </a>
           <div className="dg-auth__copy">
-            <p className="dg-auth__eyebrow">DEEPFAKE DETECTION</p>
             <h1 className="dg-auth__title">미세한 조작까지 잡아내는 딥페이크 탐지</h1>
-            <p className="dg-auth__lead">CNN의 국소 감각과 Vision Transformer의 전역 문맥을 결합한 하이브리드 모델로 미세한 조작을 잡아냅니다.</p>
           </div>
         </aside>
 
@@ -78,7 +79,6 @@ const LoginPage = ({ setSessionUser }) => {
           </Card>
         </main>
       </div>
-      <Footer />
     </div>
   );
 };

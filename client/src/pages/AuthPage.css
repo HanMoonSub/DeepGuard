@@ -26,6 +26,7 @@
 /* ───────── 좌측 히어로 ───────── */
 .dg-auth__hero {
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   padding: 40px 56px;
@@ -35,10 +36,16 @@
     radial-gradient(900px 500px at 78% 40%, #1a3f9c55, transparent),
     linear-gradient(180deg, var(--color-bg-dark), var(--color-bg-dark-2));
 }
+/* 이클립스 링: 제목 뒤 왼쪽 위로 치우치게 */
+.dg-auth__hero .dg-eclipse {
+  left: 42%;
+  top: 48%;
+  width: 560px;
+}
 .dg-auth__logo {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   align-self: flex-start;
   font-weight: 800;
   font-size: 22px;
@@ -46,27 +53,20 @@
   color: inherit;
   text-decoration: none;
 }
-.dg-auth__logo i {
-  display: inline-block;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: var(--color-primary);
-  box-shadow: 0 0 18px var(--color-primary);
+.dg-auth__mark {
+  display: block;
+  height: 28px;
+  width: auto;
+  /* 원본 파란 사각형의 box-shadow: 0 0 18px var(--color-primary) 느낌의 은은한 빛 */
+  filter: drop-shadow(0 0 10px rgba(32, 108, 253, 0.65));
 }
 .dg-auth__copy {
   margin: auto 0;
   max-width: 480px;
   padding: 48px 0;
 }
-.dg-auth__eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: var(--color-accent-light);
-}
 .dg-auth__title {
-  margin-top: 14px;
+  margin-top: 0;
   font-size: 44px;
   font-weight: 800;
   line-height: 1.2;
@@ -195,6 +195,9 @@
   }
   .dg-auth__copy {
     padding: 28px 0 0;
+  }
+  .dg-auth__hero .dg-eclipse {
+    width: 420px;
   }
   .dg-auth__title {
     font-size: 30px;
