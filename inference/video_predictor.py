@@ -7,6 +7,7 @@ from typing import Dict, List
 from preprocess.frame_extractor import FrameExtractor
 from preprocess.face_detector import FaceDetector
 from deepguard.data import get_test_transforms
+from .utils import ClipPredictorMixin, to_artifact_scores
 
 class VideoPredictor:
     def __init__(self,
@@ -22,13 +23,21 @@ class VideoPredictor:
         self.frame_extractor = FrameExtractor(jitter=0)
         self.face_detector = FaceDetector(conf_thres, min_face_ratio)
         self.model_name = model_name
-        self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
+        self.model = self._load_model(model_name, dataset)
         self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
         
         # Model Inference Mode
         self.model.to(self.device)
         self.model.eval()
-        
+
+    def _load_model(self, model_name: str, dataset: str):
+        return timm.create_model(model_name, pretrained=True, dataset=dataset)
+
+    def _forward(self, batch: torch.Tensor) -> np.ndarray:
+        """(B,3,H,W) -> (B,) fake probabilities"""
+        with torch.no_grad():
+            return torch.sigmoid(self.model(batch).view(-1)).cpu().numpy()
+
     def _get_frame_indices(self, frame_cnt: int, num_frames: int):
         
         frame_indices = np.linspace(0, frame_cnt - 1, num=num_frames,
@@ -170,10 +179,8 @@ class VideoPredictor:
         frames_list = [transforms(image=f)['image'] for f in frames]
         batch_frames = torch.stack(frames_list).to(self.device) # (B,3,H,W)
                             
-        with torch.no_grad():
-            outs = self.model(batch_frames) # (B,1)
-            preds = torch.sigmoid(outs.view(-1)).cpu().numpy() # (B,)
-            
+        preds = self._forward(batch_frames) # (B,)
+
         return preds
     
     def predict_video(self, video_path: str, num_frames: int = 20, agg_mode: str = 'conf', tta_hflip: float = 0) -> np.ndarray:
@@ -193,3 +200,42 @@ class VideoPredictor:
                 f"margin_ratio='{self.margin_ratio}', "
                 f"device='{self.device}', "
                 f"img_size={self.img_size})")
+
+class ClipVideoPredictor(ClipPredictorMixin, VideoPredictor):
+    def __init__(
+        self,
+        margin_ratio: float,
+        conf_thres: float,
+        min_face_ratio: float,
+        model_name: str,
+    ):
+        self._check_model_name(model_name)
+        super().__init__(margin_ratio, conf_thres, min_face_ratio, model_name, dataset=None)
+
+    def predict_video_artifacts(self, video_path: str, num_frames: int = 20, agg_mode: str = 'conf',
+                                tta_hflip: float = 0) -> dict:
+        """
+        Returns {"prob": fake probability, "artifacts": {region: {artifact type: probability}}}.
+        prob is aggregated over the frames with agg_mode (same as predict_video), artifacts is the mean over the frames.
+        artifacts is None when no face is found (prob is 0.5, same as predict_video).
+        """
+        try:
+            frames = self._preprocess_frames(video_path, num_frames)
+            if not frames:
+                return {"prob": 0.5, "artifacts": None}
+
+            transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
+            batch_frames = torch.stack([transforms(image=f)['image'] for f in frames]).to(self.device)
+            probs, artifact_probs = self._forward_artifacts(batch_frames) # (B,), (B,20)
+
+            return {
+                "prob": float(self._frame_aggregate(probs, agg_mode)),
+                "artifacts": to_artifact_scores(artifact_probs.mean(axis=0)),
+            }
+
+        except Exception as e:
+            print(f"Error in predict_video_artifacts: {e}")
+            return {"prob": 0.5, "artifacts": None}
+
+    def __repr__(self):
+        return super().__repr__().replace("VideoPredictor", "ClipVideoPredictor", 1)
