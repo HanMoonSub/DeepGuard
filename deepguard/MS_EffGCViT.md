@@ -15,7 +15,7 @@ This Repository presents the PyTorch implementation of **Multi Scale Efficient G
 This model is a **frame-level** and **spatial-domain** architecture, designed to perform classification tasks on both **static images** and **video sequences**
 
 
-<img src="../docs/benchmarks/celeb_df_v2_gcvit.png" width="900">
+<img src="../docs/benchmarks/gcvit_params_acc.png" width="900">
 
 ## 💥 News 💥
 - [**09.05.2026**] 🔥 Released **HIGH-Eff-GCVIT-B5** (384X384) weights for **Celeb DF(V2)**, **FaceForensics++**, **KoDF**
@@ -32,36 +32,42 @@ This model is a **frame-level** and **spatial-domain** architecture, designed to
 
 **MS-EFF-GCViT achieves state-of-the-art (SOTA) results across three DeepFake benchmarks.**
 The model ships in two variants from a single architecture — **Fast (b0)** for real-time / edge
-deployment and **Pro (b5)** for enterprise-grade accuracy. Notably, **Fast** matches or exceeds
-much larger SOTA models while using a fraction of the parameters and compute.
+deployment and **Pro (b5)** for enterprise-grade accuracy.
 
-<p align="center">
-  <img src="../docs/benchmarks/gcvit_summary_bars.png" width="100%">
-</p>
+**📊 Model Performance Results on Celeb-DF (v2) Dataset**
 
-> On **Celeb-DF(v2)**, Pro reaches **0.9981 Acc** (rank #1) and Fast **0.9842** (rank #3) among 20 architectures.
-> On the **KoDF competition** leaderboard, Pro ranks **#1** and Fast **#4** out of 49 entries.
+| Model | Test@Acc | Test@Auc | #Params(M) | Params Ratio | #FLOPS(G) | FLOPS Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ms_eff_gcvit_b0** | 98.4% | 99.7% | 8.7 | 1x | 0.85 | 1x |
+| sia (eccv,2022) | 99.0% | 99.8% | 17.57 | 2x | 2.05 | 2.4x |
+| core (cvpr,2022) | 99.6% | 99.7% | 20.81 | 2.4x | 8.40 | 9.9x |
+| **ms_eff_gcvit_b5** | **99.8%** | 99.8% | 50.34 | 5.8x | 13.43 | 15.8x |
+| iid (cvpr,2023) | **99.8%** | **99.9%** | 65.5 | 7.5x | 12.7 | 14.9x |
+| effort (icml, 2025) | **99.8%** | 99.7% | 303.4 | 34.9x | 155.9 | 183.4x |
 
-<details>
-<summary><b>📊 Celeb-DF (v2) — Accuracy & Efficiency</b></summary>
-<br>
-<img src="../docs/benchmarks/celeb_df_v2_gcvit_2.png" width="100%">
 
-</details>
+**📊 Model Performance Results on FaceForensics++ Dataset**
 
-<details>
-<summary><b>📊 FaceForensics++ — Accuracy & Efficiency</b></summary>
-<br>
-<img src="../docs/benchmarks/ff_gcvit.png" width="100%">
+| Model | Test@Acc | Test@Auc | #Params(M) | Params Ratio | #FLOPS(G) | FLOPS Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ms_eff_gcvit_b0** | 98.1% | 99.7% | 8.7 | 1x | 0.85 | 1x |
+| sia (ECCV,2022) | 95.0% | 97.5% | 17.57 | 2x | 2.05 | 2.4x |
+| core (CVPR,2022) | 98.3% | **99.8%** | 20.81 | 2.4x | 8.40 | 9.9x |
+| **ms_eff_gcvit_b5** | **98.5%** | 99.7% | 50.34 | 5.8x | 13.43 | 15.8x |
+| iid (CVPR,2023) | 97.3% | 99.6% | 65.5 | 7.5x | 12.7 | 14.9x |
+| effort (ICML, 2025) | 98.4% | **99.8%** | 303.4 | 34.9x | 155.9 | 183.4x |
 
-</details>
+**📊 Model Performance Results on KoDF Dataset**
 
-<details>
-<summary><b>📊 KoDF Competition — Accuracy Ranking</b></summary>
-<br>
-<img src="../docs/benchmarks/kodf_gcvit.png" width="100%">
+| Model | Test@Acc | Test@Auc | #Params(M) | Params Ratio | #FLOPS(G) | FLOPS Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ms_eff_gcvit_b0** | 96.6% | 97.9% | 8.7 | 1x | 0.85 | 1x |
+| sia (ECCV,2022) | 97.0% | 98.8% | 17.57 | 2x | 2.05 | 2.4x |
+| core (CVPR,2022) | 96.3% | 99.2% | 20.81 | 2.4x | 8.40 | 9.9x |
+| **ms_eff_gcvit_b5** | 97.9% | 98.3% | 50.34 | 5.8x | 13.43 | 15.8x |
+| iid (CVPR,2023) | 96.5% | 97.6% | 65.5 | 7.5x | 12.7 | 14.9x |
+| effort (ICML, 2025) | **99.0%** | **99.5%** | 303.4 | 34.9x | 155.9 | 183.4x |
 
-</details>
 
 ## Model Indroduction
 
@@ -109,28 +115,20 @@ Modern DeepFakes can leave very localized forgery region. To Capture this, we ad
 
 ## 📊 Model Zoo
 
-| Model | Resolution | # Total Params(M) | # Backbone(M) | # L-ViT(M) | # H-ViT(M)  | FLOPs (G) | Model Config |
-| ----- | ---------- | -------------- | ----------- |------------- | ------------- | --------------  | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 3.6(41.4%) | 1.7(19.5%) | 3.3(37.9%) | 0.87 |  [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
-| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 27.3(54.3%) | 6.6(13.1%) | 16.1(32.0%) | 13.64 | [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| Model | Resolution | # Params(M) | # FLOPS(G) | Model Config |
+| ----- | ---------- | -------------- | ----------- | ------- | 
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.70 | 0.85 | [spec](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
+| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.34 | 13.43 | [spec](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 
-## 🛠 Model Variants
+## 🕐 Model Inference Latency
 
-**⚡ ms_eff_gcvit_b0 (Fast Mode / Mobile)**: Efficiency at the Edge
-- Optimized for **real-time inference** and mobile deployment.
+Latency is measured with batch size 1 on a single Tesla T4 and video (num_frames=20).
 
-**🔥 ms_eff_gcvit_b5 (Pro Mode / Enterprise)**: Uncompromising Precision
-- Engineered for high-fidelity analysis and enterprise-grade accuracy.
-
-## ⚙️ Model Weight Initialization
-The model incorporates a hybrid initialization strategy to leverage pre-trained features while ensuring stable convergence of the transformer components
-
-> **Backbone**: **ImageNet-1K Pretraiend Weights**(EfficientNet)  
-
-> **L-GCViT / H-GCViT / Head**: Truncated Normal( `std=0.02` )
- 
-> **No Weight Decay**: `relative_position_bias_table`, `bn`, `norm`
+| Model | Mode | Target Deployment | Latency (s) | Ratio |
+| ----- | ---- | ----------------- | ----------- | ----- |
+| ⚡ ms_eff_gcvit_b0 | Fast Mode | Edge / on-device deployment | 0.051 | 1.00× |
+| 🔥 ms_eff_gcvit_b5 | Pro Mode | Enterprise deployment | 0.479 | 9.41× |
 
 
 ## DeepFake Video Benchmarks
@@ -143,24 +141,24 @@ The model incorporates a hybrid initialization strategy to leverage pre-trained 
 
 **Celeb DF(v2) Pretrained Models**
 
-| Model Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
+| Model | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
 | ------------- | -------- | -------- | ---------- | -------- | ----- |
 | ms_eff_gcvit_b0 | 0.9842 | 0.9965 | 0.0283 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b0_celeb_df_v2.bin) | [recipe](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
 | ms_eff_gcvit_b5 | 0.9981 | 0.9984 | 0.0089 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b5_celeb_df_v2.bin) | [recipe](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
 **FaceForensics++ Pretrained Models**
 
-| Model Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
+| Model | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
 | ------------- | -------- | -------- | ---------- | -------- | ------ |
-| ms_eff_gcvit_b0 | 0.9808 | 0.9969 | 0.0637| [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b0_ff++.bin) | [recipe](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
-| ms_eff_gcvit_b5 | 0.9850 | 0.9974 | 0.0492 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b5_ff++.bin) | [recipe](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ms_eff_gcvit_b0 | 0.9808 | 0.9969 | 0.0637| [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b0_ff++.bin) | [recipe](./config/ms_eff_gcvit_b0/ff++.yaml) |
+| ms_eff_gcvit_b5 | 0.9850 | 0.9974 | 0.0492 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.1.0/ms_eff_gcvit_b5_ff++.bin) | [recipe](./config/ms_eff_gcvit_b5/ff++.yaml) |
 
 **KoDF Pretrained Models**
 
-| Model Variant | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
+| Model | Test@Acc | Test@Auc | Test@log_loss | Download | Train Config |
 | ------------- | -------- | -------- | ---------- | -------- | ------ |
-| ms_eff_gcvit_b0 | 0.9655 | 0.9792 | 0.1237 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b0_kodf.bin) | [recipe](./config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
-| ms_eff_gcvit_b5 | 0.9850 | 0.9974 | 0.0492 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](./config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| ms_eff_gcvit_b0 | 0.9655 | 0.9792 | 0.1237 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b0_kodf.bin) | [recipe](./config/ms_eff_gcvit_b0/kodf.yaml) |
+| ms_eff_gcvit_b5 | 0.9792 | 0.9831 | 0.0692 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](./config/ms_eff_gcvit_b5/kodf.yaml) |
 
 ## Usage
 

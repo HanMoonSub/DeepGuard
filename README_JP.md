@@ -25,7 +25,6 @@
   <img src="https://img.shields.io/badge/Model-MS--Eff--GCViT--B0%20%2F%20B5-orange?style=flat-square" alt="Models">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch">
-  <img src="https://img.shields.io/badge/W%26B-Recording-FFBE00?style=flat-square&logo=weightsandbiases&logoColor=white" alt="W&B">
 </p>
 
 <p align="center">
@@ -44,12 +43,14 @@
 
 ## 📌 目次
 
+- [🗂 プロジェクト構成](#-プロジェクト構成) - ディレクトリ構成の概要 (パッケージ、Webアプリ、ドキュメント)
 - [🐳 Docker Quick Start](#-docker-quick-start) - Docker Compose でフルスタック(MySQL, Redis, FastAPI, Celery, React)を起動
 - [🤗 今すぐ体験: Hugging Face Spaces](#-今すぐ体験-hugging-face-spaces) - インストール不要、ブラウザだけで試せる画像/動画/XAI ディープフェイク検出デモ
 - [📚 ディープフェイク動画ベンチマークデータセット](#-ディープフェイク動画ベンチマークデータセット) — 学習に使用した Celeb-DF-v2, FF++, KoDF データセットの概要。
 - [⚙️ データ準備](#データ準備) — YOLOv8 を用いた効率的な顔検出およびランドマーク抽出パイプライン。
 - [🏗 モデルアーキテクチャ](#-モデルアーキテクチャ) — ハイブリッド CNN-ViT (MS-EffViT & MS-EffGCViT) 設計の詳細。
 - [🧬 Model Zoo](#-model-zoo) — モデルバリアントごとのパラメータ数および演算量(FLOPs)の比較。
+- [🕐 Model Inference Latency](#-model-inference-latency) — Tesla T4 1基における Fast(b0)と Pro(b5)の推論速度の比較。
 - [🚀 学習](#-学習) - Google Colab および W&B を活用した段階的な学習スクリプト。
 - [📈 モデル評価](#-モデル評価) - ベンチマーク結果。
 - [💻 モデルの使い方](#-モデルの使い方) - `pip install deepguard` または Hugging Face Hub から学習済みモデルをロード
@@ -61,6 +62,29 @@
 - [⚖️ ライセンス](#-ライセンス) - MIT ライセンス
 
 ---
+
+## 🗂 プロジェクト構成
+
+```
+DeepGuard/
+├── deepguard/                  # コアパッケージ (モデル、レイヤー、データパイプライン、オプティマイザ、スケジューラ、ユーティリティ)
+├── preprocess/                 # 顔検出、クロップ、ランドマーク抽出パイプライン
+├── inference/                  # 画像 / 動画の予測
+├── explainability/             # デュアルブランチ CAM ベース XAI
+├── App/                        # FastAPI バックエンド (PyPI パッケージから除外)
+├── client/                     # React フロントエンド
+├── docker/                     # MySQL / Redis Docker イメージと設定
+├── tutorials/                  # Colab ノートブック (予測と XAI 可視化)
+├── docs/                       # README 用アセット (アーキテクチャ、ablation、ベンチマーク、サンプル、XAI 結果)
+├── .github/                    # CI ワークフローとリポジトリ設定
+├── docker-compose.yml          # フルスタック (MySQL, Redis, FastAPI, Celery, React)
+├── train_eff_vit.py            # MS-EffViT 学習エントリポイント
+├── train_eff_gcvit.py          # MS-EffGCViT 学習エントリポイント
+├── pyproject.toml              # パッケージビルド設定
+├── requirements.txt            # 開発環境の依存関係
+├── README.md, README_KR.md, README_JP.md
+└── LICENSE
+```
 
 ## 🐳 Docker Quick Start
 
@@ -221,10 +245,19 @@ DATA_ROOT/
 
 ## 🧬 Model Zoo
 
-| モデル名 | 解像度 | 総パラメータ(M) | バックボーン(M) | L-ViT(M) | H-ViT(M) | 演算量(FLOPs, G) | 設定ファイル |
-| ----- | ---------- | -------------- | ----------- |------------- | ------------- | --------------  | ------- | 
-| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 3.6(41.4%) | 1.7(19.5%) | 3.3(37.9%) | 0.87 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
-| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 27.3(54.3%) | 6.6(13.1%) | 16.1(32.0%) | 13.64 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+| モデル名 | 解像度 | パラメータ(M) | 演算量(GFLOPS) | 設定ファイル |
+| ----- | ---------- | -------------- | ----------- | ------- | 
+| ⚡ ms_eff_gcvit_b0 | 224 X 224 | 8.7 | 0.85 | [spec](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
+| 🔥 ms_eff_gcvit_b5 | 384 X 384 | 50.3 | 13.43 | [spec](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
+
+## 🕐 Model Inference Latency
+
+推論速度は、Tesla T4 1基でバッチサイズ 1、動画(num_frames=20)を対象に測定しています。
+
+| モデル名 | モード | 展開対象 | 推論速度(s) | 比率 |
+| ----- | ---- | -------- | ----------- | ----- |
+| ⚡ ms_eff_gcvit_b0 | Fast Mode | エッジ / オンデバイス展開向け | 0.051 | 1.00× |
+| 🔥 ms_eff_gcvit_b5 | Pro Mode | エンタープライズ展開向け | 0.479 | 9.41× |
 
 ## 🚀 学習
 
@@ -237,13 +270,6 @@ pip install -r requirements.txt
 ```
 
 `ms_eff_vit` と `ms_eff_gcvit` の両方について学習スクリプトを提供します。無料の GPU 環境として **Google Colab** を、実験の記録およびトラッキングとして **Weights & Biases(W&B)** の使用を推奨します。
-
-#### 📊 Weight & Biases 実験結果
-
-* **ms_eff_vit_b0:** [Celeb-DF-v2 🚀](https://wandb.ai/origin6165/ms_eff_vit_b0_celeb_df_v2) | [FaceForensics++ 🚀](https://wandb.ai/origin6165/ms_eff_vit_b0_ff++) | [KoDF 🚀](https://wandb.ai/origin6165/ms_eff_vit_b0_kodf)
-* **ms_eff_vit_b5:** [Celeb-DF-v2 🚀](https://wandb.ai/origin6165/ms_eff_vit_b5_celeb_df_v2) | [FaceForensics++ 🚀](https://wandb.ai/origin6165/ms_eff_vit_b5_ff++) | [KoDF 🚀](https://wandb.ai/origin6165/ms_eff_vit_b5_kodf)
-* **ms_eff_gcvit_b0:** [Celeb-DF-v2 🚀](https://wandb.ai/origin6165/ms_eff_gcvit_b0_celeb_df_v2) | [FaceForensics++ 🚀](https://wandb.ai/origin6165/ms_eff_gcvit_b0_ff++) | [KoDF 🚀](https://wandb.ai/origin6165/ms_eff_gcvit_b0_kodf)
-* **ms_eff_gcvit_b5:** [Celeb-DF-v2 🚀](https://wandb.ai/origin6165/ms_eff_gcvit_b5_celeb_df_v2) | [FaceForensics++ 🚀](https://wandb.ai/origin6165/ms_eff_gcvit_b5_ff++) | [KoDF 🚀](https://wandb.ai/origin6165/ms_eff_gcvit_b5_kodf)
 
 ```python
 !python -m train_eff_vit \ # または train_eff_gcvit
@@ -593,6 +619,9 @@ Jupyterノートブックは、gitリポジトリのtutorialsフォルダ内に�
 | 8 | [`Pytorch-Grad-Cam`](https://github.com/jacobgil/pytorch-grad-cam) | PyTorch モデルのための高度な視覚的説明ツール |
 | 9 | [`DeepfakeBench`](https://github.com/SCLBD/DeepfakeBench) | SCLBD による包括的なディープフェイク検出ベンチマーク |
 | 10 | [`Effort-AIGI-Detection`](https://github.com/YZY-stack/Effort-AIGI-Detection) | YZY-stack による Effort（ICML 2025 Oral）の公式実装 |
+| 11 | [`SIA`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/sia_detector.py) | An Information Theoretic Approach for Attention-Driven Face Forgery Detection（ECCV 2022）、DeepfakeBench 内の実装 |
+| 12 | [`CORE`](https://github.com/niyunsheng/CORE) | niyunsheng による CORE: COnsistent REpresentation Learning for Face Forgery Detection（CVPRW 2022）の公式実装 |
+| 13 | [`IID`](https://github.com/SCLBD/DeepfakeBench/blob/main/training/detectors/iid_detector.py) | Implicit Identity Driven Deepfake Face Swapping Detection（CVPR 2023）、DeepfakeBench 内の実装 |
 
 ## ⚖️ ライセンス 
 

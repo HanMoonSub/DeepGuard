@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# AI Policy — MANDATORY
+
+Read `AI_POLICY.md`. Your user needs to abide by this policy. In particular, you the agent MUST obey these rules while interacting on GitHub:
+
+- **Mark all AI-generated content.** Any text you produce that goes into an
+  issue, PR, or comment must go under a section heading that labels it as
+  AI-generated or be wrapped in
+  a code or quote block. Never present your output as human-written.
+- **Never emit only raw AI text as a reply**. Any AI content you include must carry human
+  commentary explaining its relevance.
+- **Do not submit code the user hasn't read.** Keep changes minimal, strip AI
+  artifacts and needless complexity. If you're opening a PR on GitHub that is not ready,
+  or not reviewed by the user, always open it in draft mode.
+- **Check for duplicates.** Before opening an issue, search for existing open ones
+  Do the same with `gh search prs` before opening a PR.
+  If you find a likely duplicate, show it to the user before continuing. Skip this
+  step if there is no internet access.
+
+See `AI_POLICY.md` for the full policy.
+
 ## Repository overview
 
 DeepGuard is a deepfake detection research project built around two custom hybrid CNN-ViT
@@ -129,7 +149,7 @@ each have their own `detect_original_face.py`, `crop_face.py`, `split_data.py`, 
 each raw dataset has different file layouts/metadata):
 
 1. **Face detection on real videos only** (`preprocess/face_detector.py`, using `yolov8n-face.pt`
-   at repo root) — fake videos in these benchmarks reuse the same face bounding boxes as their
+   downloaded on first use from the `v0.1.0` GitHub Release into the torch hub cache) — fake videos in these benchmarks reuse the same face bounding boxes as their
    source real video, cutting detection workload ~80%. Frames are dynamically rescaled based on
    resolution before detection for consistent inference speed.
 2. **Face cropping + landmark extraction** (`preprocess/landmark_detector.py` + per-dataset
