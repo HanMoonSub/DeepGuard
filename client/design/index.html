@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepGuard | Deepfake Detection</title>
+<style>
+:root{--blue:#206CFD;--ink:#0b1220;--mut:#5b6577;--line:#e6eaf2;--bg:#f6f8fc}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,'Segoe UI','Noto Sans KR',sans-serif;color:var(--ink);background:#fff;line-height:1.6}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+/* nav */
+nav{position:absolute;top:0;left:0;right:0;z-index:10;color:#fff}
+nav .wrap{display:flex;align-items:center;height:72px;gap:36px}
+.logo{font-weight:800;font-size:22px;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.logo i{width:22px;height:22px;border-radius:6px;background:var(--blue);display:inline-block;box-shadow:0 0 18px var(--blue)}
+.menu{display:flex;gap:26px;font-size:15px;opacity:.9;flex:1}
+.btn{display:inline-block;padding:11px 22px;border-radius:10px;font-weight:600;font-size:15px;border:1px solid transparent;transition:.2s}
+.btn.p{background:var(--blue);color:#fff}.btn.p:hover{background:#1758d6}
+.btn.g{border-color:rgba(255,255,255,.35);color:#fff}.btn.g:hover{background:rgba(255,255,255,.1)}
+.btn.o{border-color:var(--line);color:var(--ink)}.btn.o:hover{background:var(--bg)}
+/* hero */
+.hero{position:relative;background:radial-gradient(900px 500px at 78% 40%,#1a3f9c55,transparent),linear-gradient(180deg,#050912,#0a1430);color:#fff;padding:170px 0 110px;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.pill{display:inline-block;font-size:13px;padding:6px 14px;border:1px solid rgba(255,255,255,.2);border-radius:99px;color:#9db8ff;margin-bottom:22px}
+h1{font-size:56px;line-height:1.15;letter-spacing:-1.5px;font-weight:800}
+h1 em{font-style:normal;color:#5b95ff}
+.hero p{margin:22px 0 34px;font-size:19px;color:#b7c2dc;max-width:520px}
+.cta{display:flex;gap:12px}
+/* face scan visual */
+.scan{position:relative;aspect-ratio:1;max-width:440px;margin-left:auto;border-radius:24px;background:linear-gradient(160deg,#16244d,#0b1330);border:1px solid #ffffff22;box-shadow:0 30px 80px #0008}
+.face{position:absolute;left:24%;top:16%;width:52%;height:62%;border-radius:46% 46% 42% 42%;background:radial-gradient(circle at 50% 40%,#d9b8a0,#a9836c 70%);opacity:.85}
+.heat{position:absolute;border-radius:50%;filter:blur(18px)}
+.h1{left:30%;top:36%;width:22%;height:16%;background:#ff3d3dcc}
+.h2{left:46%;top:56%;width:20%;height:12%;background:#ffb020aa}
+.box{position:absolute;left:27%;top:30%;width:40%;height:40%;border:2px solid #ff4d4d;border-radius:6px}
+.box b{position:absolute;top:-24px;left:-2px;background:#ff4d4d;font-size:12px;padding:2px 8px;border-radius:4px}
+.result{position:absolute;left:18px;right:18px;bottom:18px;background:#0b1220ee;border:1px solid #ffffff22;border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.result strong{font-size:24px;color:#ff6b6b}
+.tag{position:absolute;top:18px;left:18px;font-size:12px;color:#9db8ff;background:#ffffff14;padding:4px 10px;border-radius:6px}
+/* sections */
+section{padding:96px 0}
+.alt{background:var(--bg)}
+h2{font-size:38px;letter-spacing:-1px;line-height:1.25;font-weight:800;margin-bottom:14px}
+.sub{color:var(--mut);font-size:18px;max-width:640px}
+.center{text-align:center}.center .sub{margin:0 auto}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:52px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:34px 30px;transition:.25s}
+.card:hover{transform:translateY(-4px);box-shadow:0 18px 40px #206cfd1a;border-color:#c9d9ff}
+.ic{width:48px;height:48px;border-radius:12px;background:#e9f0ff;color:var(--blue);display:grid;place-items:center;font-size:22px;margin-bottom:20px}
+.card h3{font-size:21px;margin-bottom:8px}.card p{color:var(--mut);font-size:15.5px}
+.card a{display:inline-block;margin-top:18px;color:var(--blue);font-weight:600;font-size:15px}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:48px;text-align:center}
+.stats b{display:block;font-size:44px;letter-spacing:-1px;color:var(--blue)}
+.stats span{color:var(--mut);font-size:15px}
+/* tabs-like rows */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.list{list-style:none;margin-top:24px}
+.list li{padding:12px 0 12px 30px;position:relative;border-bottom:1px solid var(--line);font-size:16px}
+.list li:before{content:'✓';position:absolute;left:0;color:var(--blue);font-weight:800}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.chips span{padding:8px 16px;border-radius:99px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:600}
+pre{background:#0b1220;color:#d5def5;border-radius:16px;padding:26px 28px;font-size:14px;line-height:1.75;overflow-x:auto;font-family:'JetBrains Mono',Consolas,monospace}
+pre .k{color:#7fb0ff}.pre .s{color:#9be29b}pre .c{color:#6b7896}
+/* cta band */
+.band{background:linear-gradient(135deg,#206CFD,#0e3fb0);color:#fff;text-align:center;padding:84px 0}
+.band .btn.p{background:#fff;color:var(--blue)}
+footer{background:#050912;color:#8b97b3;padding:56px 0;font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+@media(max-width:900px){.hero .wrap,.row{grid-template-columns:1fr}.grid3,.stats{grid-template-columns:1fr 1fr}h1{font-size:40px}.menu{display:none}.scan{margin:0 auto}}
+@media(max-width:560px){.grid3,.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="logo" href="#"><i></i>DeepGuard</a>
+  <div class="menu"><a href="#features">AI Models</a><a href="#xai">Explainability</a><a href="#bench">Benchmark</a><a href="#api">Docs</a><a href="#team">Team</a></div>
+  <a class="btn g" href="#">로그인</a><a class="btn p" href="#">Try Now</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div>
+    <span class="pill">MS-EffGCViT · Celeb-DF-v2 AUC 0.9984</span>
+    <h1>딥페이크,<br><em>눈으로 확인</em>하세요</h1>
+    <p>이미지와 영상 속 조작 흔적을 탐지하고, 어디가 왜 가짜인지 시각적 근거까지 제공하는 딥페이크 탐지 서비스.</p>
+    <div class="cta"><a class="btn p" href="#">지금 분석해보기</a><a class="btn g" href="#api">API 문서 →</a></div>
+  </div>
+  <div class="scan">
+    <span class="tag">SAMPLE · Fake</span>
+    <div class="face"></div><div class="heat h1"></div><div class="heat h2"></div>
+    <div class="box"><b>FAKE</b></div>
+    <div class="result"><span>Deepfake Probability</span><strong>0.9873</strong></div>
+  </div>
+</div></header>
+
+<section id="features"><div class="wrap center">
+  <h2>탐지부터 설명까지, 한 번에</h2>
+  <p class="sub">CNN의 국소 감각과 Vision Transformer의 전역 문맥을 결합한 하이브리드 모델로 미세한 조작을 잡아냅니다.</p>
+  <div class="grid3" style="text-align:left">
+    <div class="card"><div class="ic">🖼</div><h3>이미지 탐지</h3><p>얼굴을 자동 검출하고 딥페이크 확률을 즉시 반환합니다.</p><a href="#">자세히 보기 →</a></div>
+    <div class="card"><div class="ic">🎬</div><h3>영상 탐지</h3><p>프레임을 샘플링해 conf / mean / vote 방식으로 종합 판정합니다.</p><a href="#">자세히 보기 →</a></div>
+    <div class="card"><div class="ic">🔍</div><h3>설명 가능한 AI</h3><p>Grad-CAM 계열 히트맵과 박스로 조작 의심 영역을 시각화합니다.</p><a href="#xai">자세히 보기 →</a></div>
+  </div>
+</div></section>
+
+<section class="alt" id="bench"><div class="wrap center">
+  <h2>검증된 성능</h2>
+  <p class="sub">Celeb-DF-v2, FaceForensics++, KoDF 3개 벤치마크로 학습·평가했습니다.</p>
+  <div class="stats">
+    <div><b>99.84%</b><span>AUC · Celeb-DF-v2 (b5)</span></div>
+    <div><b>99.81%</b><span>Accuracy · Celeb-DF-v2 (b5)</span></div>
+    <div><b>3</b><span>벤치마크 데이터셋</span></div>
+    <div><b>62K+</b><span>KoDF 원본 영상</span></div>
+  </div>
+  <div class="chips" style="justify-content:center;margin-top:36px"><span>Celeb-DF-v2</span><span>FaceForensics++</span><span>KoDF</span></div>
+</div></section>
+
+<section id="xai"><div class="wrap row">
+  <div>
+    <h2>왜 가짜인지,<br>보여드립니다</h2>
+    <p class="sub">Dual-Branch XAI가 모델의 멀티스케일 추론을 그대로 따라가며 국소 아티팩트와 전역 구조 이상을 각각 시각화합니다.</p>
+    <ul class="list">
+      <li><b>Low-level</b> · 피부 질감, 경계 블렌딩, 압축 흔적</li>
+      <li><b>High-level</b> · 조명 불일치, 얼굴 기하, 그림자</li>
+      <li>HiResCAM · LayerCAM · GradCAM++ · XGradCAM 외 6종</li>
+    </ul>
+  </div>
+  <div class="scan" style="margin:0 auto;max-width:400px"><span class="tag">Heatmap + BBox</span><div class="face"></div><div class="heat h1"></div><div class="heat h2"></div><div class="box"><b>FAKE</b></div></div>
+</div></section>
+
+<section class="alt" id="api"><div class="wrap row">
+  <div>
+    <h2>코드 몇 줄이면 끝</h2>
+    <p class="sub">PyTorch·timm 인터페이스와 Hugging Face Hub로 바로 불러와 쓸 수 있습니다.</p>
+    <div class="chips"><span>ms_eff_gcvit_b0 · 8.7M</span><span>ms_eff_gcvit_b5 · 50.3M</span></div>
+    <a class="btn o" style="margin-top:28px" href="https://github.com/HanMoonSub/DeepGuard">GitHub 보기</a>
+  </div>
+<pre><span class="k">from</span> deepguard <span class="k">import</span> ms_eff_gcvit_b0
+
+model = ms_eff_gcvit_b0(
+    pretrained=<span class="k">True</span>,
+    dataset=<span class="s">"celeb_df_v2"</span>
+)
+<span class="c"># 영상 판정</span>
+result = predictor.predict_video(
+    video_path=<span class="s">"video.mp4"</span>,
+    num_frames=20, agg_mode=<span class="s">"conf"</span>
+)</pre>
+</div></section>
+
+<section id="team"><div class="wrap center">
+  <h2>충북대학교 소프트웨어학과 졸업 프로젝트</h2>
+  <div class="grid3">
+    <div class="card"><h3>한문섭</h3><p>Data &amp; Backend Engineering</p></div>
+    <div class="card"><h3>이예솔</h3><p>UI/UX &amp; Frontend Engineering</p></div>
+    <div class="card"><h3>서윤제</h3><p>AI Engineering</p></div>
+  </div>
+</div></section>
+
+<div class="band"><div class="wrap">
+  <h2>딥페이크 탐지, 지금 시작하세요</h2>
+  <p class="sub" style="color:#dbe6ff;margin:0 auto 30px">이미지 한 장으로 바로 체험해볼 수 있어요.</p>
+  <a class="btn p" href="#">Try Now</a>
+</div></div>
+
+<footer><div class="wrap"><span>© 2026 DeepGuard (Virtuose)</span><span>MIT License · Chungbuk National University</span></div></footer>
+</body>
+</html>

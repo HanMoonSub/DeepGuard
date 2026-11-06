@@ -1,0 +1,69 @@
+/* 이클립스 링: 은은한 테두리 + 천천히 도는 빛 (부모에 position·isolation 필요) */
+.dg-eclipse {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: 680px;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid rgba(157, 184, 255, 0.32);
+  box-shadow:
+    0 0 36px rgba(32, 108, 253, 0.28),
+    inset 0 0 36px rgba(32, 108, 253, 0.18);
+  pointer-events: none;
+}
+.dg-eclipse > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.dg-eclipse > .dg-eclipse__halo {
+  inset: -14%;
+  background: radial-gradient(circle, rgba(32, 108, 253, 0.6), transparent 65%);
+  filter: blur(40px);
+  opacity: 0.6;
+  animation: dg-eclipse-breath 6s ease-in-out infinite;
+}
+.dg-eclipse__spin {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 120deg,
+    var(--color-primary) 250deg,
+    var(--color-accent-light) 320deg,
+    #22d3ee 345deg,
+    transparent 360deg
+  );
+  opacity: 0.55;
+  animation: dg-eclipse-spin 10s linear infinite;
+}
+.dg-eclipse__spin--blur {
+  filter: blur(20px);
+}
+.dg-eclipse > .dg-eclipse__core {
+  inset: 3px;
+  background: radial-gradient(circle at 50% 20%, #0f1d44 0%, #070c1c 55%, var(--color-bg-dark) 100%);
+}
+@keyframes dg-eclipse-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes dg-eclipse-breath {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg-eclipse__halo,
+  .dg-eclipse__spin {
+    animation: none;
+  }
+}
