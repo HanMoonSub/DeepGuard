@@ -8,7 +8,7 @@ from typing import List
 from preprocess.face_detector import FaceDetector2
 from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
-from .utils import PredictorError
+from .utils import ClipPredictorMixin, PredictorError, to_artifact_scores
 
 class ImagePredictor:
     def __init__(
@@ -23,13 +23,21 @@ class ImagePredictor:
         self.landmark_detector = LandmarkDetector()
         self.margin_ratio = margin_ratio
         self.model_name = model_name
-        self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
+        self.model = self._load_model(model_name, dataset)
         self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
         
         # Model Inference Mode
         self.model.to(self.device)
         self.model.eval()
-                
+
+    def _load_model(self, model_name: str, dataset: str):
+        return timm.create_model(model_name, pretrained=True, dataset=dataset)
+
+    def _forward(self, batch: torch.Tensor) -> np.ndarray:
+        """(B,3,H,W) -> (B,) fake probabilities"""
+        with torch.no_grad():
+            return torch.sigmoid(self.model(batch).view(-1)).cpu().numpy()
+
     def _get_face_bbox(self, img: np.ndarray) -> List[float]:
         """
             return [xmin, ymin, xmax, ymax, confidence] or None
@@ -113,12 +121,9 @@ class ImagePredictor:
             transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
             img = transforms(image=img)['image']
         
-            with torch.no_grad():
-                img = img.unsqueeze(0).to(self.device)
-            
-                out = self.model(img)
-                pred = torch.sigmoid(out).item()
-            
+            img = img.unsqueeze(0).to(self.device)
+            pred = float(self._forward(img)[0])
+
             return {"prob": pred, "face_conf": face_conf, "face_ratio": face_ratio, "face_brightness": face_brightness}
         
         except PredictorError as e:
@@ -130,3 +135,32 @@ class ImagePredictor:
         return (f"ImagePredictor(model_name='{self.model_name}', "
                 f"device='{self.device}', "
                 f"img_size={self.img_size})")
+
+class ClipImagePredictor(ClipPredictorMixin, ImagePredictor):
+    def __init__(
+        self,
+        margin_ratio: float,
+        conf_thres: float,
+        model_name: str,
+    ):
+        self._check_model_name(model_name)
+        super().__init__(margin_ratio, conf_thres, model_name, dataset=None)
+
+    def predict_img(self, img_path: str, tta_hflip: float = 0) -> dict:
+        """Same as ImagePredictor.predict_img, plus "artifacts": {region: {artifact type: probability}}"""
+        img, face_conf, face_ratio, face_brightness = self._preprocess_img(img_path)
+
+        transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
+        img = transforms(image=img)['image'].unsqueeze(0).to(self.device)
+        probs, artifact_probs = self._forward_artifacts(img)
+
+        return {
+            "prob": float(probs[0]),
+            "face_conf": face_conf,
+            "face_ratio": face_ratio,
+            "face_brightness": face_brightness,
+            "artifacts": to_artifact_scores(artifact_probs[0]),
+        }
+
+    def __repr__(self):
+        return super().__repr__().replace("ImagePredictor", "ClipImagePredictor", 1)
