@@ -11,6 +11,7 @@ from explainability.explainer.cam_explainer import (
     LayerCAMExplainer,
     XGradCAMExplainer,
 )
+from explainability.explainer.fusion_explainer import BranchFusionExplainer
 from explainability.utils.deepclip import check_deepclip_model_name
 
 
@@ -19,7 +20,7 @@ class ClipExplainerMixin:
     DeepClip parts shared by the Clip explainers.
 
     DeepClip has no dataset variants, and its low/high GCViT branches live under model.image_encoder.
-    Both branches are always used, so branch_level can be "low", "high" or "both".
+    branch_level is "low" or "high"; use ClipBranchFusionExplainer to combine both branches.
     forward() returns (B,1) fake logits, same as DeepGuard, so the CAM targets are unchanged.
     """
 
@@ -64,3 +65,26 @@ class ClipGradCAMPlusPlusExplainer(ClipExplainerMixin, GradCAMPlusPlusExplainer)
 
 class ClipXGradCAMExplainer(ClipExplainerMixin, XGradCAMExplainer):
     pass
+
+
+class ClipBranchFusionExplainer(BranchFusionExplainer):
+    """BranchFusionExplainer의 DeepClip 버전: dataset 없음, low/high에는 Clip*Explainer 클래스만 허용."""
+
+    def __init__(
+        self,
+        model_name: Literal["deepclip_b0", "deepclip_b5"],
+        low: type[ClipExplainerMixin] = ClipHiResCAMExplainer,
+        high: type[ClipExplainerMixin] = ClipEigenGradCAMExplainer,
+        **kwargs,
+    ):
+        kwargs.pop("dataset", None)
+        super().__init__(
+            model_name=model_name, dataset=None, low=low, high=high, **kwargs
+        )
+
+    def _validate_explainer_cls(self, cls: type) -> None:
+        super()._validate_explainer_cls(cls)
+        if not issubclass(cls, ClipExplainerMixin):
+            raise TypeError(
+                f"ClipBranchFusionExplainer에는 Clip*Explainer 클래스를 넘겨야 합니다 (입력: {cls.__name__})."
+            )

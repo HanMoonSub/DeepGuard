@@ -23,7 +23,7 @@ class BaseExplainer:
         dataset: Optional[Literal["celeb_df_v2", "ff++", "kodf"]] = None, # DeepClip 모델은 dataset 불필요
         margin_ratio: float = 0.2,
         conf_thres: float = 0.5,
-        branch_level: Literal["low", "high", "both"] = "high", # "both"는 ms_eff_* 모델만 가능
+        branch_level: Literal["low", "high"] = "high", # 두 branch 결합은 BranchFusionExplainer 사용
         model: Optional[torch.nn.Module] = None,
     ):
 
@@ -87,6 +87,8 @@ class BaseExplainer:
         Raises:
             ValueError: low_/high_ 단일 branch 모델에 존재하지 않는 branch를 요청한 경우 발생.
         """
+        if self.branch_level not in ("low", "high"):
+            raise ValueError(f"branch_level은 'low' 또는 'high'만 가능합니다 (입력: {self.branch_level!r}). 두 branch 결합은 BranchFusionExplainer를 사용하세요.")
         if self.transformer_type == "cnn" and self.branch_level != "high":
             raise ValueError(f"{self.model_name}은 마지막 feature map만 사용하므로 branch_level='high'만 가능합니다.")
         if self.model_name.startswith("low_") and self.branch_level != "low":
@@ -124,15 +126,15 @@ class BaseExplainer:
             layers.append(self._get_backbone_layer(root.h_meta["feature_idx"]))
 
         elif self.transformer_type == "gcvit":
-            if self.branch_level in ("low", "both"):
+            if self.branch_level == "low":
                 layers.append(root.l_gcvit.stages[-1].blocks[-1].norm2)
-            if self.branch_level in ("high", "both"):
+            else:
                 layers.append(root.h_gcvit.stages[-1].blocks[-1].norm2)
 
         else:  # vit
-            if self.branch_level in ("low", "both"):
+            if self.branch_level == "low":
                 layers.append(root.l_vit.blocks[-1].norm1)
-            if self.branch_level in ("high", "both"):
+            else:
                 layers.append(root.h_vit.blocks[-1].norm1)
 
         return layers

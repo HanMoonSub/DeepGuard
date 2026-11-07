@@ -6,8 +6,10 @@ from explainability.explainer.cam_explainer import (
     # high-level branch
     EigenGradCAMExplainer, GradCAMPlusPlusExplainer, XGradCAMExplainer,
 )
+from explainability.explainer.fusion_explainer import BranchFusionExplainer
 from explainability.explainer.clip_explainer import (
     ClipExplainerMixin,
     ClipHiResCAMExplainer, ClipGradCAMElementWiseExplainer, ClipLayerCAMExplainer,
     ClipEigenGradCAMExplainer, ClipGradCAMPlusPlusExplainer, ClipXGradCAMExplainer,
+    ClipBranchFusionExplainer,
 )
