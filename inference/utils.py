@@ -1,9 +1,14 @@
 import numpy as np
 import timm
 import torch
-import deepclip  # noqa: F401  (registers deepclip_b0 / deepclip_b5 in timm)
-from deepclip.data.text import PAIR_ORDER
-from deepclip.models.deepclip import available_models
+
+# deepclip is an optional extra: pip install deepguard[deepclip]
+try:
+    import deepclip  # noqa: F401  (registers deepclip_b0 / deepclip_b5 in timm)
+    from deepclip.data.text import PAIR_ORDER
+    from deepclip.models.deepclip import available_models
+except ImportError:
+    deepclip = None
 
 class PredictorError(Exception):
     def __init__(self, message: str, status_code: int = 500):
@@ -33,6 +38,8 @@ class ClipPredictorMixin:
 
     @staticmethod
     def _check_model_name(model_name: str):
+        if deepclip is None:
+            raise ImportError("DeepClip models need the deepclip package: pip install deepguard[deepclip]")
         if model_name not in available_models():
             raise ValueError(f"Unknown DeepClip model {model_name!r}. Available: {available_models()}")
 
