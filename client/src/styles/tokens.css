@@ -50,3 +50,23 @@
   --section-py: 96px;
   --nav-h: 72px;
 }
+
+/* Dark 테마 — useTheme 훅을 쓰는 페이지(이미지/동영상 분석, 위조 흔적)에서만 적용 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-primary-hover: #3d80ff;
+  --color-primary-soft: #13204a;
+  --color-primary-border: #2c3d70;
+  --color-ink: #e8edf7;
+  --color-muted: #8b97b3;
+  --color-line: #1d2945;
+  --color-bg: #0c1430;
+  --color-bg-alt: #070c1a;
+  --color-on-dark-subtle: #5b6886;
+  --color-danger-soft: #3a1218;
+  --color-success-soft: #0f2a1c;
+  --color-warning-soft: #33260c;
+}
+:root[data-theme="dark"] body {
+  background: var(--color-bg-alt);
+}

@@ -10,7 +10,8 @@ import './Navbar.css';
 // links: 같은 페이지 앵커 메뉴 [{ href: '#bench', label: 'Benchmark' }]
 // logoutRedirect: 로그아웃 후 이동 경로
 // solid: dark 변형에서 스크롤 전에도 어두운 배경 유지 (흰 히어로 위에서 사용)
-const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRedirect = '/main', solid = false }) => {
+// theme / onThemeChange: 넘기면 로그인 왼쪽에 해/달 테마 전환 버튼 표시 (useTheme 훅과 함께 사용)
+const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRedirect = '/main', solid = false, theme, onThemeChange }) => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
@@ -61,6 +62,18 @@ const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRed
         </div>
 
         <div className="dg-nav__actions">
+          {onThemeChange && (
+            <button type="button" className="dg-nav__theme"
+              onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+              aria-label={theme === 'dark' ? 'Light 모드로 전환' : 'Dark 모드로 전환'}
+              title={theme === 'dark' ? 'Light 모드' : 'Dark 모드'}>
+              {theme === 'dark' ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
+              )}
+            </button>
+          )}
           {sessionUser ? (
             <>
               <span className="dg-nav__user"><strong>{sessionUser.name}</strong>님</span>

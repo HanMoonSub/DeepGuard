@@ -934,3 +934,12 @@
     width: 100%;
   }
 }
+
+/* Dark 테마 — 하드코딩된 연한 테두리 보정 */
+:root[data-theme="dark"] .dg-heatmap__chips .dg-heatmap__chip--fake,
+:root[data-theme="dark"] .dg-heatmap__alert {
+  border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+}
+:root[data-theme="dark"] .dg-heatmap__chips .dg-heatmap__chip--real {
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+}

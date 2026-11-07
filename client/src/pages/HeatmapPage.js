@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import Navbar from '../components/Navbar';
+import useTheme from '../hooks/useTheme';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -10,10 +11,13 @@ import './HeatmapPage.css';
 
 const POLL_INTERVAL = 2000;
 
-// branch별 XAI 기법 (low: 국소 흔적 / high: 전역 구조)
-const EXPLAINER_BY_BRANCH = { low: 'layercam', high: 'eigengradcam' };
-const BRANCH_HINT = { low: '국소 흔적', high: '전역 구조' };
-const BRANCH_LABEL = { low: '국소 부위 표시', high: '전역 부위 표시' };
+// branch별 XAI 기법 (low: 국소 흔적 / high: 전역 구조 / both: 둘을 결합)
+const EXPLAINER_BY_BRANCH = { low: 'layercam', high: 'eigengradcam', both: 'fusion' };
+const BRANCH_HINT = { low: '국소 흔적', high: '전역 구조', both: '국소 + 전역' };
+const BRANCH_LABEL = { low: '국소 부위 표시', high: '전역 부위 표시', both: '통합 부위 표시' };
+// 버전별 표시할 branch와 기본값 (v1: MS-EffGCViT / v2: DeepClip beta)
+const BRANCHES_BY_VERSION = { v1: ['low', 'high', 'both'], v2: ['low', 'high', 'both'] };
+const DEFAULT_BRANCH = { v1: 'high', v2: 'both' };
 const DISPLAY_OPTIONS = [
   { value: 'heatmap',      label: 'Heatmap' },
   { value: 'bbox',         label: 'BBox' },
@@ -35,15 +39,18 @@ const toAbsoluteUrl = (path) => {
 const round2 = (v) => Math.round(Number(v) * 100) / 100;
 
 // 공통 레이아웃: Navbar(light) + 본문 + Footer
-const HeatmapLayout = ({ sessionUser, children }) => (
-  <div className="dg-heatmap">
-    <Navbar variant="light" sessionUser={sessionUser} />
-    <main className="dg-heatmap__main">
-      <div className="dg-heatmap__wrap">{children}</div>
-    </main>
-    <Footer />
-  </div>
-);
+const HeatmapLayout = ({ sessionUser, children }) => {
+  const [theme, setTheme] = useTheme();
+  return (
+    <div className="dg-heatmap">
+      <Navbar variant="light" sessionUser={sessionUser} theme={theme} onThemeChange={setTheme} />
+      <main className="dg-heatmap__main">
+        <div className="dg-heatmap__wrap">{children}</div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
 
 // Display 설정 패널: 값은 draft에만 반영하고 '적용' 시 재요청
 const rangeFill = (v, min, max) => ({ '--fill': `${((v - min) / (max - min)) * 100}%` });
@@ -156,12 +163,15 @@ const DisplaySettings = ({ draft, setDraft, isDirty, isProcessing, onApply }) =>
 const HeatmapPage = ({ sessionUser }) => {
   const { state } = useLocation();
   const navigate  = useNavigate();
-  const { video_id, frame_index, timestamp, fake_score, model_type } = state || {};
+  const { video_id, frame_index, timestamp, fake_score, model_type, version_type } = state || {};
   const modelType = model_type || 'fast'; // 분석에 사용한 모델 그대로 사용
+  const versionType = BRANCHES_BY_VERSION[version_type] ? version_type : 'v1';
+  const branches = BRANCHES_BY_VERSION[versionType];
+  const defaultBranch = DEFAULT_BRANCH[versionType];
 
-  const [branch, setBranch]           = useState('high');
+  const [branch, setBranch]           = useState(defaultBranch);
   const [draft, setDraft]             = useState(DEFAULT_DISPLAY);
-  const [applied, setApplied]         = useState({ branch: 'high', ...DEFAULT_DISPLAY });
+  const [applied, setApplied]         = useState({ branch: defaultBranch, ...DEFAULT_DISPLAY });
   const [status, setStatus]           = useState('idle');
   const [heatmapSrc, setHeatmapSrc]   = useState(null);
   const [, setTaskId]                 = useState(null);
@@ -178,11 +188,11 @@ const HeatmapPage = ({ sessionUser }) => {
     return () => { isMounted.current = false; stopPolling(); };
   }, []);
 
-  // 진입 즉시 생성 (high branch + 기본 Display 설정)
+  // 진입 즉시 생성 (버전별 기본 branch + 기본 Display 설정)
   useEffect(() => {
     if (!state || startedRef.current) return;
     startedRef.current = true;
-    requestHeatmap('high', DEFAULT_DISPLAY);
+    requestHeatmap(defaultBranch, DEFAULT_DISPLAY);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopPolling = () => {
@@ -309,6 +319,7 @@ const HeatmapPage = ({ sessionUser }) => {
         <div className="dg-heatmap__chips">
           <span className={`dg-heatmap__chip--${tone}`}>{isFake ? 'FAKE' : 'REAL'}</span>
           <span>{modelType.toUpperCase()}</span>
+          <span>{versionType.toUpperCase()}</span>
         </div>
       </header>
 
@@ -384,7 +395,7 @@ const HeatmapPage = ({ sessionUser }) => {
 
         {/* Branch 전환 */}
         <div className="dg-heatmap__combos">
-          {Object.keys(EXPLAINER_BY_BRANCH).map(b => (
+          {branches.map(b => (
             <button key={b} type="button" title={BRANCH_HINT[b]} disabled={isProcessing}
               onClick={() => handleBranchSelect(b)}
               className={`dg-heatmap__combo${branch === b ? ' is-active' : ''}`}>

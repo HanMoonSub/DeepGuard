@@ -98,6 +98,28 @@
   align-items: center;
   gap: 10px;
 }
+/* 테마 전환 — 해/달 아이콘 버튼 */
+.dg-nav__theme {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.dg-nav__theme:hover {
+  color: var(--color-ink);
+  background: var(--color-bg-alt);
+}
+.dg-nav__theme:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
 .dg-nav__user {
   font-size: 15px;
   margin-right: 6px;

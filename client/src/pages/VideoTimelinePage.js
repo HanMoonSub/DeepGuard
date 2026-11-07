@@ -305,6 +305,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
             <div className="dg-timeline__chips">
               {data.domain_type && <span>{data.domain_type}</span>}
               {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
+              {data.version_type && <span>{data.version_type.toUpperCase()}</span>}
             </div>
           )}
         </header>
@@ -333,6 +334,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
       timestamp: frame.timestamp,
       fake_score: frame.fake_score,
       model_type: data.model_type || 'fast',
+      version_type: data.version_type || 'v1',
       video_name: data.video_name,
     }
   });
@@ -349,6 +351,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
         <div className="dg-timeline__chips">
           {data.domain_type && <span>{data.domain_type}</span>}
           {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
+          {data.version_type && <span>{data.version_type.toUpperCase()}</span>}
         </div>
       </header>
 
