@@ -3,6 +3,10 @@ import torch
 import cv2
 import numpy as np
 from abc import ABC, abstractmethod
+from pytorch_grad_cam import (
+    HiResCAM, GradCAMElementWise, LayerCAM,
+    EigenGradCAM, GradCAMPlusPlus, XGradCAM,
+)
 from explainability.utils.model_targets import BinaryClassifierOutputTarget
 from explainability.utils.image import (
     show_cam_on_image, show_bbox_on_image,
@@ -317,3 +321,61 @@ class CAMExplainer(BaseExplainer, ABC):
         
         show_bbox_on_image(heatmap, cam_recovered, binary_mask, kwargs.get("thickness", 1))
         return heatmap
+
+# ---------------------------------------------------------------------------
+# Low-level branch: 정밀한 local activation (texture, blending, compression traces)
+# ---------------------------------------------------------------------------
+
+class HiResCAMExplainer(CAMExplainer):
+    """
+    Like GradCAM but element-wise multiply the activations with the gradients; provably guaranteed faithfulness for certain models
+    """
+    def _build_cam(self):
+        return HiResCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
+
+
+class GradCAMElementWiseExplainer(CAMExplainer):
+    """
+    Like GradCAM but element-wise multiply the activations with the gradients then apply a ReLU operation before summing
+    """
+    def _build_cam(self):
+        return GradCAMElementWise(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
+
+
+class LayerCAMExplainer(CAMExplainer):
+    """
+    Spatially weight the activations by positive gradients.
+    Works better especially in lower layers
+    """
+    def _build_cam(self):
+        return LayerCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
+
+
+# ---------------------------------------------------------------------------
+# High-level branch: 깔끔한 class-discriminative global map (lighting, geometry, shadows)
+# ---------------------------------------------------------------------------
+
+class EigenGradCAMExplainer(CAMExplainer):
+    """
+    Like EigenCAM but with class discrimination
+    First principle component of Activations*Grad
+    Looks like GradCAM, but cleaner
+    """
+    def _build_cam(self):
+        return EigenGradCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
+
+
+class GradCAMPlusPlusExplainer(CAMExplainer):
+    """
+    Like GradCAM but uses second order gradients
+    """
+    def _build_cam(self):
+        return GradCAMPlusPlus(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
+
+
+class XGradCAMExplainer(CAMExplainer):
+    """
+    Like GradCAM but scale the gradients by the normalized activations
+    """
+    def _build_cam(self):
+        return XGradCAM(model=self.model, target_layers=self.target_layers, reshape_transform=self.reshape_fn)
