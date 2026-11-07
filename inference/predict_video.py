@@ -7,7 +7,7 @@ from colorama import Fore, Style
 from sklearn.metrics import (
     roc_auc_score, accuracy_score, 
     recall_score, precision_score, f1_score, 
-    log_loss
+    log_loss, confusion_matrix
 )
 from .video_predictor import ClipVideoPredictor, VideoPredictor
 
@@ -90,7 +90,11 @@ def main():
     auc = roc_auc_score(all_true, all_pred)
     acc = accuracy_score(all_true, y_pred_bin)
     loss = log_loss(all_true, all_pred)
-    
+    macro_f1 = f1_score(all_true, y_pred_bin, average="macro")
+
+    # Confusion Matrix (임계값 0.5)
+    tn, fp, fn, tp = confusion_matrix(all_true, y_pred_bin, labels=[0, 1]).ravel()
+
     # REAL(0) recall, precision, f1
     real_recall = recall_score(all_true, y_pred_bin, pos_label=0)
     real_precision = precision_score(all_true, y_pred_bin, pos_label=0)
@@ -105,7 +109,13 @@ def main():
     print(f"🏆 {s_}최종 평가 결과 (Final Metrics){rs_}")
     print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
 
-    print(f"   Overall  ▶  {s_}AUC:{rs_} {g_}{auc:.4f}{rs_}  |  {s_}ACC:{rs_} {g_}{acc * 100:.2f}%{rs_}  |  {s_}Log LOSS:{rs_} {g_}{loss:.4f}{rs_}")
+    print(f"   Overall  ▶  {s_}AUC:{rs_} {g_}{auc:.4f}{rs_}  |  {s_}ACC:{rs_} {g_}{acc * 100:.2f}%{rs_}  |  {s_}Log LOSS:{rs_} {g_}{loss:.4f}{rs_}  |  {s_}Macro F1:{rs_} {g_}{macro_f1:.4f}{rs_}")
+    print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
+
+    print(f"   CONFUSION MATRIX  │  PRED REAL  │  PRED FAKE")
+    print(f"   ------------------│-------------│-----------")
+    print(f"   {s_}TRUE REAL (0){rs_}     │  {g_}{tn:>9}{rs_}  │  {r_}{fp:>9}{rs_}")
+    print(f"   {s_}TRUE FAKE (1){rs_}     │  {r_}{fn:>9}{rs_}  │  {g_}{tp:>9}{rs_}")
     print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
 
     print(f"   CATEGORY  │  PRECISION  │   RECALL     │     F1    ")
