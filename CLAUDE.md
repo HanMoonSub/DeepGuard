@@ -134,11 +134,24 @@ CAM-based explainers are assigned per branch based on empirical performance, not
 - **high-level branch**: `EigenGradCAM`, `GradCAM++`, `XGradCAM` (favor cleaner class-discriminative
   global maps)
 
-`explainability/explainer/base_explainer.py` defines the shared interface
-(`display_heatmap_on_image`, `display_bbox_on_image`, `display_heatmap_bbox_on_image`); concrete
-explainers in `cam_explainer.py`, `eigenvalue_explainer.py`, `gradient_explainer.py`,
-`misc_explainer.py`, `perturbation_explainer.py` subclass it. `branch_level` (`"low"`/`"high"`) is
-a required constructor arg that determines which backbone feature stage the hooks attach to.
+Only these six methods are supported; don't add others back without a reason.
+
+- `explainability/explainer/base_explainer.py` — `BaseExplainer`: model loading, face detect/crop,
+  transforms, and target-layer resolution. `branch_level` (`"low"`/`"high"`/`"both"`, default
+  `"high"`) picks which branch the hooks attach to. The target layer is fixed per branch (no
+  stage/block args): GCViT → `stages[-1].blocks[-1].norm2`, ViT → `blocks[-1].norm1`,
+  `eff_b0`/`eff_b5` (CNN baseline) → last backbone feature map. Subclass hooks: `_load_model`,
+  `_get_transformer_type`, `_branch_root`. `dataset` is optional (unused by DeepClip).
+- `explainability/explainer/cam_explainer.py` — abstract `CAMExplainer` (the
+  `display_heatmap_*` / `display_bbox_*` / `display_heatmap_bbox_*` methods, each with an
+  `_on_image(img_path)` and `_from_array(face)` variant) plus the six concrete explainers, grouped
+  into low/high-branch sections.
+- `explainability/explainer/clip_explainer.py` — `ClipExplainerMixin` + `Clip<Method>Explainer` for
+  each of the six, for DeepClip (`deepclip_b0`/`deepclip_b5`; no dataset; branches live under
+  `model.image_encoder`). Same mixin pattern as `ClipImagePredictor` in `inference/`. deepclip is an
+  optional extra: `explainability/utils/deepclip.py` does the guarded import and raises
+  `ImportError("DeepClip models need the deepclip package: pip install deepguard[deepclip]")` at
+  construction time, so `import explainability` works without it.
 `explainability/metrics/` (`road.py`, `perturbation_confidence.py`, `cam_mult_image.py`) implement
 CAM-quality metrics used by `explainability/cam_evaluator.py`.
 
