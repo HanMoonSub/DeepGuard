@@ -29,16 +29,18 @@ const WebcamIcon = () => (
   </svg>
 );
 
-/** 업로드 영역 하단의 작은 아이콘 바: 파일 업로드 / 웹캠 */
+/** 업로드 영역 하단 바: 파일 선택 / 웹캠 (2등분 글자 버튼) */
 export const MediaSourceBar = ({ onUpload, onWebcam, mode = 'photo', disabled = false }) => (
   <div className="dg-webcam-bar" onClick={(e) => e.stopPropagation()}>
     <button type="button" className="dg-webcam-bar__btn" onClick={onUpload} disabled={disabled}
       title={mode === 'video' ? '동영상 파일 업로드' : '이미지 파일 업로드'} aria-label="파일 업로드">
       <UploadIcon />
+      <span>파일 선택</span>
     </button>
     <button type="button" className="dg-webcam-bar__btn" onClick={onWebcam} disabled={disabled}
       title={mode === 'video' ? '웹캠으로 녹화' : '웹캠으로 촬영'} aria-label={mode === 'video' ? '웹캠으로 녹화' : '웹캠으로 촬영'}>
       <WebcamIcon />
+      <span>{mode === 'video' ? '웹캠 녹화' : '웹캠 촬영'}</span>
     </button>
   </div>
 );

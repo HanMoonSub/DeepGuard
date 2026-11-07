@@ -100,16 +100,46 @@
   padding: 0 4px;
 }
 .dg-analysis__history-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
   margin-bottom: 10px;
 }
-.dg-analysis__check {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  accent-color: var(--color-primary);
+/* 휴지통 — 기록 카드에 호버하면 판정 배지 자리에 나타남 */
+.dg-analysis__trash {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.dg-analysis__history-row:hover .dg-analysis__trash,
+.dg-analysis__trash:focus-visible {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  pointer-events: auto;
+}
+.dg-analysis__trash:hover {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+  color: var(--color-danger);
+}
+.dg-analysis__history-item .dg-analysis__badge {
+  transition: opacity 0.15s ease;
+}
+.dg-analysis__history-row:hover .dg-analysis__badge {
+  opacity: 0;
 }
 .dg-analysis__history-item {
   flex: 1;
@@ -128,22 +158,15 @@
   border-color: var(--color-primary-border);
   background: var(--color-bg-alt);
 }
-.dg-analysis__history-item.is-editing {
-  cursor: default;
-}
-.dg-analysis__history-item.is-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-}
-/* REAL/FAKE 판정 카드 hover — 옅은 초록/빨강 테두리 (선택된 카드는 선택 스타일 우선) */
+/* REAL/FAKE 판정 카드 hover — 옅은 초록/빨강 테두리 */
 .dg-analysis__history-item.is-real,
 .dg-analysis__history-item.is-fake {
   transition: border-color 0.3s ease, background-color 0.3s ease;
 }
-.dg-analysis__history-item.is-real:hover:not(.is-selected) {
+.dg-analysis__history-item.is-real:hover {
   border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
 }
-.dg-analysis__history-item.is-fake:hover:not(.is-selected) {
+.dg-analysis__history-item.is-fake:hover {
   border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
 }
 .dg-analysis__thumb {
@@ -204,8 +227,32 @@
   font-size: 14px;
   color: var(--color-muted);
 }
-.dg-analysis__delete-btn {
-  margin-top: 12px;
+/* 비로그인 — 잠금 안내 카드 */
+.dg-analysis__locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 24px 16px;
+  border: 1px dashed var(--color-line);
+  border-radius: 14px;
+  background: var(--color-bg);
+  text-align: center;
+}
+.dg-analysis__locked-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.dg-analysis__locked p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-muted);
 }
 
 /* FAKE/REAL/UNKNOWN 배지 */
@@ -348,53 +395,115 @@
   overflow: hidden;
 }
 
+/* 업로드 카드 — 흰 카드 + 안쪽 점선 영역 (리파인드 라이트) */
 .dg-analysis__drop {
-  padding-bottom: 72px; /* 하단 업로드/웹캠 아이콘 바 자리 */
-  border: 2px dashed var(--color-primary-border);
+  padding-bottom: 72px; /* 하단 파일 선택/웹캠 바 자리 */
+  border-radius: 20px;
+  border-color: var(--color-line);
+  box-shadow: 0 1px 2px #0b12200a, 0 12px 32px #206cfd0d;
   cursor: pointer;
-  transition: 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.dg-analysis__drop::before {
+  content: '';
+  position: absolute;
+  inset: 14px 14px 62px;
+  border: 1.5px dashed #cfdcf5;
+  border-radius: 14px;
+  background: #fbfcff;
+  pointer-events: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.dg-analysis__drop:hover,
+.dg-analysis__drop.is-active {
+  border-color: var(--color-primary-border);
+  box-shadow: 0 1px 2px #0b12200a, 0 16px 40px #206cfd1a;
+}
+.dg-analysis__drop:hover::before,
+.dg-analysis__drop.is-active::before {
+  border-color: var(--color-primary);
+  background: #f5f8ff;
 }
 .dg-analysis__drop.is-camera {
   padding: 0;
   border: 1px solid var(--color-ink);
   cursor: default;
 }
-.dg-analysis__drop:hover,
-.dg-analysis__drop.is-active {
-  border-color: var(--color-primary);
-  background: #fbfcff;
-}
 .dg-analysis__drop.has-preview {
-  border-style: solid;
   border-color: var(--color-line);
   background: var(--color-bg);
   cursor: default;
 }
+.dg-analysis__drop.is-camera::before,
+.dg-analysis__drop.has-preview::before {
+  display: none;
+}
 .dg-analysis__drop-body {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
 }
+/* 이클립스 오빗: 헤일로(숨쉬기) + 회전 링 + 흰 코어(업로드 아이콘) */
+.dg-analysis__orbit {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: -16px 0 4px;
+  display: grid;
+  place-items: center;
+}
+.dg-analysis__orbit-halo {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #206cfd33 0%, #5b95ff1a 45%, transparent 70%);
+  filter: blur(6px);
+  animation: dg-orbit-breathe 4s ease-in-out infinite;
+}
+.dg-analysis__orbit-ring {
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--color-primary-soft);
+}
+.dg-analysis__orbit-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, var(--color-accent-light) 80deg, var(--color-primary) 160deg, transparent 200deg, transparent 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: dg-orbit-spin 6s linear infinite;
+}
 .dg-analysis__drop-icon {
-  width: 60px;
-  height: 60px;
-  margin-bottom: 18px;
+  position: relative;
+  width: 80px;
+  height: 80px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--color-primary-soft);
+  background: var(--color-bg);
+  box-shadow: 0 6px 18px #206cfd26;
   color: var(--color-primary);
-  font-size: 30px;
-  font-weight: 300;
+}
+@keyframes dg-orbit-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes dg-orbit-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
 }
 .dg-analysis__drop-title {
-  font-size: var(--fs-h3);
+  font-size: 18px;
   font-weight: 700;
 }
 .dg-analysis__drop-desc {
-  margin-top: 4px;
-  font-size: 14px;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--color-muted);
 }
 .dg-analysis__drop-options {
@@ -410,9 +519,56 @@
 }
 
 /* 결과 */
+/* 결과 대기 — 링 + 안내 + 스켈레톤 줄 (리파인드 라이트) */
+.dg-analysis__output {
+  border-radius: 20px;
+  border-color: var(--color-line);
+  box-shadow: 0 1px 2px #0b12200a, 0 12px 32px #206cfd0d;
+}
 .dg-analysis__placeholder {
-  font-size: 14px;
-  color: var(--color-muted);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.dg-analysis__placeholder-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dg-analysis__placeholder-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.dg-analysis__placeholder-lines {
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dg-analysis__placeholder-lines span {
+  height: 10px;
+  border-radius: 99px;
+  background: #f0f3f8;
+}
+.dg-analysis__ring-track {
+  stroke: #f0f3f8;
+}
+.dg-analysis__ring-arc {
+  stroke: #dbe6fb;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg-analysis__orbit-halo,
+  .dg-analysis__orbit-ring::before {
+    animation: none;
+  }
+}
+.dg-analysis__placeholder-lines span + span {
+  width: 70%;
+  margin: 0 auto;
 }
 .dg-analysis__result {
   display: flex;
@@ -516,13 +672,10 @@
   }
 }
 
-/* 분석 중 (메인 dg-scan 톤의 다크 패널) */
+/* 분석 중 — 리파인드 라이트 톤: 밝은 카드 + 중앙 탐지 펄스 */
 .dg-analysis__output.is-analyzing {
-  border-color: var(--color-primary);
-  background:
-    radial-gradient(400px 260px at 70% 30%, #1a3f9c55, transparent),
-    linear-gradient(160deg, #16244d, #0b1330);
-  box-shadow: 0 0 0 1px var(--color-primary), 0 0 32px #206cfd40;
+  border-color: var(--color-primary-border);
+  background: radial-gradient(420px 300px at 50% 38%, var(--color-primary-soft), transparent 70%), var(--color-bg);
 }
 .dg-analysis__scanning {
   width: 100%;
@@ -530,26 +683,43 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  color: var(--color-on-dark);
+  color: var(--color-ink);
 }
-.dg-analysis__scanning .dg-analysis__eyebrow {
-  color: var(--color-accent-light);
+.dg-analysis__pulse {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  margin-bottom: 18px;
+  display: grid;
+  place-items: center;
+}
+.dg-analysis__pulse span {
+  position: absolute;
+  inset: 52px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-primary);
+  opacity: 0;
+  animation: dg-analysis-wave 2.4s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+.dg-analysis__pulse span:nth-child(2) { animation-delay: 0.8s; }
+.dg-analysis__pulse span:nth-child(3) { animation-delay: 1.6s; }
+.dg-analysis__pulse-core {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 0 0 8px var(--color-primary-soft), 0 10px 24px #206cfd40;
+  animation: dg-analysis-core 2.4s ease-in-out infinite;
 }
 .dg-analysis__scan-title {
-  margin: 4px 0 40px;
-  font-size: 22px;
+  margin: 0 0 28px;
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: 1px;
-}
-.dg-analysis__scanline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
-  box-shadow: 0 0 15px var(--color-accent);
-  animation: dg-analysis-scan 3s ease-in-out infinite;
+  letter-spacing: -0.3px;
 }
 .dg-analysis__progress {
   width: 70%;
@@ -560,32 +730,34 @@
   margin-bottom: 10px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-on-dark-muted);
+  color: var(--color-muted);
 }
 .dg-analysis__live {
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-family: var(--font-mono);
   animation: dg-analysis-blink 1s step-end infinite;
 }
 .dg-analysis__bar {
-  height: 3px;
-  border-radius: 2px;
+  height: 4px;
+  border-radius: 99px;
   overflow: hidden;
-  background: #ffffff1a;
+  background: var(--color-primary-soft);
 }
 .dg-analysis__bar div {
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
   background-size: 200% 100%;
   animation: dg-analysis-loading 1.5s linear infinite;
 }
 
-@keyframes dg-analysis-scan {
-  0% { top: 0%; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+@keyframes dg-analysis-wave {
+  0%   { opacity: 0.55; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.6); }
+}
+@keyframes dg-analysis-core {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 @keyframes dg-analysis-loading {
   0% { background-position: 100% 0%; }
@@ -601,6 +773,7 @@
   position: relative;
   animation: dg-analysis-pop 0.45s cubic-bezier(0.34, 1.3, 0.64, 1) both;
 }
+.dg-analysis__result.is-fresh .dg-analysis__verdict::before,
 .dg-analysis__result.is-fresh .dg-analysis__verdict::after {
   content: '';
   position: absolute;
@@ -612,7 +785,10 @@
   border: 2px solid currentColor;
   border-radius: 50%;
   pointer-events: none;
-  animation: dg-analysis-ring 0.8s ease-out 0.1s both;
+  animation: dg-analysis-ring 1.6s cubic-bezier(0.2, 0.6, 0.35, 1) 0.1s both;
+}
+.dg-analysis__result.is-fresh .dg-analysis__verdict::after {
+  animation-delay: 0.45s;
 }
 .dg-analysis__result.is-fresh .dg-analysis__eyebrow,
 .dg-analysis__result.is-fresh .dg-analysis__detail-btn {
@@ -631,8 +807,8 @@
   100% { opacity: 1; transform: scale(1); }
 }
 @keyframes dg-analysis-ring {
-  0%   { opacity: 0.3; transform: scale(0.5); }
-  100% { opacity: 0; transform: scale(1.4); }
+  0%   { opacity: 0.45; transform: scale(0.4); }
+  100% { opacity: 0; transform: scale(3.4); }
 }
 @keyframes dg-analysis-rise {
   0%   { opacity: 0; transform: translateY(6px); }
@@ -646,7 +822,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dg-analysis__result.is-fresh *,
+  .dg-analysis__result.is-fresh *::before,
   .dg-analysis__result.is-fresh *::after,
+  .dg-analysis__pulse span,
+  .dg-analysis__pulse-core,
   .dg-analysis__history-item.is-new {
     animation: none;
   }
@@ -709,6 +888,22 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* 미지원 도메인 — "준비중" 표기 (버튼은 흐리게, 배지는 또렷하게) */
+.dg-analysis__segment button:disabled:has(.dg-analysis__soon) {
+  opacity: 1;
+  color: #b8c0cc;
+}
+.dg-analysis__soon {
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
 
 .dg-analysis__models {
   display: flex;
@@ -754,22 +949,11 @@
 .dg-analysis__model-desc svg {
   color: var(--color-primary);
 }
-.dg-analysis__model-badge {
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  font-size: 10px;
+/* 모델 설명 옆 보조 문구 — "- 추천" / "- 회원 전용" */
+.dg-analysis__model-note {
+  margin-left: 2px;
   font-weight: 700;
-}
-.dg-analysis__model-badge--rec {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: var(--color-primary);
-  color: var(--color-on-dark);
-}
-.dg-analysis__model-badge--member {
-  background: var(--color-warning-soft);
-  color: #b45309;
+  color: var(--color-ink);
 }
 
 .dg-analysis__submit {
@@ -844,4 +1028,38 @@
   .dg-analysis__verdict {
     font-size: 48px;
   }
+}
+
+/* ───────── Dark 테마 보정 (토큰으로 안 바뀌는 색) ───────── */
+:root[data-theme="dark"] .dg-analysis__drop::before {
+  border-color: #2c3d70;
+  background: #0a1124;
+}
+:root[data-theme="dark"] .dg-analysis__drop:hover::before,
+:root[data-theme="dark"] .dg-analysis__drop.is-active::before {
+  border-color: var(--color-primary);
+  background: #0f1a3a;
+}
+:root[data-theme="dark"] .dg-analysis__drop,
+:root[data-theme="dark"] .dg-analysis__output {
+  box-shadow: inset 0 1px 0 #ffffff0d;
+}
+:root[data-theme="dark"] .dg-analysis__drop.has-preview {
+  background: var(--color-bg);
+}
+:root[data-theme="dark"] .dg-analysis__placeholder-lines span,
+:root[data-theme="dark"] .dg-analysis__ring-track {
+  background: #16224a;
+  stroke: #16224a;
+}
+:root[data-theme="dark"] .dg-analysis__ring-arc {
+  stroke: #2c4fa8;
+}
+:root[data-theme="dark"] .dg-analysis__segment button.is-on {
+  background: #16224a;
+  color: var(--color-ink);
+  box-shadow: none;
+}
+:root[data-theme="dark"] .dg-analysis__segment button:disabled:has(.dg-analysis__soon) {
+  color: #4a5675;
 }

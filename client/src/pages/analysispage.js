@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import Navbar from '../components/Navbar';
+import useTheme from '../hooks/useTheme';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import './analysispage.css';
@@ -17,8 +18,11 @@ const SAMPLE_IMAGES = [
   { name: 'western_fake_2.JPG', src: '/samples/images/western_fake_2.JPG', domain: 'western', label: '서양인 Fake' },
 ];
 
-// V1 지원 종료 — 항상 V2 모델 사용 (요청 필드 version_type은 유지)
-const VERSION_TYPE = 'v2';
+// 모델 버전 — v1: MS-EffGCViT / v2: DeepClip (동양인 도메인 미지원)
+const VERSIONS = [
+  { value: 'v1', label: 'V1' },
+  { value: 'v2', label: 'V2' },
+];
 
 // FAKE/REAL/UNKNOWN → 배지 modifier
 const labelTone = (label) => (label === 'FAKE' ? 'fake' : label === 'REAL' ? 'real' : 'unknown');
@@ -30,29 +34,44 @@ const SidebarIcon = ({ open }) => (
   </svg>
 );
 
+// 개발 서버 전용 미리보기 — 백엔드 없이 이펙트 확인용
+// ?preview=analyzing (분석 중) | fake | real (결과 + 퍼지는 링). 빌드(production)에서는 무시됨
+const DEV_PREVIEW = process.env.NODE_ENV === 'development'
+  ? new URLSearchParams(window.location.search).get('preview')
+  : null;
+const PREVIEW_RESULT = ['fake', 'real'].includes(DEV_PREVIEW)
+  ? { status: 'SUCCESS', label: DEV_PREVIEW.toUpperCase(), image_id: 'preview' }
+  : null;
+
 const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const navigate = useNavigate();
+  const [theme, setTheme] = useTheme();
 
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(DEV_PREVIEW === 'analyzing');
   const [history, setHistory] = useState([]);
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [selectedSample, setSelectedSample] = useState(null);
 
+  const [versionType, setVersionType] = useState('v2');
   const [modelType, setModelType] = useState('fast');
   const [domainType, setDomainType] = useState('western');
 
-  const [result, setResult] = useState(null);
+  // v2는 동양인 도메인 미지원 → 서양인으로 전환
+  const selectVersion = (v) => {
+    setVersionType(v);
+    if (v === 'v2') setDomainType('western');
+  };
+
+  const [result, setResult] = useState(PREVIEW_RESULT);
   const [statusMessage, setStatusMessage] = useState('');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // 방금 분석이 끝난 image_id — 완료 이펙트(결과 팝 + 새 기록 하이라이트)용
-  const [freshId, setFreshId] = useState(null);
+  const [freshId, setFreshId] = useState(PREVIEW_RESULT ? 'preview' : null);
 
   const pollingTimer = useRef(null);
   const freshTimer = useRef(null);
@@ -147,7 +166,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     formData.append('imagefile', file);
     formData.append('model_type', modelType);
     formData.append('domain_type', domainType === 'western' ? '서양인' : '동양인');
-    formData.append('version_type', VERSION_TYPE);
+    formData.append('version_type', versionType);
 
     setIsAnalyzing(true);
     setStatusMessage('서버 접수 중...');
@@ -182,6 +201,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       const blob = await res.blob();
       const file = new File([blob], sample.name, { type: blob.type });
       setDomainType(sample.domain);
+      if (sample.domain === 'asian' && versionType === 'v2') setVersionType('v1');
       handleFileSelect(file);
       setSelectedSample(sample.name); // handleFileSelect 리셋 이후 선택 표시
     } catch (e) {
@@ -189,23 +209,13 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     }
   };
 
-  const toggleSelect = (id) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedIds.length === 0) return;
-    if (!window.confirm(`${selectedIds.length}개의 기록을 삭제하시겠습니까?`)) return;
-
+  // 기록 한 건 삭제 — 호버 시 노출되는 휴지통 버튼
+  const handleDeleteOne = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm("이 기록을 삭제하시겠습니까?")) return;
     try {
-      const deletePromises = selectedIds.map(id =>
-        axios.delete(`/image/history/${id}`)
-      );
-      await Promise.all(deletePromises);
-      alert("선택한 이미지 기록이 성공적으로 삭제되었습니다.");
+      await axios.delete(`/image/history/${id}`);
       fetchHistory();
-      setSelectedIds([]);
-      setIsEditMode(false);
     } catch (error) {
       console.error(error);
       alert("서버에서 기록을 삭제하는 중 오류가 발생했습니다.");
@@ -221,8 +231,13 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     if (isAnalyzing) {
       return (
         <div className="dg-analysis__scanning">
-          <div className="dg-analysis__scanline" />
-          <p className="dg-analysis__eyebrow">딥페이크 탐지 엔진</p>
+          {/* 탐지 펄스: 중앙 코어에서 원이 계속 퍼져나감 */}
+          <div className="dg-analysis__pulse" aria-hidden="true">
+            <span /><span /><span />
+            <div className="dg-analysis__pulse-core">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z" /><path d="M9 12l2 2 4-4" /></svg>
+            </div>
+          </div>
           <h3 className="dg-analysis__scan-title">AI가 이미지를 분석하고 있어요</h3>
           <div className="dg-analysis__progress">
             <div className="dg-analysis__progress-head">
@@ -236,7 +251,21 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     }
 
     if (!result) {
-      return <p className="dg-analysis__placeholder">분석 결과가 여기에 표시됩니다</p>;
+      return (
+        <div className="dg-analysis__placeholder">
+          <svg className="dg-analysis__placeholder-ring" width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
+            <circle className="dg-analysis__ring-track" cx="66" cy="66" r="54" fill="none" strokeWidth="12" />
+            <circle className="dg-analysis__ring-arc" cx="66" cy="66" r="54" fill="none" strokeWidth="12" strokeLinecap="round" strokeDasharray="90 340" transform="rotate(-90 66 66)" />
+          </svg>
+          <div className="dg-analysis__placeholder-text">
+            <p className="dg-analysis__placeholder-title">분석 결과가 여기에 표시됩니다</p>
+          </div>
+          <div className="dg-analysis__placeholder-lines" aria-hidden="true">
+            <span />
+            <span />
+          </div>
+        </div>
+      );
     }
 
     if (result.status === 'WARNING') {
@@ -263,7 +292,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
   return (
     <div className="dg-analysis">
-      <Navbar variant="light" sessionUser={sessionUser} onLogout={onLogout} logoutRedirect="/analysis" />
+      <Navbar variant="light" sessionUser={sessionUser} onLogout={onLogout} logoutRedirect="/analysis" theme={theme} onThemeChange={setTheme} />
 
       <div className="dg-analysis__workspace">
         <aside className={`dg-analysis__side${isSidebarOpen ? '' : ' is-collapsed'}`}>
@@ -273,11 +302,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
             <div className="dg-analysis__side-head">
               <h3>내 작업 기록</h3>
               <div className="dg-analysis__side-tools">
-                {sessionUser && history.length > 0 && (
-                  <button type="button" className="dg-analysis__text-btn" onClick={() => { setIsEditMode(!isEditMode); setSelectedIds([]); }}>
-                    {isEditMode ? '취소' : '편집'}
-                  </button>
-                )}
                 <button type="button" className="dg-analysis__icon-btn" onClick={() => setIsSidebarOpen(false)} aria-label="사이드바 접기">
                   <SidebarIcon open={false} />
                 </button>
@@ -288,7 +312,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
               {sessionUser ? (
                 history.map((item, index) => {
                   const p = item.prob ?? item.score ?? item.analysis?.prob ?? -1;
-                  const isSelected = selectedIds.includes(item.image_id);
                   const dType = item.domain_type || '서양인';
                   const mType = item.model_type ? item.model_type.toUpperCase() : 'FAST';
 
@@ -301,12 +324,11 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
                   return (
                     <div key={item.image_id || index} className="dg-analysis__history-row">
-                      {isEditMode && <input type="checkbox" className="dg-analysis__check" checked={isSelected} onChange={() => toggleSelect(item.image_id)} />}
                       <div
-                        onClick={() => !isEditMode && navigate('/analysis-detail', {
+                        onClick={() => navigate('/analysis-detail', {
                           state: { image_id: item.image_id }
                         })}
-                        className={`dg-analysis__history-item${isSelected ? ' is-selected' : ''}${isEditMode ? ' is-editing' : ''}${labelTone(itemLabel) === 'real' ? ' is-real' : ''}${labelTone(itemLabel) === 'fake' ? ' is-fake' : ''}${freshId === String(item.image_id) ? ' is-new' : ''}`}
+                        className={`dg-analysis__history-item${labelTone(itemLabel) === 'real' ? ' is-real' : ''}${labelTone(itemLabel) === 'fake' ? ' is-fake' : ''}${freshId === String(item.image_id) ? ' is-new' : ''}`}
                       >
                         <div className="dg-analysis__thumb">
                           {item.image_loc ? <img src={item.image_loc} alt="" /> : '🖼️'}
@@ -315,6 +337,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                           <div className="dg-analysis__history-type">
                             <span className="dg-analysis__tag">{dType}</span>
                             <span className="dg-analysis__tag">{mType}</span>
+                            {item.version_type && <span className="dg-analysis__tag">{item.version_type.toUpperCase()}</span>}
                           </div>
                           <div className="dg-analysis__history-date">
                             {item.created_at?.slice(0, 10)}
@@ -323,22 +346,23 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                         </div>
                         <span className={`dg-analysis__badge dg-analysis__badge--${labelTone(itemLabel)}`}>{labelTone(itemLabel) === 'unknown' ? '판정 불가' : itemLabel}</span>
                       </div>
+                      <button type="button" className="dg-analysis__trash" onClick={(e) => handleDeleteOne(e, item.image_id)} aria-label="기록 삭제" title="삭제">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" /></svg>
+                      </button>
                     </div>
                   );
                 })
-              ) : <p className="dg-analysis__empty">로그인하면 분석 기록이 저장돼요</p>}
+              ) : (
+                <div className="dg-analysis__locked">
+                  <span className="dg-analysis__locked-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                  </span>
+                  <p>로그인하면 분석 기록이<br />안전하게 저장돼요</p>
+                  <button type="button" className="dg-analysis__text-btn" onClick={() => navigate('/login')}>로그인하기</button>
+                </div>
+              )}
             </div>
 
-            {isEditMode && (
-              <Button
-                variant="danger"
-                className="dg-btn--block dg-analysis__delete-btn"
-                onClick={handleDeleteSelected}
-                disabled={selectedIds.length === 0}
-              >
-                선택 삭제 ({selectedIds.length})
-              </Button>
-            )}
           </div>
         </aside>
 
@@ -391,7 +415,12 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <WebcamCapture mode="photo" onCapture={handleFileSelect} onClose={() => setIsCameraOpen(false)} />
               ) : previewUrl ? <img className="dg-analysis__preview" src={previewUrl} alt="preview" /> : (
                 <div className="dg-analysis__drop-body">
-                  <div className="dg-analysis__drop-icon">+</div>
+                  {/* 이클립스 오빗 — 로그인 화면 이클립스 링의 축소판 */}
+                  <div className="dg-analysis__orbit">
+                    <span className="dg-analysis__orbit-halo" aria-hidden="true" />
+                    <span className="dg-analysis__orbit-ring" aria-hidden="true" />
+                    <div className="dg-analysis__drop-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V5M7 10l5-5 5 5M5 19h14" /></svg></div>
+                  </div>
                   <p className="dg-analysis__drop-title">이미지 업로드</p>
                   <p className="dg-analysis__drop-desc">클릭해서 이미지를 선택하거나 웹캠으로 촬영하세요</p>
                 </div>
@@ -415,10 +444,24 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <h3 className="dg-analysis__settings-title">분석 설정</h3>
 
           <div className="dg-analysis__field">
+            <p className="dg-analysis__field-label">모델 버전</p>
+            <div className="dg-analysis__segment dg-analysis__segment--version">
+              {VERSIONS.map((v) => (
+                <button key={v.value} type="button" className={versionType === v.value ? 'is-on' : ''} onClick={() => selectVersion(v.value)}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="dg-analysis__field">
             <p className="dg-analysis__field-label">대상 도메인</p>
             <div className="dg-analysis__segment">
               <button type="button" className={domainType === 'western' ? 'is-on' : ''} onClick={() => setDomainType('western')}>서양인</button>
-              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} onClick={() => setDomainType('asian')}>동양인</button>
+              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} disabled={versionType === 'v2'} onClick={() => setDomainType('asian')}>
+                동양인
+                {versionType === 'v2' && <span className="dg-analysis__soon">준비중</span>}
+              </button>
             </div>
           </div>
 
@@ -427,7 +470,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
             <div className="dg-analysis__models">
               {/* FAST */}
               <div className={`dg-analysis__model${modelType === 'fast' ? ' is-on' : ''}`} onClick={() => setModelType('fast')}>
-                <span className="dg-analysis__model-badge dg-analysis__model-badge--rec">RECOMMENDED</span>
                 <label className="dg-analysis__model-name">
                   <input type="radio" checked={modelType === 'fast'} onChange={() => setModelType('fast')} />
                   FAST
@@ -435,6 +477,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <span className="dg-analysis__model-desc">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 3 4 14h7l-1 7 9-11h-7l1-7z" /></svg>
                   빠른 속도
+                  <span className="dg-analysis__model-note">- 추천</span>
                 </span>
               </div>
               {/* PRO */}
@@ -442,11 +485,11 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <label className="dg-analysis__model-name">
                   <input type="radio" checked={modelType === 'pro'} onChange={() => setModelType('pro')} />
                   PRO
-                  <span className="dg-analysis__model-badge dg-analysis__model-badge--member">회원 전용</span>
                 </label>
                 <span className="dg-analysis__model-desc">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.5" fill="currentColor" /></svg>
                   높은 정확도
+                  <span className="dg-analysis__model-note">- 회원 전용</span>
                 </span>
               </div>
             </div>
