@@ -19,21 +19,68 @@ const DetailLayout = ({ sessionUser, children }) => (
   </div>
 );
 
-const MetricRow = ({ label, value, width, tone }) => (
-  <div className="dg-detail__metric">
-    <div className="dg-detail__metric-head">
-      <span>{label}</span>
-      <strong className={`dg-detail__tone--${tone}`}>{value}</strong>
-    </div>
-    <div className="dg-detail__track">
-      <div className={`dg-detail__fill dg-detail__fill--${tone}`} style={{ width }} />
-    </div>
+// 결과 옆 정보 목록의 한 줄 (라벨 · 값)
+const InfoRow = ({ label, value, tone }) => (
+  <div className="dg-detail__info-row">
+    <dt>{label}</dt>
+    <dd className={tone ? `dg-detail__tone--${tone}` : ''}>{value}</dd>
   </div>
 );
 
+// 위조 확률 원형 게이지
+const GAUGE_R = 76;
+const GAUGE_C = 2 * Math.PI * GAUGE_R;
+const ProbGauge = ({ prob, tone }) => {
+  const valid = prob !== -1;
+  const pct = valid ? Math.min(Math.max(Number(prob), 0), 1) : 0;
+  return (
+    <svg className="dg-detail__gauge" width="180" height="180" viewBox="0 0 180 180" role="img"
+      aria-label={valid ? `위조 확률 ${(pct * 100).toFixed(1)}%` : '위조 확률 없음'}>
+      <circle className="dg-detail__gauge-track" cx="90" cy="90" r={GAUGE_R} fill="none" strokeWidth="16" />
+      {valid && (
+        <circle className={`dg-detail__gauge-arc dg-detail__gauge-arc--${tone}`} cx="90" cy="90" r={GAUGE_R}
+          fill="none" strokeWidth="16" strokeLinecap="round"
+          strokeDasharray={`${pct * GAUGE_C} ${GAUGE_C}`} transform="rotate(-90 90 90)" />
+      )}
+      <text className="dg-detail__gauge-value" x="90" y="94" textAnchor="middle">
+        {valid ? `${(pct * 100).toFixed(1)}%` : 'N/A'}
+      </text>
+      <text className="dg-detail__gauge-label" x="90" y="120" textAnchor="middle">위조 확률</text>
+    </svg>
+  );
+};
+
+// 기록 항목의 판정 라벨 (분석 페이지 기록 목록과 같은 규칙)
+const itemLabelOf = (item) => {
+  if (item.label && item.label !== 'UNKNOWN') return item.label.toUpperCase();
+  const p = item.prob ?? item.score ?? item.analysis?.prob ?? -1;
+  if (p === -1) return 'UNKNOWN';
+  return p > 0.5 ? 'FAKE' : 'REAL';
+};
+
+// 판정별 안내 문구
+const VERDICT_COPY = {
+  fake: {
+    badge: '딥페이크로 의심돼요',
+    image: '얼굴 영역에서 합성 흔적이 감지되었어요. 히트맵에서 모델이 주목한 부위를 확인해 보세요.',
+    video: '영상의 얼굴 영역에서 합성 흔적이 감지되었어요. 타임라인에서 의심 구간을 확인해 보세요.',
+  },
+  real: {
+    badge: '실제 얼굴로 보여요',
+    image: '뚜렷한 합성 흔적이 발견되지 않았어요. 히트맵에서 모델이 본 부위를 확인할 수 있어요.',
+    video: '뚜렷한 합성 흔적이 발견되지 않았어요. 타임라인에서 프레임별 결과를 확인할 수 있어요.',
+  },
+  unknown: {
+    badge: '판정할 수 없어요',
+    image: '위조 확률을 계산하지 못했어요.',
+    video: '위조 확률을 계산하지 못했어요.',
+  },
+};
+
 const AnalysisDetailPage = ({ sessionUser }) => {
-  const { state } = useLocation();
+  const { state, pathname } = useLocation();
   const navigate = useNavigate();
+  const [history, setHistory] = useState([]);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +109,15 @@ const AnalysisDetailPage = ({ sessionUser }) => {
     fetchDetail();
   }, [state]);
 
+  // 하단 '최근 분석' 줄 — 로그인 사용자만, 이미지/동영상 기록 중 보고 있는 종류로
+  const isVideoRoute = !!state?.video_id;
+  useEffect(() => {
+    if (!sessionUser) { setHistory([]); return; }
+    axios.get(isVideoRoute ? '/video/history' : '/image/history')
+      .then((res) => { if (res.data.status === 'success') setHistory(res.data.context || []); })
+      .catch(() => console.log('히스토리 로드 실패'));
+  }, [sessionUser, isVideoRoute]);
+
   if (loading) {
     return (
       <DetailLayout sessionUser={sessionUser}>
@@ -85,9 +141,6 @@ const AnalysisDetailPage = ({ sessionUser }) => {
   }
 
   const prob = data.prob ?? data.score ?? data.analysis?.prob ?? data.result_prob ?? -1;
-  const face_conf = data.face_conf ?? data.face_confidence ?? data.conf ?? data.analysis?.face_conf ?? 0;
-  const face_ratio = data.face_ratio ?? data.ratio ?? data.analysis?.face_ratio ?? 0;
-  const face_brightness = data.face_brightness ?? data.brightness ?? data.analysis?.face_brightness ?? 0;
 
   let label = 'UNKNOWN';
   if (data.label && data.label !== 'UNKNOWN') {
@@ -97,10 +150,6 @@ const AnalysisDetailPage = ({ sessionUser }) => {
   }
 
   const isInvalid = prob === -1;
-  const displayProb = isInvalid ? 'N/A' : (Number(prob) * 100).toFixed(1) + '%';
-
-  const brightnessTone = face_brightness < 20 ? 'bad' : 'good';
-  const ratioTone = face_ratio >= 3 ? 'good' : 'bad';
 
   const mediaLoc = data.video_loc || data.media_loc || data.image_loc || '';
   const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : mediaLoc;
@@ -122,6 +171,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
         image_id: data.image_id,
         image_loc: data.image_loc,
         model_type: data.model_type || 'fast',
+        version_type: data.version_type || 'v1',
         prob,
         label,
       },
@@ -148,16 +198,12 @@ const AnalysisDetailPage = ({ sessionUser }) => {
         <button type="button" className="dg-detail__back" onClick={() => navigate(-1)}>
           <span aria-hidden="true">←</span> 뒤로가기
         </button>
-        <div className="dg-detail__chips">
-          <span>{data.domain_type || '서양인'}</span>
-          <span>{data.model_type?.toUpperCase() || 'FAST'}</span>
-        </div>
       </header>
 
       <h2 className="dg-detail__title">{isVideo ? '동영상' : '이미지'} 분석 결과</h2>
 
       <div className="dg-detail__grid">
-        {/* 왼쪽: 미디어 + 위조 흔적 분석 버튼 */}
+        {/* 왼쪽: 미디어 */}
         <Card className="dg-card--static dg-detail__media-card">
           <div className="dg-detail__media">
             {isVideo && mediaLoc ? (
@@ -170,17 +216,6 @@ const AnalysisDetailPage = ({ sessionUser }) => {
             )}
           </div>
 
-          {isVideo && mediaLoc && (
-            <Button variant="outline" className="dg-btn--block dg-detail__xai-btn" onClick={handleVideoHeatmap}>
-              비디오 위조 흔적 분석하기
-            </Button>
-          )}
-
-          {!isVideo && mediaLoc && !isWarning && (
-            <Button variant="outline" className="dg-btn--block dg-detail__xai-btn" onClick={handleImageHeatmap}>
-              이미지 위조 흔적 분석하기
-            </Button>
-          )}
         </Card>
 
         {/* 오른쪽: 판정 카드 or WARNING */}
@@ -193,47 +228,59 @@ const AnalysisDetailPage = ({ sessionUser }) => {
             </Card>
           ) : (
             <>
-              <Card className="dg-card--static dg-detail__verdict-card">
-                <p className="dg-detail__eyebrow">최종 분석</p>
-                <h1 className={`dg-detail__verdict dg-detail__verdict--${verdictTone}`}>{label}</h1>
-                <div className="dg-detail__prob">
-                  <strong className={label === 'FAKE' ? 'dg-detail__verdict--fake' : ''}>{displayProb}</strong>
-                </div>
-                {!isInvalid && (
-                  <div className="dg-detail__track dg-detail__track--lg">
-                    <div
-                      className={`dg-detail__fill dg-detail__fill--${label === 'FAKE' ? 'bad' : 'good'}`}
-                      style={{ width: `${Math.min(Number(prob) * 100, 100)}%` }}
-                    />
-                  </div>
+              {/* 결과 중심 스플릿: 위조 확률 게이지 + 판정 + 근거 보기 */}
+              <section className="dg-detail__panel dg-detail__verdict-card">
+                <ProbGauge prob={prob} tone={verdictTone} />
+                <span className={`dg-detail__badge dg-detail__badge--${verdictTone}`}>{VERDICT_COPY[verdictTone].badge}</span>
+                <p className="dg-detail__desc">{VERDICT_COPY[verdictTone][isVideo ? 'video' : 'image']}</p>
+                {mediaLoc && (
+                  <Button variant="primary" className="dg-btn--block dg-detail__xai-btn"
+                    onClick={isVideo ? handleVideoHeatmap : handleImageHeatmap}>
+                    {isVideo ? '타임라인으로 근거 보기' : '히트맵으로 근거 보기'}
+                  </Button>
                 )}
-              </Card>
+              </section>
 
-              <Card className="dg-card--static dg-detail__metrics">
-                <p className="dg-detail__eyebrow">DETAIL METRICS</p>
-                <MetricRow
-                  label="얼굴 밝기"
-                  value={`${Number(face_brightness).toFixed(1)}%`}
-                  width={`${Math.min(face_brightness, 100)}%`}
-                  tone={brightnessTone}
-                />
-                <MetricRow
-                  label="얼굴 비율"
-                  value={`${Number(face_ratio).toFixed(1)}%`}
-                  width={`${Math.min(face_ratio, 100)}%`}
-                  tone={ratioTone}
-                />
-                <MetricRow
-                  label="모델 신뢰도"
-                  value={`${Number(face_conf).toFixed(1)}%`}
-                  width={`${face_conf}%`}
-                  tone="primary"
-                />
-              </Card>
+              <dl className="dg-detail__panel dg-detail__info">
+                <InfoRow label="모델" value={`${(data.version_type || 'v1').toUpperCase()} · ${data.model_type?.toUpperCase() || 'FAST'}`} />
+                <InfoRow label="대상 도메인" value={data.domain_type || '서양인'} />
+                <InfoRow label="판정" value={label} tone={verdictTone} />
+              </dl>
             </>
           )}
         </div>
       </div>
+
+      {/* 최근 분석 */}
+      {history.length > 0 && (
+        <section className="dg-detail__recent">
+          <h3 className="dg-detail__recent-title">최근 분석</h3>
+          <div className="dg-detail__recent-list">
+            {history.slice(0, 12).map((item, index) => {
+              const id = isVideoRoute ? (item.video_id || item.id) : item.image_id;
+              const itemLabel = itemLabelOf(item);
+              const tone = itemLabel === 'FAKE' ? 'fake' : itemLabel === 'REAL' ? 'real' : 'unknown';
+              const isCurrent = String(id) === String(isVideoRoute ? state?.video_id : state?.image_id);
+              return (
+                <button key={id || index} type="button"
+                  className={`dg-detail__recent-item${isCurrent ? ' is-current' : ''}`}
+                  aria-current={isCurrent ? 'page' : undefined}
+                  onClick={() => navigate(pathname, { state: isVideoRoute ? { video_id: id } : { image_id: id } })}>
+                  <span className="dg-detail__recent-thumb">
+                    {isVideoRoute
+                      ? (item.video_loc ? <video src={`${item.video_loc}#t=0.1`} muted preload="metadata" /> : null)
+                      : (item.image_loc ? <img src={item.image_loc} alt="" /> : null)}
+                  </span>
+                  <span className="dg-detail__recent-meta">
+                    <b className={`dg-detail__tone--${tone}`}>{tone === 'unknown' ? '판정 불가' : itemLabel}</b>
+                    <span>{item.created_at?.slice(0, 10)}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </DetailLayout>
   );
 };

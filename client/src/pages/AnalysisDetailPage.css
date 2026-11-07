@@ -79,20 +79,6 @@
 .dg-detail__back span {
   font-size: 18px;
 }
-.dg-detail__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.dg-detail__chips span {
-  padding: 4px 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-primary-border);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 13px;
-  font-weight: 600;
-}
 .dg-detail__title {
   margin-bottom: 28px;
   font-size: 30px;
@@ -104,14 +90,14 @@
 /* 2열 그리드 */
 .dg-detail__grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: 28px;
   align-items: stretch;
 }
 .dg-detail__side {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 /* Card 본문 기본 색/크기 덮어쓰기 */
@@ -124,15 +110,20 @@
 }
 
 /* 미디어 */
-.dg-detail__media-card .dg-card__body {
-  height: 100%;
+.dg-detail__media-card {
   display: flex;
   flex-direction: column;
 }
+.dg-detail__media-card .dg-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+/* 이미지는 칸 크기에 맞춰 비율 유지(contain) — 칸 높이는 오른쪽 열이 정함 */
 .dg-detail__media {
+  position: relative;
   flex: 1;
   min-height: 420px;
-  max-height: 520px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -142,134 +133,173 @@
 }
 .dg-detail__media img,
 .dg-detail__media video {
-  max-width: 100%;
-  max-height: 520px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   border-radius: 12px;
 }
 .dg-detail__media-empty {
   color: var(--color-muted);
 }
-.dg-detail__xai-btn {
-  margin-top: 20px;
-  border-color: var(--color-primary-border);
-  color: var(--color-primary);
-}
-.dg-detail__xai-btn:hover {
-  background: var(--color-primary-soft);
-  border-color: var(--color-primary);
-}
 
-/* 판정 카드 */
-.dg-detail__verdict-card {
-  flex: 1;
+/* 결과 중심 스플릿 — 오른쪽 패널 */
+.dg-detail__panel {
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  background: var(--color-bg);
 }
-.dg-detail__verdict-card .dg-card__body {
-  height: 100%;
+.dg-detail__verdict-card {
+  padding: 28px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  gap: 16px;
   text-align: center;
 }
-.dg-detail__eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 2.5px;
-  color: var(--color-muted);
+.dg-detail__gauge-track {
+  stroke: #f1f3f8;
 }
-.dg-detail__verdict {
-  margin: 6px 0 20px;
-  font-size: 80px;
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -1px;
+.dg-detail__gauge-arc {
+  transition: stroke-dasharray 1s cubic-bezier(0.1, 1, 0.1, 1);
 }
-.dg-detail__verdict--fake {
+.dg-detail__gauge-arc--fake { stroke: var(--color-danger); }
+.dg-detail__gauge-arc--real { stroke: var(--color-success); }
+.dg-detail__gauge-value {
+  fill: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 36px;
+  font-weight: 800;
+}
+.dg-detail__gauge-label {
+  fill: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+.dg-detail__badge {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 800;
+}
+.dg-detail__badge--fake {
+  background: var(--color-danger-soft);
   color: var(--color-danger);
 }
-.dg-detail__verdict--real {
+.dg-detail__badge--real {
+  background: var(--color-success-soft);
   color: var(--color-success);
 }
-.dg-detail__verdict--unknown {
+.dg-detail__badge--unknown {
+  background: var(--color-bg-alt);
   color: var(--color-muted);
 }
-.dg-detail__prob {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.dg-detail__desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-muted);
 }
-.dg-detail__prob span {
+.dg-detail__xai-btn {
+  height: 50px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* 정보 목록 */
+.dg-detail__info {
+  margin: 0;
+  padding: 8px 20px;
+}
+.dg-detail__info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  font-size: 14px;
+}
+.dg-detail__info-row + .dg-detail__info-row {
+  border-top: 1px solid var(--color-line);
+}
+.dg-detail__info-row dt {
+  color: var(--color-muted);
+}
+.dg-detail__info-row dd {
+  margin: 0;
+  font-weight: 700;
+}
+.dg-detail__tone--good,
+.dg-detail__tone--real { color: var(--color-success); }
+.dg-detail__tone--bad,
+.dg-detail__tone--fake { color: var(--color-danger); }
+.dg-detail__tone--unknown { color: var(--color-muted); }
+
+/* 최근 분석 — 가로 스크롤 썸네일 줄 */
+.dg-detail__recent {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-line);
+}
+.dg-detail__recent-title {
+  margin-bottom: 12px;
   font-size: 13px;
   font-weight: 700;
   color: var(--color-muted);
 }
-.dg-detail__prob strong {
-  font-size: 44px;
-  font-weight: 900;
-  line-height: 1.15;
-  font-family: var(--font-mono);
-  letter-spacing: -1px;
+.dg-detail__recent-list {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
 }
-.dg-detail__verdict-card .dg-detail__track--lg {
-  width: 80%;
-  margin-top: 16px;
+.dg-detail__recent-item {
+  flex: 0 0 auto;
+  width: 160px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
 }
-
-/* 메트릭 */
-.dg-detail__metrics .dg-card__body {
+.dg-detail__recent-item:hover {
+  border-color: var(--color-primary-border);
+}
+.dg-detail__recent-item.is-current {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+.dg-detail__recent-thumb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: repeating-linear-gradient(135deg, #f3f6fb 0 6px, #edf1f7 6px 12px);
+}
+.dg-detail__recent-thumb img,
+.dg-detail__recent-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.dg-detail__recent-meta {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.3;
 }
-.dg-detail__metric-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-.dg-detail__metric-head span {
+.dg-detail__recent-meta span {
   color: var(--color-muted);
-  font-weight: 600;
-}
-.dg-detail__metric-head strong {
-  font-family: var(--font-mono);
-  font-size: 15px;
-}
-.dg-detail__track {
-  width: 100%;
-  height: 5px;
-  border-radius: 3px;
-  overflow: hidden;
-  background: var(--color-line);
-}
-.dg-detail__track--lg {
-  height: 8px;
-  border-radius: 4px;
-}
-.dg-detail__fill {
-  height: 100%;
-  border-radius: inherit;
-  transition: width 1s cubic-bezier(0.1, 1, 0.1, 1);
-}
-.dg-detail__fill--good {
-  background: var(--color-success);
-}
-.dg-detail__fill--bad {
-  background: var(--color-danger);
-}
-.dg-detail__fill--primary {
-  background: var(--color-primary);
-}
-.dg-detail__tone--good {
-  color: var(--color-success);
-}
-.dg-detail__tone--bad {
-  color: var(--color-danger);
-}
-.dg-detail__tone--primary {
-  color: var(--color-primary);
 }
 
 /* WARNING */
@@ -322,9 +352,6 @@
   .dg-detail__media {
     min-height: 300px;
   }
-  .dg-detail__verdict {
-    font-size: 64px;
-  }
 }
 
 @media (max-width: 560px) {
@@ -336,11 +363,5 @@
   }
   .dg-detail__title {
     font-size: 24px;
-  }
-  .dg-detail__verdict {
-    font-size: 52px;
-  }
-  .dg-detail__prob strong {
-    font-size: 36px;
   }
 }
