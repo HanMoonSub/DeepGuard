@@ -4,14 +4,11 @@ uvicorn>=0.52.4
 python-multipart>=0.0.32
 pydantic[email]>=2.13.5
 aiofiles>=25.1.0
-itsdangerous>=2.2.0
 python-dotenv>=1.2.3
 
 # --- [Database & ORM] ---
 sqlalchemy>=2.0.54
-pymysql>=1.2.0
 aiomysql>=0.3.2
-mysql-connector-python>=26.7.0
 redis>=8.1.0
 
 # --- [Security & Auth] ---
@@ -26,12 +23,10 @@ scikit-learn>=1.6.1
 
 # --- [Computer Vision & Image Processing] ---
 opencv-python>=5.0.0.93
-Pillow>=12.3.0
 albumentations>=2.0.8
 
 # --- [Deep Learning Framework] ---
 torch>=2.10.0
-torchvision>=0.28.0 
 torchmetrics>=1.6.1
 timm>=1.0.12
 ultralytics>=8.4.41
@@ -40,6 +35,10 @@ deepclip>=1.0.0
 
 # --- [Visualization & Utilities] ---
 colorama>=0.4.6
+
+# --- [Training (train_eff_vit.py / train_eff_gcvit.py)] ---
+wandb>=0.31.0
+omegaconf>=2.4.0
 
 # --- [Distributed Task Queue] ---
 celery>=5.6.3
