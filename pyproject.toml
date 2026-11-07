@@ -32,7 +32,6 @@ dependencies = [
     "timm>=1.0.12",
     "ultralytics>=8.4.41",
     "grad-cam>=1.5.5",
-    "deepclip>=1.0.0",
     "albumentations>=2.0.8",
     "opencv-python>=5.0.0.93",
     "numpy>=1.23.0,<3.0.0",
@@ -42,6 +41,12 @@ dependencies = [
     "tqdm>=4.60.0",
     "colorama>=0.4.6",
 ]
+# ─────────────────────────────────────────────
+# [project.optional-dependencies]
+# 선택 설치: pip install deepguard[deepclip]
+# ─────────────────────────────────────────────
+[project.optional-dependencies]
+deepclip = ["deepclip>=1.0.0"]   # ClipImagePredictor, ClipVideoPredictor (deepclip_b0, deepclip_b5)
 [project.urls]
 Homepage = "https://github.com/HanMoonSub/DeepGuard"
 "Bug Tracker" = "https://github.com/HanMoonSub/DeepGuard/issues"
