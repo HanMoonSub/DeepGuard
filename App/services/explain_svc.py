@@ -6,13 +6,16 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy import Connection
 from services import image_svc, inference_svc
 from explainability import (
-    CAMExplainer, 
+    CAMExplainer,
     HiResCAMExplainer, GradCAMElementWiseExplainer, LayerCAMExplainer,
     EigenGradCAMExplainer, GradCAMPlusPlusExplainer, XGradCAMExplainer,
+    ClipHiResCAMExplainer, ClipGradCAMElementWiseExplainer, ClipLayerCAMExplainer,
+    ClipEigenGradCAMExplainer, ClipGradCAMPlusPlusExplainer, ClipXGradCAMExplainer,
+    BranchFusionExplainer, ClipBranchFusionExplainer,
 )
 from celery_app import celery_app
 
-# LOW branch: 국소 위조 흔적 포착 / HIGH branch: 전역 위조 흔적 포착 
+# LOW branch: 국소 위조 흔적 포착 / HIGH branch: 전역 위조 흔적 포착
 EXPLAINER_REGISTRY = {
     "hirescam":   HiResCAMExplainer, # LOW branch
     "gradcamelementwise": GradCAMElementWiseExplainer, # LOW branch
@@ -22,9 +25,23 @@ EXPLAINER_REGISTRY = {
     "xgradcam":     XGradCAMExplainer, # HIGH branch
 }
 
+# both(branch 결합) 설정 — client에서 변경 불가
+FUSION_MODE = "mean"
+FUSION_LOW_WEIGHT = 0.5
+
+# v2(DeepClip)용 explainer
+CLIP_EXPLAINER_REGISTRY = {
+    "hirescam":   ClipHiResCAMExplainer, # LOW branch
+    "gradcamelementwise": ClipGradCAMElementWiseExplainer, # LOW branch
+    "layercam":   ClipLayerCAMExplainer, # LOW branch
+    "eigengradcam": ClipEigenGradCAMExplainer, # HIGH branch
+    "gradcamplusplus":   ClipGradCAMPlusPlusExplainer, # HIGH branch
+    "xgradcam":     ClipXGradCAMExplainer, # HIGH branch
+}
+
 _explainer_cache: dict = {}
 
-def _extract_face_from_frame(video_path: str, frame_time: float, explainer: CAMExplainer) -> np.ndarray:
+def _extract_face_from_frame(video_path: str, frame_time: float, explainer: CAMExplainer | BranchFusionExplainer) -> np.ndarray:
     """비디오의 특정 시간대 프레임에서 얼굴 영역을 추출해 크롭된 배열을 반환한다.
 
     Args:
@@ -41,34 +58,58 @@ def _extract_face_from_frame(video_path: str, frame_time: float, explainer: CAME
     cap.release()
 
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    bbox = explainer._get_face_bbox(frame_rgb)
-    
-    return explainer._crop_face(frame_rgb, bbox[:4])
-    
-def _get_or_create_explainer(model_name: str, dataset: str, explain_req_dict: dict) -> CAMExplainer:
-    """캐시에서 CAMExplainer를 조회하거나, 없으면 새로 생성해 캐싱 후 반환한다.
+    # BranchFusionExplainer는 얼굴 탐지/크롭을 low explainer에 위임
+    detector = getattr(explainer, "low_explainer", explainer)
+    bbox = detector._get_face_bbox(frame_rgb)
+
+    return detector._crop_face(frame_rgb, bbox[:4])
+
+def _get_or_create_explainer(model_name: str, dataset: str | None, explain_req_dict: dict) -> CAMExplainer | BranchFusionExplainer:
+    """캐시에서 Explainer를 조회하거나, 없으면 새로 생성해 캐싱 후 반환한다.
 
     캐시 키는 (model_name, dataset, explainer_type, branch_level) 4개 파라미터로 구성된다.
     추론 시점 파라미터(aug_smooth, threshold 등)는 키에서 제외해 메모리 사용을 최소화한다.
 
     Args:
-        model_name (str): 추론에 사용할 모델 이름.
-        dataset (str): 모델 학습에 사용된 데이터셋 이름.
+        model_name (str): 추론에 사용할 모델 이름. deepclip_* 이면 Clip explainer를 사용한다.
+        dataset (str | None): 모델 학습에 사용된 데이터셋 이름. DeepClip은 None.
         explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
-            - explainer_type (str): EXPLAINER_REGISTRY 키값.
-            - branch_level (str): 모델 브랜치 레벨 ("LOW" | "HIGH").
+            - explainer_type (str): EXPLAINER_REGISTRY 키값 (both일 때는 "fusion").
+            - branch_level (str): 모델 브랜치 레벨 ("low" | "high" | "both").
 
     Returns:
-        CAMExplainer: 캐시된 또는 새로 생성된 CAMExplainer 인스턴스.
+        CAMExplainer | BranchFusionExplainer: 캐시된 또는 새로 생성된 Explainer 인스턴스.
     """
     cache_key = (model_name, dataset, explain_req_dict["explainer_type"], explain_req_dict["branch_level"])
-    
+    is_clip = model_name.startswith("deepclip")
+
     if cache_key not in _explainer_cache:
-        _explainer_cache[cache_key] = EXPLAINER_REGISTRY[explain_req_dict["explainer_type"]](
-            model_name = model_name,
-            dataset = dataset,
-            branch_level = explain_req_dict["branch_level"],
-        )
+        if explain_req_dict["branch_level"] == "both":
+            # both: low(LayerCAM) + high(EigenGradCAM) CAM을 가중 평균으로 결합 (fuse/low_weight는 서버 고정값)
+            if is_clip:
+                _explainer_cache[cache_key] = ClipBranchFusionExplainer(
+                    model_name = model_name,
+                    low = ClipLayerCAMExplainer,
+                    high = ClipEigenGradCAMExplainer,
+                    fuse = FUSION_MODE,
+                    low_weight = FUSION_LOW_WEIGHT,
+                )
+            else:
+                _explainer_cache[cache_key] = BranchFusionExplainer(
+                    model_name = model_name,
+                    dataset = dataset,
+                    low = LayerCAMExplainer,
+                    high = EigenGradCAMExplainer,
+                    fuse = FUSION_MODE,
+                    low_weight = FUSION_LOW_WEIGHT,
+                )
+        else:
+            registry = CLIP_EXPLAINER_REGISTRY if is_clip else EXPLAINER_REGISTRY
+            _explainer_cache[cache_key] = registry[explain_req_dict["explainer_type"]](
+                model_name = model_name,
+                dataset = dataset,
+                branch_level = explain_req_dict["branch_level"],
+            )
     return _explainer_cache[cache_key]
         
 def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, explain_req_dict: dict) -> np.ndarray:

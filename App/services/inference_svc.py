@@ -7,16 +7,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import celery_db_conn
 from celery_app import celery_app
-from inference.image_predictor_prt import ImagePredictor
-from inference.video_predictor_prt import VideoPredictor
+from inference.image_predictor_prt import ImagePredictor, ClipImagePredictor
+from inference.video_predictor_prt import VideoPredictor, ClipVideoPredictor
 from inference.utils import PredictorError
 
+# v1: MS-EffGCViT (dataset별 가중치) / v2(beta): DeepClip (dataset 없음, 동양인 미지원)
 MODEL_CONFIG = {
     'v1': {
-        'fast': {'서양인': ("ms_eff_vit_b0", "ff++")},
-        'pro':  {'서양인': ("ms_eff_vit_b5", "ff++")}
-    },
-    'v2': {
         'fast': {
             '서양인': ("ms_eff_gcvit_b0", "ff++"),
             '동양인': ("ms_eff_gcvit_b0", "kodf")
@@ -25,15 +22,23 @@ MODEL_CONFIG = {
             '서양인': ("ms_eff_gcvit_b5", "ff++"),
             '동양인': ("ms_eff_gcvit_b5", "kodf")
         }
+    },
+    'v2': {
+        'fast': {'서양인': ("deepclip_b0", None)},
+        'pro':  {'서양인': ("deepclip_b5", None)}
     }
 }
+
+def is_supported(version_type: str, model_type: str, domain_type: str) -> bool:
+    """MODEL_CONFIG에 (버전, 모델, 도메인) 조합이 있는지 확인한다."""
+    return domain_type in MODEL_CONFIG.get(version_type, {}).get(model_type, {})
 
 _image_cache: dict = {}
 _video_cache: dict = {}
 
 def _get_or_create_predictor(
     model_name: str,
-    dataset: str,
+    dataset: str | None,
     predictor_mode: Literal["image", "video"],
 ) -> ImagePredictor | VideoPredictor:
     """캐시에서 Predictor를 조회하거나, 없으면 새로 생성해 캐싱 후 반환한다.
@@ -49,24 +54,31 @@ def _get_or_create_predictor(
         ImagePredictor | VideoPredictor: 캐시된 또는 새로 생성된 Predictor 인스턴스.
     """
     cache_key = (model_name, dataset)
- 
+    is_clip = model_name.startswith("deepclip") # DeepClip은 dataset 인자 없음
+
     if predictor_mode == "image":
         if cache_key not in _image_cache:
-            _image_cache[cache_key] = ImagePredictor(
+            if is_clip:
+                _image_cache[cache_key] = ClipImagePredictor(margin_ratio=0.2, conf_thres=0.5, model_name=model_name)
+            else:
+                _image_cache[cache_key] = ImagePredictor(
+                    margin_ratio=0.2,
+                    conf_thres=0.5,
+                    model_name=model_name,
+                    dataset=dataset,
+                )
+        return _image_cache[cache_key]
+
+    if cache_key not in _video_cache:
+        if is_clip:
+            _video_cache[cache_key] = ClipVideoPredictor(margin_ratio=0.2, conf_thres=0.5, model_name=model_name)
+        else:
+            _video_cache[cache_key] = VideoPredictor(
                 margin_ratio=0.2,
                 conf_thres=0.5,
                 model_name=model_name,
                 dataset=dataset,
             )
-        return _image_cache[cache_key]
- 
-    if cache_key not in _video_cache:
-        _video_cache[cache_key] = VideoPredictor(
-            margin_ratio=0.2,
-            conf_thres=0.5,
-            model_name=model_name,
-            dataset=dataset,
-        )
     return _video_cache[cache_key]
 
 def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str) -> dict:
