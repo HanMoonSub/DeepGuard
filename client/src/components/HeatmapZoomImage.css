@@ -1,0 +1,182 @@
+/* 위조 흔적 결과 이미지 + bbox 클릭 확대 */
+.dg-zoomimg {
+  position: absolute;
+  inset: 0;
+}
+.dg-zoomimg > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 안내 문구 */
+.dg-zoomimg__hint {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 7px 14px 7px 11px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(11, 18, 32, 0.1);
+  color: var(--color-ink);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: dg-zoomimg-in 0.35s ease both;
+}
+.dg-zoomimg__hint svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+/* 박스 위 클릭 영역 */
+.dg-zoomimg__spot {
+  position: absolute;
+  z-index: 1;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  cursor: zoom-in;
+  animation: dg-zoomimg-pulse 1.6s ease-out 0.4s 2;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+.dg-zoomimg__spot:hover,
+.dg-zoomimg__spot:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px color-mix(in srgb, var(--color-primary) 60%, transparent);
+}
+
+/* 확대 패널 */
+.dg-zoomimg__panel {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg-dark) 82%, transparent);
+  backdrop-filter: blur(6px);
+  cursor: zoom-out;
+  animation: dg-zoomimg-fade 0.2s ease both;
+}
+.dg-zoomimg__panel-head,
+.dg-zoomimg__panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 86%;
+  cursor: default;
+}
+.dg-zoomimg__panel-title {
+  color: var(--color-on-dark);
+  font-size: 14px;
+  font-weight: 700;
+}
+.dg-zoomimg__panel-title em {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-on-dark-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: normal;
+}
+.dg-zoomimg__close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-on-dark);
+  font-size: 14px;
+  cursor: pointer;
+}
+.dg-zoomimg__close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.dg-zoomimg__view {
+  flex: none;
+  border-radius: 10px;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 18px 48px rgba(0, 0, 0, 0.45);
+  cursor: default;
+  animation: dg-zoomimg-pop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.dg-zoomimg__panel-foot {
+  justify-content: center;
+  color: var(--color-on-dark-subtle);
+  font-size: 12px;
+}
+.dg-zoomimg__panel-foot span {
+  flex: 1;
+  text-align: center;
+}
+.dg-zoomimg__nav {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--color-on-dark);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dg-zoomimg__nav:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes dg-zoomimg-in {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes dg-zoomimg-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes dg-zoomimg-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes dg-zoomimg-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+  100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dg-zoomimg__hint,
+  .dg-zoomimg__spot,
+  .dg-zoomimg__panel,
+  .dg-zoomimg__view {
+    animation: none;
+  }
+}
+@media (max-width: 560px) {
+  .dg-zoomimg__panel-foot span {
+    display: none;
+  }
+}

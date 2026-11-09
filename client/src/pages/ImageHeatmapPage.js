@@ -5,6 +5,7 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import useTheme from '../hooks/useTheme';
 import AmbientBackground from '../components/AmbientBackground';
+import HeatmapZoomImage from '../components/HeatmapZoomImage';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -211,7 +212,8 @@ const ImageHeatmapPage = ({ sessionUser }) => {
         <section className={`dg-ihm__stage${isProcessing ? ' is-active' : ''}`} aria-label="히트맵 결과">
           <div className="dg-ihm__canvas">
             {isDone && (
-              <img src={heatmapSrc} alt="위조 흔적 히트맵"
+              <HeatmapZoomImage src={heatmapSrc} alt="위조 흔적 히트맵"
+                zoomable={applied.display_type !== 'heatmap'}
                 onError={(e) => { e.target.style.display = 'none'; setErrorMsg('이미지 로드 실패'); setErrorDetail(`URL: ${heatmapSrc}`); setStatus('error'); }}
               />
             )}
@@ -243,28 +245,22 @@ const ImageHeatmapPage = ({ sessionUser }) => {
               </div>
             )}
 
-            {/* 하단 바: 범례 · 현재 표시 · 저장 */}
-            {isDone && (
-              <div className="dg-ihm__bar">
-                {applied.display_type !== 'bbox' && (
-                  <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
-                    <span>낮음</span><i aria-hidden="true" /><span>높음</span>
-                  </div>
-                )}
-                <Button variant="outline" className="dg-ihm__save" href={heatmapSrc}
-                  download={`heatmap_img${image_id}_${applied.branch}_${modelType}_${applied.display_type}.png`}>
-                  이미지 저장
-                </Button>
+            {/* 왼쪽 아래 작은 범례 · 오른쪽 위 저장 아이콘 (그림을 가리지 않게) */}
+            {isDone && applied.display_type !== 'bbox' && (
+              <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
+                <span>낮음</span><i aria-hidden="true" /><span>높음</span>
               </div>
+            )}
+            {isDone && (
+              <a className="dg-ihm__download" href={heatmapSrc}
+                download={`heatmap_img${image_id}_${applied.branch}_${modelType}_${applied.display_type}.png`} aria-label="이미지 저장" title="이미지 저장">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+              </a>
             )}
           </div>
         </section>
 
         <aside className="dg-ihm__side">
-          <HeatmapVisualSettings branches={branches} branch={branch} setBranch={setBranch}
-            draft={draft} setDraft={setDraft} dirtyCount={dirtyCount} isProcessing={isProcessing}
-            onApply={handleApply} onReset={handleReset} canReset={canReset} />
-
           <dl className="dg-ihm__summary">
             {stats.map(item => (
               <div key={item.label} className="dg-ihm__summary-row">
@@ -273,6 +269,10 @@ const ImageHeatmapPage = ({ sessionUser }) => {
               </div>
             ))}
           </dl>
+
+          <HeatmapVisualSettings branches={branches} branch={branch} setBranch={setBranch}
+            draft={draft} setDraft={setDraft} dirtyCount={dirtyCount} isProcessing={isProcessing}
+            onApply={handleApply} onReset={handleReset} canReset={canReset} />
         </aside>
       </div>
     </HeatmapLayout>

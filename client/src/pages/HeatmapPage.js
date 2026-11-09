@@ -9,6 +9,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import HeatmapVisualSettings, { DEFAULT_DISPLAY } from '../components/HeatmapVisualSettings';
 import AmbientBackground from '../components/AmbientBackground';
+import HeatmapZoomImage from '../components/HeatmapZoomImage';
 import './HeatmapPage.css';
 import './ImageHeatmapPage.css';
 
@@ -43,10 +44,23 @@ const HeatmapLayout = ({ sessionUser, children }) => {
   );
 };
 
+// 구간 시각 → 'N초' (60초 이상은 'M분 N초'). frame_time 우선, 없으면 'mm:ss' 타임스탬프 해석
+const secondsOf = (f) => {
+  if (!f) return null;
+  if (f.frame_time != null && Number.isFinite(Number(f.frame_time))) return Math.round(Number(f.frame_time));
+  const m = /^(\d+):(\d{1,2})$/.exec(String(f.timestamp || '').trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+const secLabel = (f) => {
+  const s = secondsOf(f);
+  if (s == null) return f?.timestamp || '';
+  return s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
+};
+
 const HeatmapPage = ({ sessionUser }) => {
   const { state } = useLocation();
   const navigate  = useNavigate();
-  const { video_id, frame_index, timestamp, fake_score, model_type, version_type } = state || {};
+  const { video_id, frame_index, timestamp, frame_time, fake_score, model_type, version_type } = state || {};
   const modelType = model_type || 'fast'; // 분석에 사용한 모델 그대로 사용
   const versionType = BRANCHES_BY_VERSION[version_type] ? version_type : 'v1';
   const branches = BRANCHES_BY_VERSION[versionType];
@@ -70,7 +84,7 @@ const HeatmapPage = ({ sessionUser }) => {
   // 타임라인에서 넘어온 구간 목록 (없으면 현재 구간 하나)
   const frames = Array.isArray(state?.frames) && state.frames.length
     ? state.frames
-    : (state ? [{ frame_index, timestamp, fake_score }] : []);
+    : (state ? [{ frame_index, timestamp, frame_time, fake_score }] : []);
   const curPos = frames.findIndex(f => f.frame_index === frame_index);
   const prevFrame = curPos > 0 ? frames[curPos - 1] : null;
   const nextFrame = curPos >= 0 && curPos < frames.length - 1 ? frames[curPos + 1] : null;
@@ -96,7 +110,7 @@ const HeatmapPage = ({ sessionUser }) => {
     if (!f) return;
     navigate('/heatmap', {
       replace: true,
-      state: { ...state, frame_index: f.frame_index, timestamp: f.timestamp, fake_score: f.fake_score },
+      state: { ...state, frame_index: f.frame_index, timestamp: f.timestamp, frame_time: f.frame_time, fake_score: f.fake_score },
     });
   };
 
@@ -213,14 +227,13 @@ const HeatmapPage = ({ sessionUser }) => {
     </HeatmapLayout>
   );
 
+  // 시각화 설정 위 요약 (이미지 위조 흔적과 같은 구성)
   const stats = [
-    {
-      label: '타임스탬프', value: timestamp || `#${frame_index}`, tone: 'primary', big: true,
-      sub: frames.length > 1 && curPos >= 0 ? `${curPos + 1} / ${frames.length} 구간` : null,
-    },
-    { label: '딥페이크 확률', value: `${Number(fake_score ?? 0).toFixed(1)}%`, tone, big: true },
-    { label: '판정 결과',      value: isFake ? 'FAKE' : 'REAL',                 tone, big: true },
+    { label: '딥페이크 확률', value: `${Number(fake_score ?? 0).toFixed(1)}%`, tone },
+    { label: '판정 결과',     value: isFake ? 'FAKE' : 'REAL',                 tone },
+    { label: '모델',          value: `${versionType.toUpperCase()} · ${modelType.toUpperCase()}` },
   ];
+  const curFrame = curPos >= 0 ? frames[curPos] : { timestamp, frame_time };
 
   return (
     <HeatmapLayout sessionUser={sessionUser}>
@@ -232,43 +245,37 @@ const HeatmapPage = ({ sessionUser }) => {
         <h2 className="dg-heatmap__title">프레임 위조 흔적 분석</h2>
       </header>
 
-      {/* 스탯 + 이전/다음 구간 이동 */}
-      <Card className="dg-card--static dg-heatmap__stats dg-heatmap__stats--nav">
-        <button type="button" className="dg-heatmap__step dg-heatmap__step--prev" onClick={() => goFrame(prevFrame)}
-          disabled={!prevFrame} aria-label={prevFrame ? `이전 구간 ${prevFrame.timestamp}` : '이전 구간 없음'}>
-          <span className="dg-heatmap__step-arrow" aria-hidden="true">‹</span>
-          <span className="dg-heatmap__step-text">
-            <b>이전 구간</b>
-            <span>{prevFrame ? prevFrame.timestamp : '처음이에요'}</span>
-          </span>
-        </button>
-
-        {stats.map(item => (
-          <dl key={item.label} className={`dg-heatmap__stat${item.big ? ' dg-heatmap__stat--big' : ''}`}>
-            <dt>{item.label}</dt>
-            <dd className={item.tone ? `dg-heatmap__tone--${item.tone}` : ''} title={String(item.value)}>
-              {item.value}
-              {item.sub && <span className="dg-heatmap__stat-sub">{item.sub}</span>}
-            </dd>
-          </dl>
-        ))}
-
-        <button type="button" className="dg-heatmap__step dg-heatmap__step--next" onClick={() => goFrame(nextFrame)}
-          disabled={!nextFrame} aria-label={nextFrame ? `다음 구간 ${nextFrame.timestamp}` : '다음 구간 없음'}>
-          <span className="dg-heatmap__step-text">
-            <b>다음 구간</b>
-            <span>{nextFrame ? nextFrame.timestamp : '마지막이에요'}</span>
-          </span>
-          <span className="dg-heatmap__step-arrow" aria-hidden="true">›</span>
-        </button>
-      </Card>
-
       {/* 왼쪽 히트맵 | 오른쪽 시각화 설정 (이미지 위조 흔적과 같은 구성) */}
-      <div className="dg-ihm dg-ihm--with-stats">
-        <section className={`dg-ihm__stage${isProcessing ? ' is-active' : ''}`} aria-label="히트맵 결과">
+      <div className="dg-ihm">
+        <section className={`dg-ihm__stage dg-ihm__stage--nav${isProcessing ? ' is-active' : ''}`} aria-label="히트맵 결과">
+          {/* 이전/다음 구간: 히트맵 왼쪽·오른쪽 가운데 화살표, 아래에 'N초' */}
+          {frames.length > 1 && (
+            <>
+              <button type="button" className="dg-ihm__nav dg-ihm__nav--prev" onClick={() => goFrame(prevFrame)}
+                disabled={!prevFrame} aria-label={prevFrame ? `이전 구간 ${secLabel(prevFrame)}` : '이전 구간 없음'}>
+                <span className="dg-ihm__nav-arrow" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></svg>
+                </span>
+                <span className="dg-ihm__nav-time">{prevFrame ? secLabel(prevFrame) : '처음'}</span>
+              </button>
+              <button type="button" className="dg-ihm__nav dg-ihm__nav--next" onClick={() => goFrame(nextFrame)}
+                disabled={!nextFrame} aria-label={nextFrame ? `다음 구간 ${secLabel(nextFrame)}` : '다음 구간 없음'}>
+                <span className="dg-ihm__nav-arrow" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+                </span>
+                <span className="dg-ihm__nav-time">{nextFrame ? secLabel(nextFrame) : '마지막'}</span>
+              </button>
+            </>
+          )}
           <div className="dg-ihm__canvas">
+            {/* 왼쪽 위: 현재 구간 시각 */}
+            <span className="dg-ihm__frame-chip">
+              {secLabel(curFrame) || `#${frame_index}`}
+              {frames.length > 1 && curPos >= 0 && <em>{curPos + 1} / {frames.length}</em>}
+            </span>
             {isDone && (
-              <img src={heatmapSrc} alt="위조 흔적 히트맵"
+              <HeatmapZoomImage src={heatmapSrc} alt="위조 흔적 히트맵"
+                zoomable={applied.display_type !== 'heatmap'}
                 onError={(e) => { e.target.style.display = 'none'; setErrorMsg('이미지 로드 실패'); setErrorDetail(`URL: ${heatmapSrc}`); setStatus('error'); }}
               />
             )}
@@ -300,24 +307,30 @@ const HeatmapPage = ({ sessionUser }) => {
               </div>
             )}
 
-            {/* 하단 바: 범례 · 저장 */}
-            {isDone && (
-              <div className="dg-ihm__bar">
-                {applied.display_type !== 'bbox' && (
-                  <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
-                    <span>낮음</span><i aria-hidden="true" /><span>높음</span>
-                  </div>
-                )}
-                <Button variant="outline" className="dg-ihm__save" href={heatmapSrc}
-                  download={`heatmap_f${frame_index}_${applied.branch}_${modelType}_${applied.display_type}.png`}>
-                  이미지 저장
-                </Button>
+            {/* 왼쪽 아래 작은 범례 · 오른쪽 위 저장 아이콘 (그림을 가리지 않게) */}
+            {isDone && applied.display_type !== 'bbox' && (
+              <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
+                <span>낮음</span><i aria-hidden="true" /><span>높음</span>
               </div>
+            )}
+            {isDone && (
+              <a className="dg-ihm__download" href={heatmapSrc}
+                download={`heatmap_f${frame_index}_${applied.branch}_${modelType}_${applied.display_type}.png`} aria-label="이미지 저장" title="이미지 저장">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+              </a>
             )}
           </div>
         </section>
 
         <aside className="dg-ihm__side">
+          <dl className="dg-ihm__summary">
+            {stats.map(item => (
+              <div key={item.label} className="dg-ihm__summary-row">
+                <dt>{item.label}</dt>
+                <dd className={item.tone ? `dg-heatmap__tone--${item.tone}` : ''}>{item.value}</dd>
+              </div>
+            ))}
+          </dl>
           <HeatmapVisualSettings branches={branches} branch={branch} setBranch={setBranch}
             draft={draft} setDraft={setDraft} dirtyCount={dirtyCount} isProcessing={isProcessing}
             onApply={handleApply} onReset={handleReset} canReset={canReset} />
