@@ -5,12 +5,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
-import Eclipse from '../components/Eclipse';
-import heroTileOrig from '../assets/hero-tile-orig.png';
-import heroTileHeat from '../assets/hero-tile-heat.png';
-import heroTileBbox from '../assets/hero-tile-bbox.png';
-import heroTileBoth from '../assets/hero-tile-both.png';
-import heroVideo from '../assets/hero-video.png';
+import ScrollHero from '../components/ScrollHero';
 import xaiLow from '../assets/xai-low.png';
 import xaiHigh from '../assets/xai-high.png';
 import benchParamsAcc from '../assets/bench-params-acc.png';
@@ -429,66 +424,8 @@ const MainPage = ({ sessionUser, onLogout }) => {
     <div className="dg-landing">
       <Navbar variant="dark" solid sessionUser={sessionUser} onLogout={onLogout} links={NAV_LINKS} />
 
-      <header className="dg-hero">
-        <div className="dg-wrap dg-hero__grid">
-          <div className="dg-hero__copy">
-            {/* 텍스트 뒤 이클립스 링 (장식용) */}
-            <Eclipse />
-            <h1>딥페이크,<br /><em>눈으로 확인</em>하세요</h1>
-            <p className="dg-hero__lead">
-              이미지와 영상 속 위조 흔적을 탐지하고, 어디가 왜 가짜인지 시각적 근거까지 제공하는 딥페이크 탐지 서비스.
-            </p>
-            <div className="dg-hero__cta">
-              <Button variant="primary" href="/analysis" onClick={linkTo(handleBasicAnalysis)}>지금 분석해보기</Button>
-            </div>
-          </div>
-          {/* 히어로 비주얼: 위 = 이미지 분석 4가지 시각화, 아래 = 영상 분석(재생 화면 + 위조 비율) */}
-          <div className="dg-hv" aria-label="DeepGuard 분석 결과 예시">
-            <span className="dg-hv__chip"><i />이미지 분석</span>
-            <div className="dg-hv__tiles">
-              {[
-                { src: heroTileOrig, label: 'Original' },
-                { src: heroTileHeat, label: 'Heatmap' },
-                { src: heroTileBbox, label: 'BBox' },
-                { src: heroTileBoth, label: 'Heatmap + BBox', hl: true },
-              ].map((t) => (
-                <figure key={t.label} className={`dg-hv__tile${t.hl ? ' is-hl' : ''}`}>
-                  <img src={t.src} alt={`${t.label} 시각화 예시`} width={238} height={278} decoding="async" />
-                  <figcaption>{t.label}</figcaption>
-                </figure>
-              ))}
-            </div>
-
-            <span className="dg-hv__chip is-video"><i />영상 분석</span>
-            <div className="dg-hv__video-row">
-              <figure className="dg-hv__video">
-                <img src={heroVideo} alt="분석 대상 영상 재생 화면" width={671} height={259} decoding="async" />
-                <span className="dg-hv__play" aria-hidden="true" />
-                <div className="dg-hv__vbar" aria-hidden="true">
-                  <span>0:01 / 0:14</span>
-                  <span className="dg-hv__track"><i /></span>
-                </div>
-              </figure>
-              <div className="dg-hv__ratio">
-                <h4>FORGERY RATIO</h4>
-                <div className="dg-hv__ratio-body">
-                  <div className="dg-hv__donut"><b>100%</b></div>
-                  <div className="dg-hv__legend">
-                    <div><i className="is-fake" /><span>FAKE</span><em className="is-fake">100.0%</em></div>
-                    <div><i className="is-real" /><span>REAL</span><em className="is-real">0.0%</em></div>
-                    <small>14 / 14 FRAMES</small>
-                  </div>
-                </div>
-                <dl className="dg-hv__stats">
-                  <div><dt>FPS</dt><dd>30.0</dd></div>
-                  <div><dt>전체 프레임</dt><dd>422</dd></div>
-                  <div><dt>얼굴 탐지</dt><dd>14 / 14</dd></div>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* 스크롤 연동 히어로 (AI 생성 사진 + 줌인 영상 프레임) */}
+      <ScrollHero onStart={linkTo(handleBasicAnalysis)} onVideo={linkTo(handleVideoAnalysis)} />
 
       <section id="features" className="dg-section dg-section--alt">
         <div className="dg-wrap dg-center">
