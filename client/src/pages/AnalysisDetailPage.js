@@ -3,21 +3,28 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import Navbar from '../components/Navbar';
+import AmbientBackground from '../components/AmbientBackground';
+import useTheme from '../hooks/useTheme';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import useCountUp from '../utils/useCountUp';
 import './AnalysisDetailPage.css';
 
 // 공통 레이아웃: Navbar(light) + 본문 + Footer
-const DetailLayout = ({ sessionUser, children }) => (
+const DetailLayout = ({ sessionUser, children }) => {
+  const [theme, setTheme] = useTheme();
+  return (
   <div className="dg-detail">
-    <Navbar variant="light" sessionUser={sessionUser} />
+    <AmbientBackground />
+    <Navbar variant="light" sessionUser={sessionUser} theme={theme} onThemeChange={setTheme} />
     <main className="dg-detail__main">
       <div className="dg-wrap">{children}</div>
     </main>
     <Footer />
   </div>
-);
+  );
+};
 
 // 결과 옆 정보 목록의 한 줄 (라벨 · 값)
 const InfoRow = ({ label, value, tone }) => (
@@ -33,6 +40,7 @@ const GAUGE_C = 2 * Math.PI * GAUGE_R;
 const ProbGauge = ({ prob, tone }) => {
   const valid = prob !== -1;
   const pct = valid ? Math.min(Math.max(Number(prob), 0), 1) : 0;
+  const shown = useCountUp(pct);
   return (
     <svg className="dg-detail__gauge" width="180" height="180" viewBox="0 0 180 180" role="img"
       aria-label={valid ? `위조 확률 ${(pct * 100).toFixed(1)}%` : '위조 확률 없음'}>
@@ -40,10 +48,11 @@ const ProbGauge = ({ prob, tone }) => {
       {valid && (
         <circle className={`dg-detail__gauge-arc dg-detail__gauge-arc--${tone}`} cx="90" cy="90" r={GAUGE_R}
           fill="none" strokeWidth="16" strokeLinecap="round"
-          strokeDasharray={`${pct * GAUGE_C} ${GAUGE_C}`} transform="rotate(-90 90 90)" />
+          strokeDasharray={`${shown * GAUGE_C} ${GAUGE_C}`} transform="rotate(-90 90 90)"
+          style={{ opacity: shown > 0.0005 ? 1 : 0 }} />
       )}
       <text className="dg-detail__gauge-value" x="90" y="94" textAnchor="middle">
-        {valid ? `${(pct * 100).toFixed(1)}%` : 'N/A'}
+        {valid ? `${(shown * 100).toFixed(1)}%` : 'N/A'}
       </text>
       <text className="dg-detail__gauge-label" x="90" y="120" textAnchor="middle">위조 확률</text>
     </svg>
@@ -62,13 +71,13 @@ const itemLabelOf = (item) => {
 const VERDICT_COPY = {
   fake: {
     badge: '딥페이크로 의심돼요',
-    image: '얼굴 영역에서 합성 흔적이 감지되었어요. 히트맵에서 모델이 주목한 부위를 확인해 보세요.',
-    video: '영상의 얼굴 영역에서 합성 흔적이 감지되었어요. 타임라인에서 의심 구간을 확인해 보세요.',
+    image: '얼굴 영역에서 위조 흔적이 감지되었어요. 히트맵에서 모델이 주목한 부위를 확인해 보세요.',
+    video: '영상의 얼굴 영역에서 위조 흔적이 감지되었어요. 타임라인에서 의심 구간을 확인해 보세요.',
   },
   real: {
     badge: '실제 얼굴로 보여요',
-    image: '뚜렷한 합성 흔적이 발견되지 않았어요. 히트맵에서 모델이 본 부위를 확인할 수 있어요.',
-    video: '뚜렷한 합성 흔적이 발견되지 않았어요. 타임라인에서 프레임별 결과를 확인할 수 있어요.',
+    image: '뚜렷한 위조 흔적이 발견되지 않았어요. 히트맵에서 모델이 본 부위를 확인할 수 있어요.',
+    video: '뚜렷한 위조 흔적이 발견되지 않았어요. 타임라인에서 구간별 결과를 확인할 수 있어요.',
   },
   unknown: {
     badge: '판정할 수 없어요',

@@ -337,7 +337,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                           <div className="dg-analysis__history-type">
                             <span className="dg-analysis__tag">{dType}</span>
                             <span className="dg-analysis__tag">{mType}</span>
-                            {item.version_type && <span className="dg-analysis__tag">{item.version_type.toUpperCase()}</span>}
                           </div>
                           <div className="dg-analysis__history-date">
                             {item.created_at?.slice(0, 10)}

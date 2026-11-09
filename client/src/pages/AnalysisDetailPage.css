@@ -1,5 +1,6 @@
 /* 분석 상세 페이지 전용 스타일 — 다른 페이지에 새지 않도록 .dg-detail 하위로 한정 */
 .dg-detail {
+  isolation: isolate;
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: var(--color-bg-alt);
@@ -160,9 +161,6 @@
 }
 .dg-detail__gauge-track {
   stroke: #f1f3f8;
-}
-.dg-detail__gauge-arc {
-  transition: stroke-dasharray 1s cubic-bezier(0.1, 1, 0.1, 1);
 }
 .dg-detail__gauge-arc--fake { stroke: var(--color-danger); }
 .dg-detail__gauge-arc--real { stroke: var(--color-success); }
