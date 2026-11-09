@@ -18,6 +18,22 @@ y_ = Fore.YELLOW
 s_ = Style.BRIGHT
 rs_ = Style.RESET_ALL
 
+def rule_based_fake_prob(result: dict) -> float:
+    """
+    predict_video_artifacts 결과로 최종 fake 확률 계산 (rule-base)
+      - real(1-prob), prob(1-real), artifact 20개 = 22개 확률 중 argmax
+      - real이 가장 크면 prob 사용, 아니면 가장 큰 fake 쪽 확률(prob 또는 artifact) 사용
+    얼굴 미검출(artifacts None)이면 prob(0.5)를 그대로 사용
+    """
+    prob = result["prob"]
+    artifacts = result["artifacts"]
+    if artifacts is None:
+        return prob
+
+    artifact_probs = [p for types in artifacts.values() for p in types.values()]
+    fake_max = max([prob] + artifact_probs)
+    return prob if 1 - prob >= fake_max else fake_max
+
 def main():
     parser = argparse.ArgumentParser(description="Predict DeepFake Video")
     # --- Data & Path Settings ---
@@ -78,7 +94,11 @@ def main():
     all_true = meta_df[args.label_col]
     
     for video_path in tqdm(meta_df['video_path'], total=len(meta_df), desc=f"Test Evaluation (Data: {args.dataset} | Model: {model_desc})"):
-        pred = video_predictor.predict_video(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
+        if is_clip:
+            result = video_predictor.predict_video_artifacts(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
+            pred = rule_based_fake_prob(result)
+        else:
+            pred = video_predictor.predict_video(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
         all_pred.append(pred)
         
     all_pred = np.array(all_pred)
