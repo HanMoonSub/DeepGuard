@@ -14,6 +14,20 @@ from explainability.utils.image import (
 )
 from explainability.explainer.base_explainer import BaseExplainer
 
+# branch별 위조 흔적 임계값 고정값 (CAM 상위 백분위 기준)
+#   - low (국소 구조): 0.95 → 상위 5%만 위조 의심 영역
+#   - high (전역 구조): 0.8 → 상위 20%를 위조 의심 영역
+DEFAULT_THRESHOLD = {"low": 0.95, "high": 0.8}
+
+
+def _cam_kwargs(kwargs: dict) -> dict:
+    """display_* kwargs에서 CAM 생성에 쓰는 인자만 골라낸다."""
+    return {
+        "category": kwargs.get("category", 1),
+        "aug_smooth": kwargs.get("aug_smooth", False),
+        "eigen_smooth": kwargs.get("eigen_smooth", False),
+    }
+
 class CAMDisplayMixin:
     """CAM 맵을 히트맵/바운딩 박스로 시각화하는 공통 기능.
 
@@ -85,6 +99,25 @@ class CAMDisplayMixin:
             )
         return binary_mask
 
+    def _threshold_of(self, kwargs: dict) -> Union[float, Literal["auto"]]:
+        """kwargs에 threshold가 없으면 이 explainer branch의 고정값(DEFAULT_THRESHOLD)을 쓴다."""
+        threshold = kwargs.get("threshold")
+        return DEFAULT_THRESHOLD[self.branch_level] if threshold is None else threshold
+
+    def _prepare_masked_cam(self, img_path: str, **kwargs) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """CAM을 원래 얼굴 해상도로 복원하고, 위조 의심 영역 이진 마스크를 함께 만든다.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray]: (cam_recovered, binary_mask, face)
+        """
+        cam_recovered, face = self._prepare_cam(img_path, **_cam_kwargs(kwargs))
+        return cam_recovered, self._get_binary_mask(cam_recovered, self._threshold_of(kwargs)), face
+
+    def _prepare_masked_cam_from_array(self, face: np.ndarray, **kwargs) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """_prepare_masked_cam의 얼굴 배열 입력 버전."""
+        cam_recovered, face = self._prepare_cam_from_array(face, **_cam_kwargs(kwargs))
+        return cam_recovered, self._get_binary_mask(cam_recovered, self._threshold_of(kwargs)), face
+
     def display_heatmap_on_image(self, img_path: str, **kwargs) -> np.ndarray:
         """이미지 경로를 입력받아 원본 얼굴 위에 위조 흔적 히트맵을 중첩한 이미지를 생성한다.
 
@@ -94,20 +127,14 @@ class CAMDisplayMixin:
                 category (int): 타겟 클래스 인덱스 (기본값: 1).
                 aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
                 eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: "auto").
+                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
                 colormap (int): OpenCV 컬러맵 상수 (기본값: cv2.COLORMAP_JET).
-                image_weight (float): 원본 이미지 불투명도 가중치 (기본값: 0.5).
+                image_weight (float): 원본 이미지 불투명도 가중치 (기본값: 0.8).
 
         Returns:
             np.ndarray: 히트맵이 합성된 얼굴 이미지 (RGB, np.uint8).
         """
-        cam_recovered, face = self._prepare_cam(
-            img_path, 
-            category = kwargs.get("category", 1), 
-            aug_smooth = kwargs.get("aug_smooth", False), 
-            eigen_smooth = kwargs.get("eigen_smooth", False))
-        
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        cam_recovered, binary_mask, face = self._prepare_masked_cam(img_path, **kwargs)
         cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
                 
         return show_cam_on_image(
@@ -115,7 +142,7 @@ class CAMDisplayMixin:
             cam_recovered,
             use_rgb = True,
             colormap = kwargs.get("colormap", cv2.COLORMAP_JET),
-            image_weight = kwargs.get("image_weight", 0.5),
+            image_weight = kwargs.get("image_weight", 0.8),
         )
         
     def display_heatmap_from_array(self, face: np.ndarray, **kwargs) -> np.ndarray:
@@ -127,21 +154,15 @@ class CAMDisplayMixin:
                 category (int): 타겟 클래스 인덱스 (기본값: 1).
                 aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
                 eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: "auto").
+                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
                 colormap (int): OpenCV 컬러맵 상수 (기본값: cv2.COLORMAP_JET).
-                image_weight (float): 원본 이미지 불투명도 가중치 (기본값: 0.5).
+                image_weight (float): 원본 이미지 불투명도 가중치 (기본값: 0.8).
 
         Returns:
             np.ndarray: 히트맵이 합성된 얼굴 이미지 (RGB, np.uint8).
         """
         
-        cam_recovered, face = self._prepare_cam_from_array(
-            face, 
-            category = kwargs.get("category", 1), 
-            aug_smooth = kwargs.get("aug_smooth", False), 
-            eigen_smooth = kwargs.get("eigen_smooth", False))
-        
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        cam_recovered, binary_mask, face = self._prepare_masked_cam_from_array(face, **kwargs)
         cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
                 
         return show_cam_on_image(
@@ -149,7 +170,7 @@ class CAMDisplayMixin:
             cam_recovered,
             use_rgb = True,
             colormap = kwargs.get("colormap", cv2.COLORMAP_JET),
-            image_weight = kwargs.get("image_weight", 0.5),
+            image_weight = kwargs.get("image_weight", 0.8),
         )  
     
     def display_bbox_on_image(self, img_path: str, **kwargs) -> np.ndarray:
@@ -161,22 +182,14 @@ class CAMDisplayMixin:
                 category (int): 타겟 클래스 인덱스 (기본값: 1).
                 aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
                 eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: "auto").
+                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
                 thickness (int): 사각형 선 굵기 (기본값: 2).
 
         Returns:
             np.ndarray: 바운딩 박스와 어노테이션이 추가된 원본 얼굴 이미지 (RGB).
         """
-        cam_recovered, face = self._prepare_cam(
-            img_path, 
-            category = kwargs.get("category", 1), 
-            aug_smooth = kwargs.get("aug_smooth", False), 
-            eigen_smooth = kwargs.get("eigen_smooth", False)
-            )
-        
+        cam_recovered, binary_mask, face = self._prepare_masked_cam(img_path, **kwargs)
         annotated_img = face.copy()
-        
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
         show_bbox_on_image(annotated_img, cam_recovered, binary_mask, kwargs.get("thickness", 1))
 
         return annotated_img
@@ -190,35 +203,20 @@ class CAMDisplayMixin:
                 category (int): 타겟 클래스 인덱스 (기본값: 1).
                 aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
                 eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: "auto").
+                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
                 thickness (int): 사각형 선 굵기 (기본값: 2).
 
         Returns:
             np.ndarray: 바운딩 박스와 어노테이션이 추가된 원본 얼굴 이미지 (RGB).
         """
-        cam_recovered, face = self._prepare_cam_from_array(
-            face, 
-            category = kwargs.get("category", 1), 
-            aug_smooth = kwargs.get("aug_smooth", False), 
-            eigen_smooth = kwargs.get("eigen_smooth", False)
-            )
-        
+        cam_recovered, binary_mask, face = self._prepare_masked_cam_from_array(face, **kwargs)
         annotated_img = face.copy()
-        
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
         show_bbox_on_image(annotated_img, cam_recovered, binary_mask, kwargs.get("thickness", 1))
 
         return annotated_img
     
     def display_heatmap_bbox_on_image(self, img_path: str, **kwargs) -> np.ndarray:
-        cam_recovered, face = self._prepare_cam(
-            img_path, 
-            category = kwargs.get("category", 1), 
-            aug_smooth = kwargs.get("aug_smooth", False), 
-            eigen_smooth = kwargs.get("eigen_smooth", False)
-            )
-        
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        cam_recovered, binary_mask, face = self._prepare_masked_cam(img_path, **kwargs)
         cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
          
         heatmap = show_cam_on_image(
@@ -226,21 +224,14 @@ class CAMDisplayMixin:
             cam_recovered,
             use_rgb = True,
             colormap = kwargs.get("colormap", cv2.COLORMAP_JET),
-            image_weight = kwargs.get("image_weight", 0.5),
+            image_weight = kwargs.get("image_weight", 0.8),
         )
         
         show_bbox_on_image(heatmap, cam_recovered, binary_mask, kwargs.get("thickness", 1))
         return heatmap
     
     def display_heatmap_bbox_from_array(self, face: np.ndarray, **kwargs) -> np.ndarray:
-        cam_recovered, face = self._prepare_cam_from_array(
-            face, 
-            category = kwargs.get("category", 1), 
-            aug_smooth = kwargs.get("aug_smooth", False), 
-            eigen_smooth = kwargs.get("eigen_smooth", False)
-            )
-        
-        binary_mask = self._get_binary_mask(cam_recovered, kwargs.get("threshold", "auto"))
+        cam_recovered, binary_mask, face = self._prepare_masked_cam_from_array(face, **kwargs)
         cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
          
         heatmap = show_cam_on_image(
@@ -248,7 +239,7 @@ class CAMDisplayMixin:
             cam_recovered,
             use_rgb = True,
             colormap = kwargs.get("colormap", cv2.COLORMAP_JET),
-            image_weight = kwargs.get("image_weight", 0.5),
+            image_weight = kwargs.get("image_weight", 0.8),
         )
         
         show_bbox_on_image(heatmap, cam_recovered, binary_mask, kwargs.get("thickness", 1))
