@@ -7,25 +7,18 @@ import useTheme from '../hooks/useTheme';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import HeatmapVisualSettings, { DEFAULT_DISPLAY } from '../components/HeatmapVisualSettings';
+import AmbientBackground from '../components/AmbientBackground';
 import './HeatmapPage.css';
+import './ImageHeatmapPage.css';
 
 const POLL_INTERVAL = 2000;
 
 // branch별 XAI 기법 (low: 국소 흔적 / high: 전역 구조 / both: 둘을 결합)
 const EXPLAINER_BY_BRANCH = { low: 'layercam', high: 'eigengradcam', both: 'fusion' };
-const BRANCH_HINT = { low: '국소 흔적', high: '전역 구조', both: '국소 + 전역' };
-const BRANCH_LABEL = { low: '국소 부위 표시', high: '전역 부위 표시', both: '통합 부위 표시' };
 // 버전별 표시할 branch와 기본값 (v1: MS-EffGCViT / v2: DeepClip beta)
 const BRANCHES_BY_VERSION = { v1: ['low', 'high', 'both'], v2: ['low', 'high', 'both'] };
-const DEFAULT_BRANCH = { v1: 'high', v2: 'both' };
-const DISPLAY_OPTIONS = [
-  { value: 'heatmap',      label: 'Heatmap' },
-  { value: 'bbox',         label: 'BBox' },
-  { value: 'heatmap_bbox', label: 'Heatmap + BBox' },
-];
-const DISPLAY_EYEBROW = { heatmap: 'HEATMAP', bbox: 'BBOX', heatmap_bbox: 'HEATMAP + BBOX' };
-const DEFAULT_DISPLAY = { display_type: 'heatmap_bbox', overlay_ratio: 0.7, threshold: 0.8 };
-
+const DEFAULT_BRANCH = { v1: 'both', v2: 'both' };
 const extractTaskId = (data) => {
   if (typeof data === 'string') return data;
   return data?.task_id || data?.id || null;
@@ -35,128 +28,18 @@ const toAbsoluteUrl = (path) => {
   if (path.startsWith('http') || path.startsWith('blob')) return path;
   return path;
 };
-// 0.05 단위 슬라이더 부동소수 오차 정리
-const round2 = (v) => Math.round(Number(v) * 100) / 100;
-
 // 공통 레이아웃: Navbar(light) + 본문 + Footer
 const HeatmapLayout = ({ sessionUser, children }) => {
   const [theme, setTheme] = useTheme();
   return (
     <div className="dg-heatmap">
+      <AmbientBackground />
       <Navbar variant="light" sessionUser={sessionUser} theme={theme} onThemeChange={setTheme} />
       <main className="dg-heatmap__main">
         <div className="dg-heatmap__wrap">{children}</div>
       </main>
       <Footer />
     </div>
-  );
-};
-
-// Display 설정 패널: 값은 draft에만 반영하고 '적용' 시 재요청
-const rangeFill = (v, min, max) => ({ '--fill': `${((v - min) / (max - min)) * 100}%` });
-
-const DisplaySettings = ({ draft, setDraft, isDirty, isProcessing, onApply }) => {
-  const isBBox = draft.display_type === 'bbox';
-  const update = (key, value) => setDraft(prev => ({ ...prev, [key]: value }));
-  const reset = (key) => update(key, DEFAULT_DISPLAY[key]);
-  const isDefault = (key) => draft[key] === DEFAULT_DISPLAY[key];
-
-  return (
-    <Card className="dg-card--static dg-heatmap__settings">
-      <details className="dg-heatmap__settings-fold">
-        <summary className="dg-heatmap__settings-summary">
-          <span className="dg-heatmap__eyebrow">위조 흔적 표시 설정</span>
-          <span className="dg-heatmap__settings-meta">
-            <span>{DISPLAY_OPTIONS.find(opt => opt.value === draft.display_type)?.label}</span>
-            {!isBBox && <span>투명도 {draft.overlay_ratio.toFixed(2)}</span>}
-            <span>임계값 {draft.threshold.toFixed(2)}</span>
-            {isDirty && <span className="is-dirty">미적용 변경</span>}
-          </span>
-          <i className="dg-heatmap__settings-chevron" aria-hidden="true">▾</i>
-        </summary>
-
-        <div className="dg-heatmap__settings-body">
-          {/* ① Display Mode → display_type */}
-          <section className="dg-heatmap__settings-box dg-heatmap__settings-box--mode">
-            <div className="dg-heatmap__mode">
-              <span className="dg-heatmap__setting-label" id="hm-display-label">위조 흔적 표시</span>
-              <div className="dg-heatmap__radios" role="radiogroup" aria-labelledby="hm-display-label">
-                {DISPLAY_OPTIONS.map(opt => (
-                  <label key={opt.value} className={`dg-heatmap__radio${draft.display_type === opt.value ? ' is-active' : ''}`}>
-                    <input type="radio" name="hm-display" value={opt.value}
-                      checked={draft.display_type === opt.value}
-                      onChange={() => update('display_type', opt.value)} />
-                    <i className="dg-heatmap__radio-dot" aria-hidden="true" />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <Button variant="primary" className="dg-heatmap__apply" onClick={onApply} disabled={isProcessing || !isDirty}>
-              {isProcessing ? '적용 중...' : '적용'}
-            </Button>
-          </section>
-
-          {/* ② Image Weight | Threshold */}
-          <section className="dg-heatmap__settings-box dg-heatmap__settings-box--sliders">
-            {/* Image Weight → overlay_ratio */}
-            <div className={`dg-heatmap__slider${isBBox ? ' is-disabled' : ''}`}>
-              <div className="dg-heatmap__slider-head">
-                <div className="dg-heatmap__slider-text">
-                  <div className="dg-heatmap__slider-title">
-                    <label className="dg-heatmap__setting-label" htmlFor="hm-overlay">원본 이미지 투명도</label>
-                    {isBBox && <span className="dg-heatmap__setting-badge">BBox 모드에서는 적용되지 않음</span>}
-                  </div>
-                  <p className="dg-heatmap__setting-desc">값이 작을수록 원본이 옅어지고 위조 흔적이 진해집니다</p>
-                </div>
-                <div className="dg-heatmap__value-box">
-                  <span>{draft.overlay_ratio.toFixed(2)}</span>
-                  <button type="button" className="dg-heatmap__reset" title="기본값으로 초기화"
-                    aria-label="원본 이미지 투명도 초기화" disabled={isBBox || isDefault('overlay_ratio')}
-                    onClick={() => reset('overlay_ratio')}>↺</button>
-                </div>
-              </div>
-              <div className="dg-heatmap__range-wrap">
-                <span className="dg-heatmap__range-tick" aria-hidden="true">0.5</span>
-                <input id="hm-overlay" type="range" className="dg-heatmap__range"
-                  min="0.5" max="0.9" step="0.05" value={draft.overlay_ratio} disabled={isBBox}
-                  style={rangeFill(draft.overlay_ratio, 0.5, 0.9)}
-                  onChange={(e) => update('overlay_ratio', round2(e.target.value))} />
-                <span className="dg-heatmap__range-tick" aria-hidden="true">0.9</span>
-              </div>
-            </div>
-
-            {/* Threshold */}
-            <div className="dg-heatmap__slider">
-              <div className="dg-heatmap__slider-head">
-                <div className="dg-heatmap__slider-text">
-                  <div className="dg-heatmap__slider-title">
-                    <label className="dg-heatmap__setting-label" htmlFor="hm-threshold">위조 흔적 임계값</label>
-                  </div>
-                  <p className="dg-heatmap__setting-desc">
-                    상위 몇 %까지 위조 의심 영역으로 표시할지 정합니다 — 현재 상위 {Math.round((1 - draft.threshold) * 100)}%
-                  </p>
-                </div>
-                <div className="dg-heatmap__value-box">
-                  <span>{draft.threshold.toFixed(2)}</span>
-                  <button type="button" className="dg-heatmap__reset" title="기본값으로 초기화"
-                    aria-label="위조 흔적 임계값 초기화" disabled={isDefault('threshold')}
-                    onClick={() => reset('threshold')}>↺</button>
-                </div>
-              </div>
-              <div className="dg-heatmap__range-wrap">
-                <span className="dg-heatmap__range-tick" aria-hidden="true">0.7</span>
-                <input id="hm-threshold" type="range" className="dg-heatmap__range"
-                  min="0.7" max="0.95" step="0.05" value={draft.threshold}
-                  style={rangeFill(draft.threshold, 0.7, 0.95)}
-                  onChange={(e) => update('threshold', round2(e.target.value))} />
-                <span className="dg-heatmap__range-tick" aria-hidden="true">0.95</span>
-              </div>
-            </div>
-          </section>
-        </div>
-      </details>
-    </Card>
   );
 };
 
@@ -180,20 +63,42 @@ const HeatmapPage = ({ sessionUser }) => {
 
   const pollingRef = useRef(null);
   const isMounted  = useRef(true);
-  const startedRef = useRef(false); // StrictMode 중복 요청 방지
-  const reqIdRef   = useRef(0);     // 최신 요청만 반영
+  const requestedFrameRef = useRef(-1); // 마지막으로 요청한 frame_index (StrictMode 중복 요청 방지)
+  const appliedRef = useRef(null);      // 구간 이동 시 그대로 쓸 현재 적용 설정
+  const reqIdRef   = useRef(0);         // 최신 요청만 반영
+
+  // 타임라인에서 넘어온 구간 목록 (없으면 현재 구간 하나)
+  const frames = Array.isArray(state?.frames) && state.frames.length
+    ? state.frames
+    : (state ? [{ frame_index, timestamp, fake_score }] : []);
+  const curPos = frames.findIndex(f => f.frame_index === frame_index);
+  const prevFrame = curPos > 0 ? frames[curPos - 1] : null;
+  const nextFrame = curPos >= 0 && curPos < frames.length - 1 ? frames[curPos + 1] : null;
 
   useEffect(() => {
     isMounted.current = true;
     return () => { isMounted.current = false; stopPolling(); };
   }, []);
 
-  // 진입 즉시 생성 (버전별 기본 branch + 기본 Display 설정)
+  // 진입 시 기본 설정으로 생성, 이후 구간을 옮기면 지금 적용된 설정 그대로 다시 생성
   useEffect(() => {
-    if (!state || startedRef.current) return;
-    startedRef.current = true;
-    requestHeatmap(defaultBranch, DEFAULT_DISPLAY);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!state) return;
+    const key = frame_index ?? 0;
+    if (requestedFrameRef.current === key) return;
+    const isFirst = requestedFrameRef.current === -1;
+    requestedFrameRef.current = key;
+    if (isFirst || !appliedRef.current) requestHeatmap(defaultBranch, DEFAULT_DISPLAY);
+    else requestHeatmap(appliedRef.current.branch, appliedRef.current);
+  }, [frame_index]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 이전/다음 구간으로 이동 — 히스토리를 쌓지 않아 '타임라인으로'는 그대로 한 번에 돌아감
+  const goFrame = (f) => {
+    if (!f) return;
+    navigate('/heatmap', {
+      replace: true,
+      state: { ...state, frame_index: f.frame_index, timestamp: f.timestamp, fake_score: f.fake_score },
+    });
+  };
 
   const stopPolling = () => {
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
@@ -208,7 +113,9 @@ const HeatmapPage = ({ sessionUser }) => {
     setErrorMsg('');
     setErrorDetail('');
     setTaskId(null);
-    setApplied({ branch: nextBranch, display_type: display.display_type, overlay_ratio: display.overlay_ratio, threshold: display.threshold });
+    const nextApplied = { branch: nextBranch, display_type: display.display_type, overlay_ratio: display.overlay_ratio, threshold: display.threshold };
+    appliedRef.current = nextApplied;
+    setApplied(nextApplied);
 
     const body = {
       model_type: modelType,
@@ -273,20 +180,24 @@ const HeatmapPage = ({ sessionUser }) => {
     }, POLL_INTERVAL);
   };
 
-  const handleBranchSelect = (b) => {
-    setBranch(b);
-    requestHeatmap(b, draft);
-  };
+  const handleReset = () => { setBranch(defaultBranch); setDraft(DEFAULT_DISPLAY); };
   const handleApply = () => requestHeatmap(branch, draft);
   const handleRetry = () => requestHeatmap(applied.branch, applied);
 
   const isFake = (fake_score ?? 0) > 50;
   const isProcessing = status === 'submitting' || status === 'polling';
   const tone = isFake ? 'fake' : 'real';
-  const isDirty = branch !== applied.branch
-    || draft.display_type !== applied.display_type
-    || draft.overlay_ratio !== applied.overlay_ratio
-    || draft.threshold !== applied.threshold;
+  const dirtyCount = [
+    branch !== applied.branch,
+    draft.display_type !== applied.display_type,
+    draft.overlay_ratio !== applied.overlay_ratio,
+    draft.threshold !== applied.threshold,
+  ].filter(Boolean).length;
+  const canReset = branch !== defaultBranch
+    || draft.display_type !== DEFAULT_DISPLAY.display_type
+    || draft.overlay_ratio !== DEFAULT_DISPLAY.overlay_ratio
+    || draft.threshold !== DEFAULT_DISPLAY.threshold;
+  const isDone = status === 'done' && !!heatmapSrc;
 
   if (!state) return (
     <HeatmapLayout sessionUser={sessionUser}>
@@ -303,71 +214,76 @@ const HeatmapPage = ({ sessionUser }) => {
   );
 
   const stats = [
-    { label: '타임스탬프',   value: timestamp || `#${frame_index}`,            tone: 'primary', big: true },
+    {
+      label: '타임스탬프', value: timestamp || `#${frame_index}`, tone: 'primary', big: true,
+      sub: frames.length > 1 && curPos >= 0 ? `${curPos + 1} / ${frames.length} 구간` : null,
+    },
     { label: '딥페이크 확률', value: `${Number(fake_score ?? 0).toFixed(1)}%`, tone, big: true },
     { label: '판정 결과',      value: isFake ? 'FAKE' : 'REAL',                 tone, big: true },
   ];
 
   return (
     <HeatmapLayout sessionUser={sessionUser}>
-      {/* 상단: 뒤로가기 + 제목 + 판정/모델 태그 */}
+      {/* 상단: 뒤로가기 + 제목 */}
       <header className="dg-heatmap__head">
         <button type="button" className="dg-heatmap__back" onClick={() => navigate(-1)}>
           <span aria-hidden="true">←</span> 타임라인으로
         </button>
         <h2 className="dg-heatmap__title">프레임 위조 흔적 분석</h2>
-        <div className="dg-heatmap__chips">
-          <span className={`dg-heatmap__chip--${tone}`}>{isFake ? 'FAKE' : 'REAL'}</span>
-          <span>{modelType.toUpperCase()}</span>
-          <span>{versionType.toUpperCase()}</span>
-        </div>
       </header>
 
-      {/* 스탯 */}
-      <Card className="dg-card--static dg-heatmap__stats dg-heatmap__stats--3">
+      {/* 스탯 + 이전/다음 구간 이동 */}
+      <Card className="dg-card--static dg-heatmap__stats dg-heatmap__stats--nav">
+        <button type="button" className="dg-heatmap__step dg-heatmap__step--prev" onClick={() => goFrame(prevFrame)}
+          disabled={!prevFrame} aria-label={prevFrame ? `이전 구간 ${prevFrame.timestamp}` : '이전 구간 없음'}>
+          <span className="dg-heatmap__step-arrow" aria-hidden="true">‹</span>
+          <span className="dg-heatmap__step-text">
+            <b>이전 구간</b>
+            <span>{prevFrame ? prevFrame.timestamp : '처음이에요'}</span>
+          </span>
+        </button>
+
         {stats.map(item => (
           <dl key={item.label} className={`dg-heatmap__stat${item.big ? ' dg-heatmap__stat--big' : ''}`}>
             <dt>{item.label}</dt>
-            <dd className={item.tone ? `dg-heatmap__tone--${item.tone}` : ''} title={String(item.value)}>{item.value}</dd>
+            <dd className={item.tone ? `dg-heatmap__tone--${item.tone}` : ''} title={String(item.value)}>
+              {item.value}
+              {item.sub && <span className="dg-heatmap__stat-sub">{item.sub}</span>}
+            </dd>
           </dl>
         ))}
+
+        <button type="button" className="dg-heatmap__step dg-heatmap__step--next" onClick={() => goFrame(nextFrame)}
+          disabled={!nextFrame} aria-label={nextFrame ? `다음 구간 ${nextFrame.timestamp}` : '다음 구간 없음'}>
+          <span className="dg-heatmap__step-text">
+            <b>다음 구간</b>
+            <span>{nextFrame ? nextFrame.timestamp : '마지막이에요'}</span>
+          </span>
+          <span className="dg-heatmap__step-arrow" aria-hidden="true">›</span>
+        </button>
       </Card>
 
-      {/* Display 설정 */}
-      <DisplaySettings draft={draft} setDraft={setDraft} isDirty={isDirty}
-        isProcessing={isProcessing} onApply={handleApply} />
-
-      {/* 히트맵 패널 */}
-      <Card className={`dg-card--static dg-heatmap__panel${isProcessing ? ' is-active' : ''}`}>
-        <div className="dg-heatmap__panel-head">
-          <div className="dg-heatmap__panel-title">
-            <i className={`dg-heatmap__dot${isProcessing ? ' is-active' : status === 'done' ? ' is-done' : ''}`} />
-            <span className="dg-heatmap__eyebrow">{DISPLAY_EYEBROW[applied.display_type]}</span>
-          </div>
-          <div className="dg-heatmap__panel-tools">
-            {status === 'done' && heatmapSrc && (
-              <Button variant="outline" className="dg-heatmap__save" href={heatmapSrc}
-                download={`heatmap_f${frame_index}_${applied.branch}_${modelType}_${applied.display_type}.png`}>
-                ↓ 저장
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* 결과 */}
-        {status === 'done' && heatmapSrc ? (
-          <div className="dg-heatmap__result">
-            <div className="dg-heatmap__media">
-              <img src={heatmapSrc} alt="Heatmap"
+      {/* 왼쪽 히트맵 | 오른쪽 시각화 설정 (이미지 위조 흔적과 같은 구성) */}
+      <div className="dg-ihm dg-ihm--with-stats">
+        <section className={`dg-ihm__stage${isProcessing ? ' is-active' : ''}`} aria-label="히트맵 결과">
+          <div className="dg-ihm__canvas">
+            {isDone && (
+              <img src={heatmapSrc} alt="위조 흔적 히트맵"
                 onError={(e) => { e.target.style.display = 'none'; setErrorMsg('이미지 로드 실패'); setErrorDetail(`URL: ${heatmapSrc}`); setStatus('error'); }}
               />
-            </div>
-          </div>
-        ) : (
-          <div className="dg-heatmap__media dg-heatmap__media--stage">
+            )}
+
+            {/* 로딩 */}
+            {(isProcessing || status === 'idle') && (
+              <div className="dg-ihm__state">
+                <div className="dg-heatmap__spinner" />
+                <p className="dg-ihm__state-title">위조 흔적을 그리는 중이에요</p>
+              </div>
+            )}
+
             {/* 에러 */}
             {status === 'error' && (
-              <div className="dg-heatmap__options">
+              <div className="dg-ihm__state dg-heatmap__options">
                 <div className="dg-heatmap__alert">
                   <div className="dg-heatmap__alert-icon" aria-hidden="true">!</div>
                   <p className="dg-heatmap__alert-msg">{errorMsg}</p>
@@ -377,34 +293,36 @@ const HeatmapPage = ({ sessionUser }) => {
               </div>
             )}
 
-            {/* 로딩 */}
-            {(isProcessing || status === 'idle') && (
-              <div className="dg-heatmap__loading">
-                <div className="dg-heatmap__spinner" />
-              </div>
-            )}
-
             {status === 'done' && !heatmapSrc && (
-              <div className="dg-heatmap__empty">
-                <p>결과 이미지를 받지 못했습니다.</p>
+              <div className="dg-ihm__state">
+                <p className="dg-ihm__state-title">결과 이미지를 받지 못했어요</p>
                 <Button variant="outline" onClick={handleRetry}>재시도</Button>
               </div>
             )}
+
+            {/* 하단 바: 범례 · 저장 */}
+            {isDone && (
+              <div className="dg-ihm__bar">
+                {applied.display_type !== 'bbox' && (
+                  <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
+                    <span>낮음</span><i aria-hidden="true" /><span>높음</span>
+                  </div>
+                )}
+                <Button variant="outline" className="dg-ihm__save" href={heatmapSrc}
+                  download={`heatmap_f${frame_index}_${applied.branch}_${modelType}_${applied.display_type}.png`}>
+                  이미지 저장
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+        </section>
 
-        {/* Branch 전환 */}
-        <div className="dg-heatmap__combos">
-          {branches.map(b => (
-            <button key={b} type="button" title={BRANCH_HINT[b]} disabled={isProcessing}
-              onClick={() => handleBranchSelect(b)}
-              className={`dg-heatmap__combo${branch === b ? ' is-active' : ''}`}>
-              {BRANCH_LABEL[b]}
-            </button>
-          ))}
-        </div>
-      </Card>
-
+        <aside className="dg-ihm__side">
+          <HeatmapVisualSettings branches={branches} branch={branch} setBranch={setBranch}
+            draft={draft} setDraft={setDraft} dirtyCount={dirtyCount} isProcessing={isProcessing}
+            onApply={handleApply} onReset={handleReset} canReset={canReset} />
+        </aside>
+      </div>
     </HeatmapLayout>
   );
 };

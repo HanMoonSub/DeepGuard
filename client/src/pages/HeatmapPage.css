@@ -1,5 +1,6 @@
 /* 히트맵 페이지(프레임/이미지) 공용 스타일 — 다른 페이지에 새지 않도록 .dg-heatmap 하위로 한정 */
 .dg-heatmap {
+  isolation: isolate;
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: var(--color-bg-alt);
@@ -183,6 +184,75 @@
 .dg-heatmap__stat {
   min-width: 0;
 }
+
+/* 이전/다음 구간 이동 — 통계 3칸 양옆 */
+.dg-heatmap__stats--nav .dg-card__body {
+  grid-template-columns: auto repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+}
+.dg-heatmap__stats--nav .dg-heatmap__step + .dg-heatmap__stat {
+  padding-left: 0;
+  border-left: none;
+}
+.dg-heatmap__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-bg);
+  font: inherit;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+.dg-heatmap__step:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.dg-heatmap__step:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.dg-heatmap__step:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.dg-heatmap__step-arrow {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+.dg-heatmap__step-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.dg-heatmap__step--prev .dg-heatmap__step-text {
+  align-items: flex-start;
+}
+.dg-heatmap__step--next .dg-heatmap__step-text {
+  align-items: flex-end;
+}
+.dg-heatmap__step-text b {
+  font-size: 13px;
+  font-weight: 800;
+}
+.dg-heatmap__step-text span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.dg-heatmap__stat-sub {
+  margin-left: 8px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
 .dg-heatmap__stat + .dg-heatmap__stat {
   padding-left: 24px;
   border-left: 1px solid var(--color-line);
@@ -272,6 +342,7 @@
   color: var(--color-muted);
 }
 .dg-heatmap__panel-tools {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -942,4 +1013,19 @@
 }
 :root[data-theme="dark"] .dg-heatmap__chips .dg-heatmap__chip--real {
   border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+}
+
+/* 좁은 화면: 통계 2열 + 이동 버튼은 아래 한 줄 */
+@media (max-width: 640px) {
+  .dg-heatmap__stats--nav .dg-card__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dg-heatmap__stats--nav .dg-heatmap__step {
+    order: 1;
+    justify-content: space-between;
+  }
+  .dg-heatmap__stats--nav .dg-heatmap__stat + .dg-heatmap__stat {
+    padding-left: 0;
+    border-left: none;
+  }
 }
