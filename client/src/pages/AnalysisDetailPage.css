@@ -234,10 +234,26 @@
 .dg-detail__tone--unknown { color: var(--color-muted); }
 
 /* 최근 분석 — 가로 스크롤 썸네일 줄 */
-.dg-detail__recent {
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px solid var(--color-line);
+/* 본문 왼쪽 빈 공간의 최근 분석 카드 (배경 패널 없이 카드만) */
+.dg-detail .dg-wrap.dg-detail__layout {
+  max-width: calc(var(--container) + 268px);
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.dg-detail__content {
+  min-width: 0;
+}
+.dg-detail__aside {
+  position: sticky;
+  top: calc(var(--nav-h) + 24px);
+}
+.dg-detail__aside-inner {
+  max-height: calc(100vh - var(--nav-h) - 48px);
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
 }
 .dg-detail__recent-title {
   margin-bottom: 12px;
@@ -246,28 +262,35 @@
   color: var(--color-muted);
 }
 .dg-detail__recent-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 2px 4px;
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 6px;
+  flex-direction: column;
+  gap: 10px;
 }
 .dg-detail__recent-item {
-  flex: 0 0 auto;
-  width: 160px;
-  padding: 6px;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 10px;
+  box-shadow: 0 1px 2px rgba(11, 18, 32, 0.04), 0 6px 18px rgba(32, 108, 253, 0.05);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   border: 1px solid var(--color-line);
   border-radius: 12px;
   background: var(--color-bg);
+  color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.2s, background 0.2s;
 }
 .dg-detail__recent-item:hover {
   border-color: var(--color-primary-border);
+  background: var(--color-bg-alt);
 }
 .dg-detail__recent-item.is-current {
   border-color: var(--color-primary);
@@ -279,7 +302,7 @@
   height: 44px;
   overflow: hidden;
   border-radius: 8px;
-  background: repeating-linear-gradient(135deg, #f3f6fb 0 6px, #edf1f7 6px 12px);
+  background: var(--color-bg-alt);
 }
 .dg-detail__recent-thumb img,
 .dg-detail__recent-thumb video {
@@ -289,14 +312,51 @@
   display: block;
 }
 .dg-detail__recent-meta {
+  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 12px;
   line-height: 1.3;
 }
-.dg-detail__recent-meta span {
+.dg-detail__recent-tags {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dg-detail__recent-tags i {
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--color-muted);
+}
+.dg-detail__recent-tags i::before {
+  content: '·';
+  margin: 0 6px;
+}
+.dg-detail__recent-date {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.dg-detail__recent-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.dg-detail__recent-badge--fake {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.dg-detail__recent-badge--real {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.dg-detail__recent-badge--unknown {
+  background: var(--color-bg-alt);
   color: var(--color-muted);
 }
 
@@ -343,6 +403,30 @@
 }
 
 /* 반응형 */
+/* 좁은 화면: 최근 분석을 본문 위 가로 스크롤 줄로 */
+@media (max-width: 1080px) {
+  .dg-detail .dg-wrap.dg-detail__layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .dg-detail__aside {
+    position: static;
+    min-width: 0;
+  }
+  .dg-detail__aside-inner {
+    max-height: none;
+  }
+  .dg-detail__recent-list {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+  }
+  .dg-detail__recent-item {
+    width: 240px;
+  }
+}
+
 @media (max-width: 900px) {
   .dg-detail__grid {
     grid-template-columns: 1fr;

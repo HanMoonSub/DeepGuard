@@ -11,15 +11,18 @@ import Card from '../components/Card';
 import useCountUp from '../utils/useCountUp';
 import './AnalysisDetailPage.css';
 
-// 공통 레이아웃: Navbar(light) + 본문 + Footer
-const DetailLayout = ({ sessionUser, children }) => {
+// 공통 레이아웃: Navbar(light) + [왼쪽 여백 최근 분석 카드] + 본문 + Footer
+const DetailLayout = ({ sessionUser, aside, children }) => {
   const [theme, setTheme] = useTheme();
   return (
   <div className="dg-detail">
     <AmbientBackground />
     <Navbar variant="light" sessionUser={sessionUser} theme={theme} onThemeChange={setTheme} />
     <main className="dg-detail__main">
-      <div className="dg-wrap">{children}</div>
+      <div className={`dg-wrap${aside ? ' dg-detail__layout' : ''}`}>
+        {aside}
+        <div className="dg-detail__content">{children}</div>
+      </div>
     </main>
     <Footer />
   </div>
@@ -118,7 +121,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
     fetchDetail();
   }, [state]);
 
-  // 하단 '최근 분석' 줄 — 로그인 사용자만, 이미지/동영상 기록 중 보고 있는 종류로
+  // 왼쪽 '최근 분석' 사이드바 — 로그인 사용자만, 이미지/동영상 기록 중 보고 있는 종류로
   const isVideoRoute = !!state?.video_id;
   useEffect(() => {
     if (!sessionUser) { setHistory([]); return; }
@@ -200,8 +203,47 @@ const AnalysisDetailPage = ({ sessionUser }) => {
   };
 
 
+  // 본문 왼쪽 빈 공간: 최근 분석 결과 카드 목록 (별도 배경 패널 없이)
+  const recentAside = history.length > 0 && (
+    <aside className="dg-detail__aside" aria-label="최근 분석">
+      <div className="dg-detail__aside-inner">
+        <h3 className="dg-detail__recent-title">최근 분석</h3>
+        <div className="dg-detail__recent-list">
+          {history.slice(0, 20).map((item, index) => {
+            const id = isVideoRoute ? (item.video_id || item.id) : item.image_id;
+            const itemLabel = itemLabelOf(item);
+            const tone = itemLabel === 'FAKE' ? 'fake' : itemLabel === 'REAL' ? 'real' : 'unknown';
+            const isCurrent = String(id) === String(isVideoRoute ? state?.video_id : state?.image_id);
+            return (
+              <button key={id || index} type="button"
+                className={`dg-detail__recent-item${isCurrent ? ' is-current' : ''}`}
+                aria-current={isCurrent ? 'page' : undefined}
+                onClick={() => navigate(pathname, { state: isVideoRoute ? { video_id: id } : { image_id: id } })}>
+                <span className="dg-detail__recent-thumb">
+                  {isVideoRoute
+                    ? (item.video_loc ? <video src={`${item.video_loc}#t=0.1`} muted preload="metadata" /> : null)
+                    : (item.image_loc ? <img src={item.image_loc} alt="" /> : null)}
+                </span>
+                <span className="dg-detail__recent-meta">
+                  <span className="dg-detail__recent-tags">
+                    {item.domain_type || '서양인'}
+                    <i>{(item.model_type || 'fast').toUpperCase()}</i>
+                  </span>
+                  <span className="dg-detail__recent-date">{item.created_at?.slice(0, 10)}</span>
+                </span>
+                <b className={`dg-detail__recent-badge dg-detail__recent-badge--${tone}`}>
+                  {tone === 'unknown' ? '판정 불가' : itemLabel}
+                </b>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </aside>
+  );
+
   return (
-    <DetailLayout sessionUser={sessionUser}>
+    <DetailLayout sessionUser={sessionUser} aside={recentAside}>
       {/* 상단: 뒤로가기 + 분석 조건 태그 */}
       <header className="dg-detail__head">
         <button type="button" className="dg-detail__back" onClick={() => navigate(-1)}>
@@ -260,36 +302,6 @@ const AnalysisDetailPage = ({ sessionUser }) => {
         </div>
       </div>
 
-      {/* 최근 분석 */}
-      {history.length > 0 && (
-        <section className="dg-detail__recent">
-          <h3 className="dg-detail__recent-title">최근 분석</h3>
-          <div className="dg-detail__recent-list">
-            {history.slice(0, 12).map((item, index) => {
-              const id = isVideoRoute ? (item.video_id || item.id) : item.image_id;
-              const itemLabel = itemLabelOf(item);
-              const tone = itemLabel === 'FAKE' ? 'fake' : itemLabel === 'REAL' ? 'real' : 'unknown';
-              const isCurrent = String(id) === String(isVideoRoute ? state?.video_id : state?.image_id);
-              return (
-                <button key={id || index} type="button"
-                  className={`dg-detail__recent-item${isCurrent ? ' is-current' : ''}`}
-                  aria-current={isCurrent ? 'page' : undefined}
-                  onClick={() => navigate(pathname, { state: isVideoRoute ? { video_id: id } : { image_id: id } })}>
-                  <span className="dg-detail__recent-thumb">
-                    {isVideoRoute
-                      ? (item.video_loc ? <video src={`${item.video_loc}#t=0.1`} muted preload="metadata" /> : null)
-                      : (item.image_loc ? <img src={item.image_loc} alt="" /> : null)}
-                  </span>
-                  <span className="dg-detail__recent-meta">
-                    <b className={`dg-detail__tone--${tone}`}>{tone === 'unknown' ? '판정 불가' : itemLabel}</b>
-                    <span>{item.created_at?.slice(0, 10)}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
     </DetailLayout>
   );
 };
