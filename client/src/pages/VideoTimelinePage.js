@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -6,12 +6,12 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import useCountUp from '../utils/useCountUp';
 import './VideoTimelinePage.css';
 
-// 차트 색 (tokens.css와 동일 값 — canvas는 CSS 변수를 직접 못 씀)
+// 도넛 색 (tokens.css의 danger와 동일 값)
 const COLOR_FAKE = '#ff4d4d';
-const COLOR_REAL = '#16a34a';
-const COLOR_LINE = '#206cfd';
+const DONUT_R = 70;
 
 // 공통 레이아웃: Navbar(light) + 본문 + Footer
 const TimelineLayout = ({ sessionUser, children }) => (
@@ -52,7 +52,7 @@ const ERROR_VIEWS = {
   auth: {
     tone: 'primary',
     title: '로그인이 필요해요',
-    desc: () => '프레임별 분석은 회원만 볼 수 있어요.',
+    desc: () => '구간별 분석은 회원만 볼 수 있어요.',
     actions: () => ['login', 'back'],
   },
   incomplete: {
@@ -83,26 +83,32 @@ const ERROR_VIEWS = {
   },
 };
 
+// 초 → mm:ss
+const formatClock = (sec) => {
+  const s = Math.max(Math.floor(sec || 0), 0);
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+};
+
 const VideoTimelinePage = ({ sessionUser }) => {
   const { state: data } = useLocation();
   const navigate = useNavigate();
   const [timelineData, setTimelineData] = useState([]);
-  const [videoMeta, setVideoMeta]       = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError]         = useState(null); // { type, detail }
   const [retryKey, setRetryKey]   = useState(0);    // 다시 시도 시 fetch 재실행용
   const [thumbs, setThumbs]       = useState({});   // { frame_index: dataURL } 그래프 hover 미리보기용
   const [hoverIdx, setHoverIdx]   = useState(null); // 그래프에서 커서가 올라간 프레임 순번
+  const [duration, setDuration]   = useState(null); // 영상 길이(초) — video 메타데이터에서
+  const [currentTime, setCurrentTime] = useState(0); // 재생 위치(초) — 하단 스크러버 표시용
 
   const videoId = data?.video_id || data?.id;
   const mediaLoc = data?.video_loc || '';
   const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : mediaLoc;
 
-  // Canvas는 막대 div 위에 absolute로 얹히므로
-  // 막대 div 자체를 ref로 잡아서 크기/위치를 측정
-  const canvasRef   = useRef(null);
-  const barsRef     = useRef(null); // 막대들이 들어있는 flex div
-  const barRefs     = useRef([]);   // 각 막대 div ref 배열
+  // hover 툴팁 위치 계산용: 그래프 영역과 각 구간(열) ref
+  const chartRef = useRef(null);
+  const colRefs  = useRef([]);
+  const videoRef = useRef(null);
 
   useEffect(() => {
     const fetchTimelineDetails = async () => {
@@ -115,7 +121,6 @@ const VideoTimelinePage = ({ sessionUser }) => {
         let frames = [];
         if (d?.frames?.length)        frames = d.frames;
         else if (d?.timeline?.length) frames = d.timeline;
-        if (d?.meta) setVideoMeta(d.meta);
         if (frames.length) {
           setTimelineData(frames.map(normalizeFrame));
         } else {
@@ -140,102 +145,8 @@ const VideoTimelinePage = ({ sessionUser }) => {
   const fakeCount  = timelineData.filter(f => f.fake_score > 50).length;
   const totalCount = timelineData.length;
   const fakeRatio  = totalCount ? (fakeCount / totalCount) * 100 : 0;
-  const realRatio  = 100 - fakeRatio;
-
-  // ── Canvas 렌더링 ──
-  // 핵심: 각 막대 div의 getBoundingClientRect()로 실제 화면 위치를 측정해
-  //       캔버스 좌표로 변환 → 완벽하게 막대 상단 중앙을 통과하는 꺾은선
-  const drawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const barsEl = barsRef.current;
-    if (!canvas || !barsEl || timelineData.length < 2) return;
-    if (barRefs.current.length !== timelineData.length) return;
-    if (barRefs.current.some(r => !r)) return;
-
-    const barsRect = barsEl.getBoundingClientRect();
-    const W = barsRect.width;
-    const H = barsRect.height;
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width  = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width  = W + 'px';
-    canvas.style.height = H + 'px';
-
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, W, H);
-
-    // 각 막대 상단 중앙 좌표 계산
-    // barRef는 막대 div (색깔 있는 직사각형)
-    const points = barRefs.current.map((barEl, i) => {
-      const barRect = barEl.getBoundingClientRect();
-      // canvas 기준 좌표 = barRect - barsRect (offset)
-      const x = barRect.left - barsRect.left + barRect.width / 2;
-      const y = barRect.top  - barsRect.top;  // 막대 상단
-      return { x, y, isFake: timelineData[i].fake_score > 50 };
-    });
-
-    // 50% 기준선 y좌표: fake_score=50일 때의 막대 높이 비율로 계산
-    // 막대 영역 높이 = barsEl에서 timestamp span 제외한 부분
-    // barsEl padding-top=30px → 막대 영역 시작 y=30, 막대 바닥 y=H-23(timestamp)
-    const BAR_TOP    = 30;  // padding-top
-    const BAR_BOTTOM = H - 23; // timestamp 텍스트 영역 제외
-    const BAR_H      = BAR_BOTTOM - BAR_TOP;
-    const y50 = BAR_BOTTOM - (50 / 100) * BAR_H;
-
-    // 50% 기준선
-    ctx.save();
-    ctx.setLineDash([5, 4]);
-    ctx.strokeStyle = 'rgba(255, 77, 77, 0.45)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, y50);
-    ctx.lineTo(points[points.length - 1].x, y50);
-    ctx.stroke();
-    ctx.restore();
-
-    // 꺾은선 (밝은 배경용: primary 선 + 옅은 글로우)
-    ctx.save();
-    ctx.shadowColor = 'rgba(32, 108, 253, 0.35)';
-    ctx.shadowBlur  = 8;
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-    ctx.strokeStyle = COLOR_LINE;
-    ctx.lineWidth   = 2;
-    ctx.lineJoin    = 'round';
-    ctx.lineCap     = 'round';
-    ctx.stroke();
-    ctx.restore();
-
-    // 데이터 포인트 dot
-    points.forEach((pt) => {
-      // 외곽 글로우 원
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
-      ctx.fillStyle = pt.isFake ? 'rgba(255, 77, 77, 0.18)' : 'rgba(22, 163, 74, 0.16)';
-      ctx.fill();
-      // 내부 dot (흰 테두리로 막대와 분리)
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = pt.isFake ? COLOR_FAKE : COLOR_REAL;
-      ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-    });
-  }, [timelineData]);
-
-  useEffect(() => {
-    if (isLoading || !timelineData.length) return;
-    // DOM 렌더 완료 후 실행 (두 번 대기로 안전하게)
-    const t1 = setTimeout(drawCanvas, 100);
-    const t2 = setTimeout(drawCanvas, 400);
-    const ro = new ResizeObserver(() => setTimeout(drawCanvas, 50));
-    if (barsRef.current) ro.observe(barsRef.current);
-    return () => { clearTimeout(t1); clearTimeout(t2); ro.disconnect(); };
-  }, [timelineData, isLoading, drawCanvas]);
+  // 도넛: 로딩이 끝나면 0%에서 차오름 (상세 화면 원형 차트와 같은 효과)
+  const shownRatio = useCountUp(isLoading ? 0 : fakeRatio);
 
   // ── 프레임 썸네일 추출 ──
   // 숨은 video로 각 frame_time에 seek → canvas에 그려 작은 jpg로 저장 (동일 출처라 canvas 오염 없음)
@@ -336,18 +247,58 @@ const VideoTimelinePage = ({ sessionUser }) => {
       model_type: data.model_type || 'fast',
       version_type: data.version_type || 'v1',
       video_name: data.video_name,
+      // 히트맵 화면에서 이전/다음 구간으로 바로 이동할 수 있게 구간 목록을 함께 전달
+      frames: timelineData.map(f => ({ frame_index: f.frame_index, timestamp: f.timestamp, fake_score: f.fake_score })),
     }
   });
 
-  const circumference = 2 * Math.PI * 56;
+  const circumference = 2 * Math.PI * DONUT_R;
+  // 영상 전체 판정: 상세 화면과 같은 기준(label → prob), 없으면 위조 구간 비율
+  const prob = data.prob ?? data.score ?? data.result_prob;
+  const isFakeVideo = data.label && data.label !== 'UNKNOWN'
+    ? data.label.toUpperCase() === 'FAKE'
+    : (prob != null && prob !== -1 ? prob > 0.5 : fakeRatio > 50);
+
+  // 영상 길이: video 메타데이터 우선, 없으면 마지막 프레임 시각 + 샘플 간격으로 추정
+  const times = timelineData.map(f => f.frame_time).filter(t => t != null);
+  const step = times.length > 1 ? (times[times.length - 1] - times[0]) / (times.length - 1) : 0;
+  const videoSec = duration || (times.length ? times[times.length - 1] + step : 0);
+  const fakeSec = totalCount ? Math.round((fakeCount / totalCount) * videoSec) : 0;
+  const ratioSentence = !fakeCount
+    ? '동영상 내 위조 흔적이 보이지 않습니다'
+    : (videoSec
+      ? <>동영상 내 <b className="dg-timeline__tone--fake">{Math.max(fakeSec, 1)}초</b> 동안 위조 흔적이 보입니다</>
+      : <>{totalCount}개 구간 중 <b className="dg-timeline__tone--fake">{fakeCount}개</b> 구간에서 위조 흔적이 보입니다</>);
+
+  // 타임라인(E안): 스크러버의 위조 구간(연속된 50% 초과 프레임 묶음)
+  const fakeRuns = [];
+  timelineData.forEach((f, i) => {
+    if (f.fake_score <= 50) return;
+    const last = fakeRuns[fakeRuns.length - 1];
+    if (last && last.end === i - 1) last.end = i;
+    else fakeRuns.push({ start: i, end: i });
+  });
+  const playRatio = videoSec ? Math.min(Math.max(currentTime / videoSec, 0), 1) : 0;
+  const seekTo = (e) => {
+    const v = videoRef.current;
+    if (!v || !videoSec) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    v.currentTime = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) * videoSec;
+  };
+
+  // 가장 의심되는 장면: 딥페이크 확률이 가장 높은 프레임 2개
+  const topFrames = [...timelineData].sort((a, b) => b.fake_score - a.fake_score).slice(0, 2);
 
   return (
     <TimelineLayout sessionUser={sessionUser}>
-      {/* 상단: 뒤로가기 + 분석 조건 태그 */}
-      <header className="dg-timeline__head">
-        <button type="button" className="dg-timeline__back" onClick={() => navigate(-1)}>
-          <span aria-hidden="true">←</span> 뒤로가기
-        </button>
+      {/* 상단: 왼쪽 뒤로가기 + 제목, 오른쪽 분석 조건 태그 */}
+      <header className="dg-timeline__head dg-timeline__head--title">
+        <div className="dg-timeline__head-main">
+          <button type="button" className="dg-timeline__back" onClick={() => navigate(-1)}>
+            <span aria-hidden="true">←</span> 뒤로가기
+          </button>
+          <h2 className="dg-timeline__title">동영상 구간별 위조 분석</h2>
+        </div>
         <div className="dg-timeline__chips">
           {data.domain_type && <span>{data.domain_type}</span>}
           {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
@@ -355,69 +306,64 @@ const VideoTimelinePage = ({ sessionUser }) => {
         </div>
       </header>
 
-      <h2 className="dg-timeline__title">프레임별 위조 분석</h2>
-      <p className="dg-timeline__sub">구간별 변조 확률을 확인하고, 의심 구간은 히트맵으로 근거를 살펴보세요.</p>
-
-      {/* 상단: 영상 + 위조 비율 */}
+      {/* 상단: 영상 | 오른쪽 패널 (A안 위조 비율 + D안 TOP 3) */}
       <div className="dg-timeline__grid">
         <Card className="dg-card--static dg-timeline__media-card">
           <div className="dg-timeline__media">
-            <video src={mediaSrc} controls />
+            <video ref={videoRef} src={mediaSrc} controls
+              onLoadedMetadata={e => { if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration); }}
+              onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)} />
           </div>
         </Card>
 
-        <Card className="dg-card--static dg-timeline__ratio-card">
-          <p className="dg-timeline__eyebrow">위조 비율</p>
-
-          <div className="dg-timeline__ratio">
-            {/* 도넛 차트 */}
-            <svg width="140" height="140" viewBox="0 0 140 140" className="dg-timeline__donut">
-              {/* real 전체 배경 링 */}
-              <circle cx="70" cy="70" r="56" fill="none" stroke={COLOR_REAL} strokeWidth="16" />
-              {/* fake 비율만큼 덮어쓰기 */}
-              <circle
-                cx="70" cy="70" r="56" fill="none"
-                stroke={COLOR_FAKE} strokeWidth="16"
-                strokeDasharray={`${(fakeRatio / 100) * circumference} ${circumference}`}
-                strokeLinecap="butt"
-                className="dg-timeline__donut-fake"
-              />
-              {/* 중앙 fake % 텍스트 (rotate 보정) */}
-              <text
-                x="70" y="70"
-                textAnchor="middle" dominantBaseline="central"
-                className="dg-timeline__donut-text"
-              >
-                {fakeRatio.toFixed(0)}%
-              </text>
-            </svg>
-
-            {/* 범례 */}
-            <div className="dg-timeline__legend">
-              <div className="dg-timeline__legend-row">
-                <i className="dg-timeline__swatch dg-timeline__swatch--fake" />
-                <span>FAKE</span>
-                <strong className="dg-timeline__tone--fake">{fakeRatio.toFixed(1)}%</strong>
-              </div>
-              <div className="dg-timeline__legend-row">
-                <i className="dg-timeline__swatch dg-timeline__swatch--real" />
-                <span>REAL</span>
-                <strong className="dg-timeline__tone--real">{realRatio.toFixed(1)}%</strong>
-              </div>
-              <div className="dg-timeline__legend-count">
-                {totalCount}개 프레임 중 {fakeCount}개 위조
+        <aside className="dg-timeline__side">
+          <Card className="dg-card--static dg-timeline__ratio-card">
+            <div className="dg-timeline__ratio">
+              <svg width="172" height="172" viewBox="0 0 172 172" className="dg-timeline__donut" aria-hidden="true">
+                <circle cx="86" cy="86" r={DONUT_R} fill="none" className="dg-timeline__donut-track" strokeWidth="16" />
+                <circle cx="86" cy="86" r={DONUT_R} fill="none" stroke={COLOR_FAKE} strokeWidth="16"
+                  strokeDasharray={`${(shownRatio / 100) * circumference} ${circumference}`}
+                  strokeLinecap={fakeCount ? 'round' : 'butt'}
+                  style={{ opacity: shownRatio > 0.05 ? 1 : 0 }}
+                  transform="rotate(-90 86 86)" className="dg-timeline__donut-fake" />
+                <text x="86" y="80" textAnchor="middle" dominantBaseline="central" className="dg-timeline__donut-text">
+                  {shownRatio.toFixed(0)}%
+                </text>
+                <text x="86" y="110" textAnchor="middle" className="dg-timeline__donut-label">위조 구간</text>
+              </svg>
+              <div className="dg-timeline__verdict">
+                <span className={`dg-timeline__verdict-badge dg-timeline__verdict-badge--${isFakeVideo ? 'fake' : 'real'}`}>
+                  {isFakeVideo ? '딥페이크 의심' : '실제 영상으로 보여요'}
+                </span>
+                <p className="dg-timeline__verdict-count">{ratioSentence}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {videoMeta && (
-            <dl className="dg-timeline__meta">
-              <div><dt>FPS</dt><dd>{Number(videoMeta.fps).toFixed(1)}</dd></div>
-              <div><dt>전체 프레임</dt><dd>{videoMeta.total_frames}</dd></div>
-              <div><dt>얼굴 탐지</dt><dd>{videoMeta.num_detected} / {videoMeta.num_sampled}</dd></div>
-            </dl>
-          )}
-        </Card>
+          <section className="dg-timeline__top" aria-labelledby="tl-top-title">
+            <h3 id="tl-top-title" className="dg-timeline__top-title">가장 의심되는 장면 TOP 2</h3>
+            {isLoading ? (
+              <div className="dg-timeline__top-empty">구간을 불러오는 중...</div>
+            ) : topFrames.map(frame => {
+              const tone = frame.fake_score > 50 ? 'fake' : 'real';
+              return (
+                <div key={frame.frame_index} className="dg-timeline__top-row">
+                  <span className={`dg-timeline__top-mark dg-timeline__top-mark--${tone}`} aria-hidden="true" />
+                  <span className="dg-timeline__top-info">
+                    <b className="dg-timeline__top-time">{frame.timestamp}</b>
+                    <span className="dg-timeline__top-meta">
+                      딥페이크 확률: <b className={`dg-timeline__tone--${tone}`}>{Math.round(frame.fake_score)}%</b>
+                    </span>
+                  </span>
+                  <button type="button" className="dg-timeline__top-btn" onClick={() => goHeatmap(frame)}
+                    aria-label={`${frame.timestamp} 장면 위조 흔적 보기`}>
+                    위조 흔적 <span aria-hidden="true">→</span>
+                  </button>
+                </div>
+              );
+            })}
+          </section>
+        </aside>
       </div>
 
       {/* 하단: 타임라인 그래프 & 프레임 데이터 보드 */}
@@ -426,7 +372,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
           <p className="dg-timeline__eyebrow">타임라인</p>
           <div className="dg-timeline__board-legend">
             <span><i className="dg-timeline__swatch dg-timeline__swatch--fake" />변조 의심 (50% 초과)</span>
-            <span><i className="dg-timeline__swatch dg-timeline__swatch--real" />정상</span>
+            <span><i className="dg-timeline__swatch dg-timeline__swatch--normal" />정상 (50% 이하)</span>
           </div>
         </div>
 
@@ -437,90 +383,82 @@ const VideoTimelinePage = ({ sessionUser }) => {
           </div>
         ) : (
           <div>
-            {/* 차트 영역: 막대 + Canvas 꺾은선 */}
-            <div className="dg-timeline__chart">
+            {/* 차트 (E안): 50% 판정 기준선 + 구간별 그라데이션 막대 */}
+            <div ref={chartRef} className="dg-timeline__chart">
+              <div className="dg-timeline__threshold" aria-hidden="true">
+                <span>판정 기준 50%</span>
+              </div>
 
-              {/* 막대 그래프 (치수는 drawCanvas 기준선 계산과 맞물려 있으므로 유지) */}
-              <div ref={barsRef} className="dg-timeline__bars" onMouseLeave={() => setHoverIdx(null)}>
+              <div className="dg-timeline__bars" onMouseLeave={() => setHoverIdx(null)}>
                 {timelineData.map((frame, i) => {
-                  const isFakeUnit = frame.fake_score > 50;
+                  const score = Number(frame.fake_score);
+                  const tone = score > 50 ? 'fake' : 'real';
+                  const h = Math.max(score, 3);
                   return (
-                    <div key={i} className={`dg-timeline__bar-col${hoverIdx === i ? ' is-hover' : ''}`}
-                      onMouseEnter={() => setHoverIdx(i)}>
-                      {/* 막대 div — ref 배열로 각각 잡음 */}
-                      <div
-                        ref={el => barRefs.current[i] = el}
-                        className={`dg-timeline__bar dg-timeline__bar--${isFakeUnit ? 'fake' : 'real'}`}
-                        style={{ height: `${Math.max(frame.fake_score, 4)}%` }}
-                      />
-                      <span className="dg-timeline__bar-time">{frame.timestamp}</span>
-                    </div>
+                    <button
+                      key={i}
+                      type="button"
+                      ref={el => { colRefs.current[i] = el; }}
+                      className={`dg-timeline__bar-col${hoverIdx === i ? ' is-hover' : ''}`}
+                      onMouseEnter={() => setHoverIdx(i)}
+                      onFocus={() => setHoverIdx(i)}
+                      onBlur={() => setHoverIdx(null)}
+                      onClick={() => goHeatmap(frame)}
+                      aria-label={`${frame.timestamp} 위조 확률 ${score.toFixed(1)}%, 위조 흔적 보기`}
+                    >
+                      <b className={`dg-timeline__bar-value dg-timeline__bar-value--${tone}`} style={{ bottom: `calc(${h}% + 6px)` }}>
+                        {Math.round(score)}
+                      </b>
+                      <span className={`dg-timeline__bar dg-timeline__bar--${tone}`} style={{ height: `${h}%` }} />
+                    </button>
                   );
                 })}
               </div>
 
-              {/* Canvas: barsRef와 완전히 동일한 위치/크기 */}
-              <canvas ref={canvasRef} className="dg-timeline__canvas" />
-
-              {/* hover 프레임 미리보기 (그래프 위) */}
+              {/* hover 툴팁: 장면 썸네일 + 시각/확률 + 히트맵 안내 */}
               {hoverIdx != null && timelineData[hoverIdx] && (() => {
                 const frame = timelineData[hoverIdx];
-                const barEl = barRefs.current[hoverIdx];
-                const barsEl = barsRef.current;
-                // 그래프 영역 상단에 작게, 해당 구간과 가로 가운데 정렬
-                const PREVIEW_W = 96;
-                const PREVIEW_H = Math.round(PREVIEW_W * 9 / 16) + 20; // 썸네일 + 정보 줄
-                const GAP = 6;
-                const TOP = 10;
+                const colEl = colRefs.current[hoverIdx];
+                const chartEl = chartRef.current;
+                const TIP_W = 176;
+                const GAP = 12;
                 let left = 0;
-                let top = TOP;
-                if (barEl && barsEl) {
-                  const chartRect = barsEl.getBoundingClientRect();
-                  const barRect = barEl.getBoundingClientRect();
-                  const centerX = barRect.left - chartRect.left + barRect.width / 2;
-                  const pointY = barRect.top - chartRect.top; // 꺾은선 점 위치 = 막대 상단
-                  left = Math.min(Math.max(centerX - PREVIEW_W / 2, GAP), chartRect.width - GAP - PREVIEW_W);
-                  // 점이 높아 미리보기와 겹치면 점 바로 아래로
-                  if (pointY < TOP + PREVIEW_H + 8) top = pointY + 12;
+                if (colEl && chartEl) {
+                  const chartRect = chartEl.getBoundingClientRect();
+                  const colRect = colEl.getBoundingClientRect();
+                  const right = colRect.right - chartRect.left + 4;
+                  // 기본은 막대 오른쪽, 공간이 없으면 왼쪽
+                  left = right + TIP_W + GAP <= chartRect.width ? right : colRect.left - chartRect.left - 4 - TIP_W;
+                  left = Math.max(left, GAP);
                 }
                 const tone = frame.fake_score > 50 ? 'fake' : 'real';
                 const thumb = thumbs[frame.frame_index];
                 return (
-                  <div className="dg-timeline__preview" style={{ left, top, width: PREVIEW_W }}>
+                  <div className="dg-timeline__preview" style={{ left, width: TIP_W }} aria-hidden="true">
                     {thumb
-                      ? <img src={thumb} alt={`${frame.timestamp} 장면`} />
+                      ? <img src={thumb} alt="" />
                       : <div className="dg-timeline__preview-empty">장면 불러오는 중...</div>}
                     <div className="dg-timeline__preview-info">
                       <span>{frame.timestamp}</span>
                       <b className={`dg-timeline__tone--${tone}`}>{Number(frame.fake_score).toFixed(1)}%</b>
                     </div>
+                    <span className="dg-timeline__preview-cta">클릭해서 위조 흔적 보기 →</span>
                   </div>
                 );
               })()}
             </div>
 
-            {/* 구간별 텍스트 그리드 */}
-            <div className="dg-timeline__frames">
-              {timelineData.map((frame, idx) => {
-                const isFake = frame.fake_score > 50;
-                const tone = isFake ? 'fake' : 'real';
-                return (
-                  <div key={idx} className="dg-timeline__frame">
-                    <span className="dg-timeline__frame-time">타임스탬프 {frame.timestamp}</span>
-                    <div className="dg-timeline__frame-info">
-                      <span className="dg-timeline__frame-prob">
-                        변조 확률 <b className={`dg-timeline__tone--${tone}`}>{Number(frame.fake_score).toFixed(1)}%</b>
-                      </span>
-                      <span className={`dg-timeline__badge dg-timeline__badge--${tone}`}>
-                        {isFake ? 'MANIPULATED' : 'VERIFIED'}
-                      </span>
-                      <button type="button" className="dg-timeline__frame-btn" onClick={() => goHeatmap(frame)}>
-                        히트맵
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+            {/* 재생 위치 스크러버: 빨간 구간 = 위조 의심, 클릭하면 해당 위치로 이동 */}
+            <div className="dg-timeline__scrub">
+              <span className="dg-timeline__scrub-label">재생 위치</span>
+              <div className="dg-timeline__scrub-track" onClick={seekTo} role="presentation">
+                {totalCount > 0 && fakeRuns.map(run => (
+                  <span key={run.start} className="dg-timeline__scrub-fake"
+                    style={{ left: `${(run.start / totalCount) * 100}%`, width: `${((run.end - run.start + 1) / totalCount) * 100}%` }} />
+                ))}
+                <span className="dg-timeline__scrub-head" style={{ left: `${playRatio * 100}%` }} />
+              </div>
+              <span className="dg-timeline__scrub-time">{formatClock(currentTime)} / {formatClock(videoSec)}</span>
             </div>
           </div>
         )}

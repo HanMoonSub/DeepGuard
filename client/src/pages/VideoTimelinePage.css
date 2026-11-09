@@ -134,10 +134,22 @@
 /* 상단 */
 .dg-timeline__head {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 16px 24px;
   margin-bottom: 18px;
+}
+.dg-timeline__head--title {
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+.dg-timeline__head-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
 }
 .dg-timeline__back {
   display: inline-flex;
@@ -147,7 +159,7 @@
   border: none;
   background: none;
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--color-muted);
   cursor: pointer;
 }
@@ -177,11 +189,6 @@
   letter-spacing: -0.8px;
   line-height: 1.25;
 }
-.dg-timeline__sub {
-  margin: 6px 0 28px;
-  font-size: 15px;
-  color: var(--color-muted);
-}
 .dg-timeline__eyebrow {
   font-size: 12px;
   font-weight: 700;
@@ -189,15 +196,23 @@
   color: var(--color-muted);
 }
 
-/* 상단 2열: 영상 | 위조 비율 */
+/* 상단 2열: 영상 | 오른쪽 패널 */
 .dg-timeline__grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 24px;
   margin-bottom: 24px;
 }
+.dg-timeline__media-card,
+.dg-timeline__media-card .dg-card__body {
+  height: 100%;
+}
+.dg-timeline .dg-timeline__media-card {
+  padding: 14px;
+}
 .dg-timeline__media {
-  height: 300px;
+  height: 100%;
+  min-height: 360px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -209,62 +224,144 @@
   max-width: 100%;
   max-height: 100%;
 }
-
-.dg-timeline__ratio-card .dg-card__body {
-  height: 100%;
+.dg-timeline__side {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* 위조 비율 — 패널에서 가장 크게 */
+.dg-timeline .dg-timeline__ratio-card {
+  flex: 1;
+  display: flex;
+  padding: 24px 22px;
+}
+.dg-timeline__ratio-card .dg-card__body {
+  flex: 1;
+  display: flex;
 }
 .dg-timeline__ratio {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 32px;
-  margin-top: 20px;
+  gap: 16px;
+  text-align: center;
 }
 .dg-timeline__donut {
   flex-shrink: 0;
-  transform: rotate(-90deg);
 }
-.dg-timeline__donut-fake {
-  transition: stroke-dasharray 0.6s cubic-bezier(0.1, 1, 0.1, 1);
+.dg-timeline__donut-track {
+  stroke: var(--color-line);
 }
 .dg-timeline__donut-text {
   fill: var(--color-ink);
-  font-family: var(--font-mono);
-  font-size: 26px;
-  font-weight: 900;
-  transform: rotate(90deg);
-  transform-origin: 70px 70px;
+  font-size: 36px;
+  font-weight: 800;
 }
-.dg-timeline__legend {
+.dg-timeline__donut-label {
+  fill: var(--color-muted);
+  font-size: 13px;
+}
+.dg-timeline__verdict {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-.dg-timeline__legend-row {
-  display: flex;
   align-items: center;
   gap: 10px;
 }
-.dg-timeline__legend-row span {
-  width: 44px;
+.dg-timeline__verdict-badge {
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 800;
+}
+.dg-timeline__verdict-badge--fake {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.dg-timeline__verdict-badge--real {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.dg-timeline__verdict-count {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+/* 가장 의심되는 장면 TOP 2 (6차 A안 의심 구간 스타일, 프레임 단위) */
+.dg-timeline__top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dg-timeline__top-title {
+  font-size: 15px;
+  font-weight: 800;
+}
+.dg-timeline__top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+.dg-timeline__top-mark {
+  width: 8px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: var(--color-danger);
+}
+.dg-timeline__top-mark--real {
+  background: #5b95ff;
+}
+.dg-timeline__top-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dg-timeline__top-time {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+.dg-timeline__top-meta {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.dg-timeline__top-btn {
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-bg);
+  font: inherit;
   font-size: 12px;
   font-weight: 700;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: 0.15s;
+}
+.dg-timeline__top-btn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.dg-timeline__top-empty {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 13px;
   color: var(--color-muted);
 }
-.dg-timeline__legend-row strong {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 900;
-}
-.dg-timeline__legend-count {
-  margin-top: 2px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  color: var(--color-muted);
-}
+
 .dg-timeline__swatch {
   display: inline-block;
   width: 12px;
@@ -283,26 +380,6 @@
 }
 .dg-timeline__tone--real {
   color: var(--color-success);
-}
-
-/* 메타 정보 */
-.dg-timeline__meta {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid var(--color-line);
-}
-.dg-timeline__meta dt {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-muted);
-}
-.dg-timeline__meta dd {
-  font-family: var(--font-mono);
-  font-size: 15px;
-  font-weight: 700;
 }
 
 /* 하단 타임라인 보드 */
@@ -326,75 +403,115 @@
   gap: 6px;
 }
 
-/* 차트 — 치수(height/padding/gap/타임스탬프 높이)는 drawCanvas의 BAR_TOP/BAR_BOTTOM 계산과 맞물려 있어 기존 값 유지 */
+/* 차트 (E안) — 50% 판정 기준선 + 그라데이션 막대 */
 .dg-timeline__chart {
+  --tl-chart-h: 220px;
+  --tl-chart-top: 26px; /* 100% 막대 위 값 라벨 자리 */
   position: relative;
-  border-radius: 12px;
-  border: 1px solid var(--color-line);
-  background: var(--color-bg-alt);
+  height: calc(var(--tl-chart-h) + var(--tl-chart-top));
+  padding-top: var(--tl-chart-top);
+  border-bottom: 1px solid var(--color-line);
 }
-.dg-timeline__bars {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  height: 180px;
-  padding: 30px 40px;
-}
-.dg-timeline__bar-col {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-}
-.dg-timeline__bar {
-  width: 24%;
-  border-radius: 3px 3px 0 0;
-  transition: height 0.4s cubic-bezier(0.1, 1, 0.1, 1);
-}
-.dg-timeline__bar--fake {
-  background: var(--color-danger);
-  opacity: 0.85;
-}
-.dg-timeline__bar--real {
-  background: var(--color-success);
-  opacity: 0.75;
-}
-.dg-timeline__bar-time {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: normal;
-  color: var(--color-muted);
-}
-.dg-timeline__canvas {
+.dg-timeline__threshold {
   position: absolute;
-  top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: calc(var(--tl-chart-h) / 2);
+  border-top: 1.5px dashed color-mix(in srgb, var(--color-danger) 55%, transparent);
   pointer-events: none;
 }
-
-/* 그래프 hover 프레임 미리보기 */
+.dg-timeline__threshold span {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2; /* 막대에 가려지지 않게 */
+  transform: translateY(-50%);
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--color-danger-soft);
+  box-shadow: 0 0 0 3px var(--color-bg);
+  color: var(--color-danger);
+  font-size: 11px;
+  font-weight: 800;
+}
+.dg-timeline__bars {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  padding: 0 112px 0 24px; /* 오른쪽은 '판정 기준 50%' 라벨 자리 — 막대와 겹치지 않게 */
+}
 .dg-timeline__bar-col {
-  border-radius: 6px;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
   transition: background-color 0.15s;
 }
 .dg-timeline__bar-col.is-hover {
-  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  background: color-mix(in srgb, var(--color-ink) 5%, transparent);
 }
-/* 그래프 영역(.dg-timeline__chart) 안쪽, hover 구간 꼭짓점 바로 위에 작게 (위치는 JS 계산) */
+.dg-timeline__bar-col:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.dg-timeline__bar {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: min(34px, 70%);
+  transform: translateX(-50%);
+  border-radius: 10px 10px 4px 4px;
+  transition: height 0.4s cubic-bezier(0.1, 1, 0.1, 1), box-shadow 0.15s;
+}
+.dg-timeline__bar--fake {
+  background: linear-gradient(180deg, var(--color-danger), color-mix(in srgb, var(--color-danger) 50%, var(--color-bg)));
+}
+.dg-timeline__bar--real {
+  background: linear-gradient(180deg, #5b95ff, color-mix(in srgb, #5b95ff 35%, var(--color-bg)));
+}
+.dg-timeline__bar-col.is-hover .dg-timeline__bar {
+  box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-ink);
+}
+.dg-timeline__bar-value {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.dg-timeline__bar-value--fake {
+  color: var(--color-danger);
+}
+.dg-timeline__bar-value--real {
+  color: var(--color-muted);
+}
+.dg-timeline__swatch--normal {
+  background: #5b95ff;
+}
+/* hover 툴팁 — 막대 옆 (위치는 JS 계산) */
 .dg-timeline__preview {
   position: absolute;
+  top: 8px;
   z-index: 5;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
   border: 1px solid var(--color-line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--color-bg);
-  box-shadow: 0 8px 24px #0b122026;
+  box-shadow: 0 12px 32px #0b12201f;
   pointer-events: none;
   animation: dg-timeline-preview-in 0.12s ease-out;
 }
@@ -404,107 +521,88 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
+  border-radius: 8px;
   background: var(--color-ink);
 }
 .dg-timeline__preview-empty {
   display: grid;
   place-items: center;
   color: var(--color-on-dark-subtle);
-  font-size: 9px;
+  font-size: 10px;
 }
 .dg-timeline__preview-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 20px;
-  padding: 0 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
   color: var(--color-muted);
+}
+.dg-timeline__preview-info b {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 800;
+}
+.dg-timeline__preview-cta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
 }
 @keyframes dg-timeline-preview-in {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 구간별 리스트 */
-.dg-timeline__frames {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 24px;
-}
-.dg-timeline__frame {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding: 14px 20px;
-  border: 1px solid var(--color-line);
-  border-radius: 12px;
-  background: var(--color-bg);
-}
-.dg-timeline__frame-time {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-muted);
-}
-.dg-timeline__frame-info {
+/* 재생 위치 스크러버 */
+.dg-timeline__scrub {
   display: flex;
   align-items: center;
   gap: 14px;
+  margin-top: 18px;
 }
-.dg-timeline__frame-prob {
-  font-size: 13px;
-  color: var(--color-muted);
-}
-.dg-timeline__frame-prob b {
-  margin-left: 4px;
-  font-family: var(--font-mono);
-  font-size: 14px;
-}
-.dg-timeline__badge {
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-.dg-timeline__badge--fake {
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
-}
-.dg-timeline__badge--real {
-  background: var(--color-success-soft);
-  color: var(--color-success);
-}
-.dg-timeline__frame-btn {
-  padding: 3px 12px;
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  background: var(--color-bg);
-  font: inherit;
+.dg-timeline__scrub-label {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-muted);
-  cursor: pointer;
-  transition: 0.15s;
+  white-space: nowrap;
 }
-.dg-timeline__frame-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
+.dg-timeline__scrub-track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--color-ink) 7%, var(--color-bg));
+  cursor: pointer;
+}
+.dg-timeline__scrub-fake {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 99px;
+  background: var(--color-danger);
+}
+.dg-timeline__scrub-head {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--color-ink);
+  border-radius: 50%;
+  background: var(--color-bg);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.dg-timeline__scrub-time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-muted);
+  white-space: nowrap;
 }
 
 /* 반응형 */
 @media (max-width: 900px) {
   .dg-timeline__grid {
-    grid-template-columns: 1fr;
-  }
-  .dg-timeline__frames {
     grid-template-columns: 1fr;
   }
 }
@@ -520,15 +618,16 @@
     font-size: 24px;
   }
   .dg-timeline__media {
-    height: 220px;
+    min-height: 220px;
   }
-  .dg-timeline__ratio {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
-  }
-  /* 차트 좌우 여백만 축소 (상하 padding은 canvas 기준선 계산 때문에 유지) */
   .dg-timeline__bars {
-    padding: 30px 12px;
+    gap: 3px;
+    padding: 0 8px;
+  }
+  .dg-timeline__threshold span {
+    display: none;
+  }
+  .dg-timeline__scrub {
+    gap: 10px;
   }
 }
