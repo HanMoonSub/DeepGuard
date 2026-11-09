@@ -12,7 +12,8 @@ const DISPLAY_OPTIONS = [
   { value: 'bbox',         label: 'BBox',           desc: '위조 의심 영역을 박스로' },
   { value: 'heatmap_bbox', label: 'Heatmap + BBox', desc: '색과 박스를 함께' },
 ];
-export const DEFAULT_DISPLAY = { display_type: 'heatmap_bbox', overlay_ratio: 0.7, threshold: 0.8 };
+// 위조 흔적 임계값은 서버(explainability)에서 branch별 고정값을 쓴다 (전역 0.8 / 국소 0.95)
+export const DEFAULT_DISPLAY = { display_type: 'heatmap_bbox', overlay_ratio: 0.8 };
 
 // 0.05 단위 슬라이더 부동소수 오차 정리
 const round2 = (v) => Math.round(Number(v) * 100) / 100;
@@ -108,9 +109,6 @@ const HeatmapVisualSettings = ({ branches, branch, setBranch, draft, setDraft, d
         disabled={isBBox} note={isBBox ? 'BBox 모드에서는 적용 안 됨' : ''}
         onChange={(v) => update('overlay_ratio', v)}
         hint="높을수록 위조 의심 영역이 약하게 보여요" />
-      <RangeField id="ihm-threshold" label="위조 흔적 임계값" value={draft.threshold} min={0.7} max={0.95}
-        onChange={(v) => update('threshold', v)}
-        hint={`상위 ${Math.round((1 - draft.threshold) * 100)}%를 위조 의심 영역으로 표시해요`} />
 
       <div className="dg-ihm__apply-wrap">
         {dirtyCount > 0 && !isProcessing && (

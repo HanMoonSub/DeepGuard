@@ -92,7 +92,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
     setErrorMsg('');
     setErrorDetail('');
     setTaskId(null);
-    setApplied({ branch: nextBranch, display_type: display.display_type, overlay_ratio: display.overlay_ratio, threshold: display.threshold });
+    setApplied({ branch: nextBranch, display_type: display.display_type, overlay_ratio: display.overlay_ratio });
 
     const body = {
       model_type: modelType,
@@ -100,7 +100,6 @@ const ImageHeatmapPage = ({ sessionUser }) => {
       explainer_type: EXPLAINER_BY_BRANCH[nextBranch],
       display_type: display.display_type,
       overlay_ratio: display.overlay_ratio,
-      threshold: display.threshold,
     };
 
     try {
@@ -169,12 +168,10 @@ const ImageHeatmapPage = ({ sessionUser }) => {
     branch !== applied.branch,
     draft.display_type !== applied.display_type,
     draft.overlay_ratio !== applied.overlay_ratio,
-    draft.threshold !== applied.threshold,
   ].filter(Boolean).length;
   const canReset = branch !== defaultBranch
     || draft.display_type !== DEFAULT_DISPLAY.display_type
-    || draft.overlay_ratio !== DEFAULT_DISPLAY.overlay_ratio
-    || draft.threshold !== DEFAULT_DISPLAY.threshold;
+    || draft.overlay_ratio !== DEFAULT_DISPLAY.overlay_ratio;
   const isDone = status === 'done' && !!heatmapSrc;
 
   if (!state) return (
@@ -213,7 +210,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
           <div className="dg-ihm__canvas">
             {isDone && (
               <HeatmapZoomImage src={heatmapSrc} alt="위조 흔적 히트맵"
-                zoomable={applied.display_type !== 'heatmap'}
+                hasBoxes={applied.display_type !== 'heatmap'} zoomable={applied.branch === 'low'}
                 onError={(e) => { e.target.style.display = 'none'; setErrorMsg('이미지 로드 실패'); setErrorDetail(`URL: ${heatmapSrc}`); setStatus('error'); }}
               />
             )}
