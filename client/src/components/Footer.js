@@ -16,7 +16,6 @@ const COLUMNS = [
     links: [
       { label: 'Benchmark', href: '/main#bench' },
       { label: 'Explainability', href: '/main#xai' },
-      { label: 'Docs (API)', href: '/main#api' },
       { label: 'GitHub ↗', href: 'https://github.com/HanMoonSub/DeepGuard', external: true },
       {
         label: 'Hugging Face Spaces ↗',

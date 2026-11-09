@@ -440,7 +440,6 @@ const MainPage = ({ sessionUser, onLogout }) => {
             </p>
             <div className="dg-hero__cta">
               <Button variant="primary" href="/analysis" onClick={linkTo(handleBasicAnalysis)}>지금 분석해보기</Button>
-              <Button variant="ghost" href="#api">API 문서 →</Button>
             </div>
           </div>
           {/* 히어로 비주얼: 위 = 이미지 분석 4가지 시각화, 아래 = 영상 분석(재생 화면 + 위조 비율) */}

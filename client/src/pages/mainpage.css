@@ -332,14 +332,13 @@
   flex-wrap: wrap;
   gap: 12px;
 }
-/* API 문서 버튼: 흰 배경 + primary 테두리·글씨 */
-.dg-landing .dg-hero__cta .dg-btn--ghost {
+/* 지금 분석해보기 버튼: 흰 박스 + primary 글씨 */
+.dg-landing .dg-hero__cta .dg-btn--primary {
   background: #fff;
-  border: 1px solid var(--color-primary);
   color: var(--color-primary);
 }
-.dg-landing .dg-hero__cta .dg-btn--ghost:hover {
-  background: var(--color-primary-soft);
+.dg-landing .dg-hero__cta .dg-btn--primary:hover {
+  background: #e8f0ff;
   color: var(--color-primary);
 }
 

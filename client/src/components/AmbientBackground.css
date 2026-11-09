@@ -4,14 +4,13 @@
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  --amb-spot: rgba(32, 108, 253, 0.13);
-  --amb-a: rgba(91, 149, 255, 0.16);
-  --amb-b: rgba(147, 112, 255, 0.1);
-  --amb-c: rgba(25, 181, 232, 0.1);
-  --amb-beam: rgba(32, 108, 253, 0.55);
-  --amb-grain: 0.035;
+  background: linear-gradient(180deg, #e1ecff 0%, #edf3ff 38%, #f6f9ff 70%, #fbfcff 100%);
+  --amb-spot: rgba(255, 255, 255, 0.85);
+  --amb-beam: rgba(32, 108, 253, 0.45);
+  --amb-grain: 0.03;
 }
 :root[data-theme="dark"] .dg-ambient {
+  background: none;
   --amb-spot: rgba(32, 108, 253, 0.26);
   --amb-a: rgba(32, 108, 253, 0.22);
   --amb-b: rgba(124, 92, 255, 0.14);
@@ -20,8 +19,9 @@
   --amb-grain: 0.06;
 }
 
-/* 오로라 — 큰 메시 그라데이션이 아주 천천히 흐름 */
+/* 오로라 — 큰 메시 그라데이션이 아주 천천히 흐름 (dark 전용) */
 .dg-ambient__aurora {
+  display: none;
   position: absolute;
   inset: -20%;
   background:
@@ -32,10 +32,69 @@
   animation: dg-amb-flow 40s ease-in-out infinite alternate;
   will-change: transform;
 }
+:root[data-theme="dark"] .dg-ambient__aurora {
+  display: block;
+}
 @keyframes dg-amb-flow {
   0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
   50%  { transform: translate3d(-3%, 2%, 0) rotate(6deg) scale(1.05); }
   100% { transform: translate3d(2%, -3%, 0) rotate(-4deg) scale(1); }
+}
+
+/* 뭉게구름 — 흐릿한 원 여러 개를 겹쳐 한 덩어리로, 아주 천천히 흐름 (light 전용) */
+.dg-ambient__cloud {
+  position: absolute;
+  filter: blur(16px);
+  opacity: 0.95;
+  will-change: transform;
+}
+.dg-ambient__cloud--1 {
+  top: 5vh;
+  left: -10vw;
+  width: 48vw;
+  height: 32vh;
+  background:
+    radial-gradient(28% 42% at 22% 62%, #fff 0%, rgba(255, 255, 255, 0.9) 45%, transparent 72%),
+    radial-gradient(26% 50% at 44% 46%, #fff 0%, rgba(255, 255, 255, 0.92) 48%, transparent 74%),
+    radial-gradient(24% 40% at 66% 60%, #fff 0%, rgba(255, 255, 255, 0.88) 46%, transparent 72%),
+    radial-gradient(40% 30% at 46% 78%, rgba(214, 228, 255, 0.9), transparent 75%);
+  animation: dg-amb-cloud-a 26s ease-in-out infinite alternate;
+}
+.dg-ambient__cloud--2 {
+  top: 15vh;
+  right: -12vw;
+  width: 55vw;
+  height: 37vh;
+  background:
+    radial-gradient(26% 44% at 30% 58%, #fff 0%, rgba(255, 255, 255, 0.9) 46%, transparent 72%),
+    radial-gradient(30% 54% at 52% 42%, #fff 0%, rgba(255, 255, 255, 0.93) 48%, transparent 74%),
+    radial-gradient(22% 38% at 74% 62%, #fff 0%, rgba(255, 255, 255, 0.86) 46%, transparent 72%),
+    radial-gradient(44% 30% at 52% 80%, rgba(205, 222, 255, 0.85), transparent 75%);
+  animation: dg-amb-cloud-b 32s ease-in-out infinite alternate;
+}
+.dg-ambient__cloud--3 {
+  bottom: -8vh;
+  left: 26vw;
+  width: 60vw;
+  height: 35vh;
+  filter: blur(20px);
+  background:
+    radial-gradient(30% 46% at 30% 56%, rgba(255, 255, 255, 0.95) 0%, transparent 72%),
+    radial-gradient(32% 52% at 58% 48%, rgba(255, 255, 255, 0.95) 0%, transparent 74%),
+    radial-gradient(40% 34% at 50% 76%, rgba(220, 232, 255, 0.8), transparent 75%);
+  animation: dg-amb-cloud-c 38s ease-in-out infinite alternate;
+}
+:root[data-theme="dark"] .dg-ambient__cloud {
+  display: none;
+}
+@keyframes dg-amb-cloud-a {
+  to { transform: translate3d(4vw, -1vh, 0); }
+}
+@keyframes dg-amb-cloud-b {
+  to { transform: translate3d(-5vw, 1.2vh, 0); }
+}
+@keyframes dg-amb-cloud-c {
+  to { transform: translate3d(3vw, 0.8vh, 0); }
 }
 
 /* 위에서 내려오는 스포트라이트 */
@@ -77,6 +136,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dg-ambient__aurora,
+  .dg-ambient__cloud,
   .dg-ambient__beam {
     animation: none;
   }
