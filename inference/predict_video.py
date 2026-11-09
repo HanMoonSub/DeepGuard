@@ -18,6 +18,21 @@ y_ = Fore.YELLOW
 s_ = Style.BRIGHT
 rs_ = Style.RESET_ALL
 
+def rule_based_fake_prob(result: dict, fake_thres: float) -> float:
+    """
+    predict_video_artifacts 결과로 최종 fake 확률 계산 (rule-base)
+      - prob(1-real) >= fake_thres : prob 그대로 사용
+      - prob < fake_thres          : prob + artifact 20개 = 21개 확률 중 최댓값 사용
+    얼굴 미검출(artifacts None)이면 prob(0.5)를 그대로 사용
+    """
+    prob = result["prob"]
+    artifacts = result["artifacts"]
+    if prob >= fake_thres or artifacts is None:
+        return prob
+
+    artifact_probs = [p for types in artifacts.values() for p in types.values()]
+    return max([prob] + artifact_probs)
+
 def main():
     parser = argparse.ArgumentParser(description="Predict DeepFake Video")
     # --- Data & Path Settings ---
@@ -38,6 +53,7 @@ def main():
     parser.add_argument("--num-frames", default=20, type=int, help="Number of frames to sample per video")
     parser.add_argument("--agg-mode", default='conf', type=str, help="Aggregation method for frame-level predictions")
     parser.add_argument("--tta-hflip", default=0.0, type=float, help="Probability of horizontal flip for Test-Time Augmentation (TTA)")
+    parser.add_argument("--fake-thres", default=0.8, type=float, help="[deepclip only] If prob >= this, use prob as is; otherwise use the max of prob and the 20 artifact probs")
     
     args = parser.parse_args()
     
@@ -78,7 +94,11 @@ def main():
     all_true = meta_df[args.label_col]
     
     for video_path in tqdm(meta_df['video_path'], total=len(meta_df), desc=f"Test Evaluation (Data: {args.dataset} | Model: {model_desc})"):
-        pred = video_predictor.predict_video(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
+        if is_clip:
+            result = video_predictor.predict_video_artifacts(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
+            pred = rule_based_fake_prob(result, args.fake_thres)
+        else:
+            pred = video_predictor.predict_video(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
         all_pred.append(pred)
         
     all_pred = np.array(all_pred)
