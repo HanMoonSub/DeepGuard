@@ -1,5 +1,7 @@
 /* 동영상 타임라인 페이지 전용 스타일 — 다른 페이지에 새지 않도록 .dg-timeline 하위로 한정 */
 .dg-timeline {
+  isolation: isolate; /* AmbientBackground(z-index:-1)를 콘텐츠 뒤에 깔기 위함 */
+  --tl-real: #5b95ff; /* Real 구간 색 (트랙과 동일) */
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: var(--color-bg-alt);
@@ -169,20 +171,6 @@
 .dg-timeline__back span {
   font-size: 18px;
 }
-.dg-timeline__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.dg-timeline__chips span {
-  padding: 4px 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-primary-border);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 13px;
-  font-weight: 600;
-}
 .dg-timeline__title {
   font-size: 30px;
   font-weight: 800;
@@ -207,22 +195,28 @@
 .dg-timeline__media-card .dg-card__body {
   height: 100%;
 }
+.dg-timeline__media-card .dg-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .dg-timeline .dg-timeline__media-card {
-  padding: 14px;
+  padding: 14px 14px 10px;
 }
 .dg-timeline__media {
-  height: 100%;
-  min-height: 360px;
+  flex: 1;
+  min-height: 300px;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
   border-radius: 12px;
-  background: var(--color-ink);
+  background: #0b1220; /* 영상 프레임은 테마와 무관하게 어둡게 */
 }
 .dg-timeline__media video {
   max-width: 100%;
   max-height: 100%;
+  cursor: pointer;
 }
 .dg-timeline__side {
   display: flex;
@@ -320,7 +314,7 @@
   background: var(--color-danger);
 }
 .dg-timeline__top-mark--real {
-  background: #5b95ff;
+  background: var(--tl-real);
 }
 .dg-timeline__top-info {
   flex: 1;
@@ -373,23 +367,79 @@
   background: var(--color-danger);
 }
 .dg-timeline__swatch--real {
-  background: var(--color-success);
+  background: var(--tl-real);
 }
 .dg-timeline__tone--fake {
   color: var(--color-danger);
 }
 .dg-timeline__tone--real {
-  color: var(--color-success);
+  color: var(--tl-real);
 }
 
 /* 하단 타임라인 보드 */
-.dg-timeline__board-head {
+.dg-timeline__board-toggle {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dg-timeline__board-title {
+  display: flex;
+  align-items: baseline;
   flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-bottom: 20px;
+  gap: 4px 14px;
+}
+.dg-timeline__board-desc {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.dg-timeline__board-action {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px 6px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  transition: border-color 0.2s, background 0.2s;
+}
+.dg-timeline__board-toggle:hover .dg-timeline__board-action,
+.dg-timeline__board-toggle:focus-visible .dg-timeline__board-action {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-soft);
+}
+.dg-timeline__board-toggle:focus-visible {
+  outline: none;
+}
+.dg-timeline__board-action svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+.dg-timeline__board-action svg.is-open {
+  transform: rotate(180deg);
+}
+.dg-timeline__board-body {
+  margin-top: 20px;
+}
+.dg-timeline__board-body > .dg-timeline__board-legend {
+  margin-bottom: 16px;
 }
 .dg-timeline__board-legend {
   display: flex;
@@ -475,7 +525,7 @@
   background: linear-gradient(180deg, var(--color-danger), color-mix(in srgb, var(--color-danger) 50%, var(--color-bg)));
 }
 .dg-timeline__bar--real {
-  background: linear-gradient(180deg, #5b95ff, color-mix(in srgb, #5b95ff 35%, var(--color-bg)));
+  background: linear-gradient(180deg, var(--tl-real), color-mix(in srgb, var(--tl-real) 35%, var(--color-bg)));
 }
 .dg-timeline__bar-col.is-hover .dg-timeline__bar {
   box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-ink);
@@ -497,7 +547,7 @@
   color: var(--color-muted);
 }
 .dg-timeline__swatch--normal {
-  background: #5b95ff;
+  background: var(--tl-real);
 }
 /* hover 툴팁 — 막대 옆 (위치는 JS 계산) */
 .dg-timeline__preview {
@@ -553,53 +603,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 재생 위치 스크러버 */
-.dg-timeline__scrub {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 18px;
-}
-.dg-timeline__scrub-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-muted);
-  white-space: nowrap;
-}
-.dg-timeline__scrub-track {
-  position: relative;
-  flex: 1;
-  height: 8px;
-  border-radius: 99px;
-  background: color-mix(in srgb, var(--color-ink) 7%, var(--color-bg));
-  cursor: pointer;
-}
-.dg-timeline__scrub-fake {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: 99px;
-  background: var(--color-danger);
-}
-.dg-timeline__scrub-head {
-  position: absolute;
-  top: 50%;
-  width: 16px;
-  height: 16px;
-  border: 3px solid var(--color-ink);
-  border-radius: 50%;
-  background: var(--color-bg);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-.dg-timeline__scrub-time {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-muted);
-  white-space: nowrap;
-}
-
 /* 반응형 */
 @media (max-width: 900px) {
   .dg-timeline__grid {
@@ -626,8 +629,5 @@
   }
   .dg-timeline__threshold span {
     display: none;
-  }
-  .dg-timeline__scrub {
-    gap: 10px;
   }
 }

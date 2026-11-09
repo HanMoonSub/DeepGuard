@@ -1,0 +1,203 @@
+/* 영상 아래 재생 컨트롤 + Deepfake / Real 구간 트랙 */
+.dg-vtrack {
+  --vt-real: #5b95ff;
+  --vt-label-w: 96px;
+  --vt-ruler-h: 34px;
+  --vt-row-h: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+}
+
+/* 컨트롤 */
+.dg-vtrack__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 0;
+}
+.dg-vtrack__clock {
+  min-width: 104px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.dg-vtrack__clock i {
+  font-style: normal;
+  color: var(--color-muted);
+}
+.dg-vtrack__spacer {
+  flex: 1;
+}
+.dg-vtrack__btn {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dg-vtrack__btn:hover,
+.dg-vtrack__btn:focus-visible {
+  outline: none;
+  background: var(--color-primary-soft);
+}
+.dg-vtrack__btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dg-vtrack__btn svg.is-fill {
+  fill: currentColor;
+}
+.dg-vtrack__play svg {
+  width: 24px;
+  height: 24px;
+}
+.dg-vtrack__speed {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* 트랙 */
+.dg-vtrack__body {
+  display: flex;
+  border-top: 1px solid var(--color-line);
+}
+.dg-vtrack__labels {
+  flex: none;
+  width: var(--vt-label-w);
+  display: flex;
+  flex-direction: column;
+}
+.dg-vtrack__label-ruler {
+  height: var(--vt-ruler-h);
+}
+.dg-vtrack__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--vt-row-h);
+  padding-left: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+.dg-vtrack__label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dg-vtrack__label--fake::before { background: var(--color-danger); }
+.dg-vtrack__label--real::before { background: var(--vt-real); }
+.dg-vtrack__label--fake,
+.dg-vtrack__row--fake {
+  background: color-mix(in srgb, var(--color-ink) 3%, var(--color-bg));
+}
+
+.dg-vtrack__area {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  margin-right: 14px;
+  cursor: pointer;
+  touch-action: none;
+}
+.dg-vtrack__area.is-dragging {
+  cursor: grabbing;
+}
+.dg-vtrack__ruler {
+  position: relative;
+  height: var(--vt-ruler-h);
+  border-bottom: 1px solid var(--color-muted);
+}
+.dg-vtrack__tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 6px;
+  background: var(--color-muted);
+}
+.dg-vtrack__tick.is-major {
+  height: 12px;
+}
+.dg-vtrack__tick em {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.dg-vtrack__row {
+  position: relative;
+  height: var(--vt-row-h);
+  border-left: 1px solid var(--color-muted);
+}
+.dg-vtrack__seg {
+  position: absolute;
+  top: 50%;
+  height: 10px;
+  transform: translateY(-50%);
+}
+.dg-vtrack__row--fake .dg-vtrack__seg { background: var(--color-danger); }
+.dg-vtrack__row--real .dg-vtrack__seg { background: var(--vt-real); }
+
+/* 재생 위치 */
+.dg-vtrack__head {
+  position: absolute;
+  top: 4px;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-danger);
+  pointer-events: none;
+}
+.dg-vtrack__handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 14px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-bg), 0 2px 6px rgba(11, 18, 32, 0.25);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  cursor: grab;
+}
+.dg-vtrack__handle::after {
+  content: '';
+  position: absolute;
+  inset: 6px 4px;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.85);
+}
+.dg-vtrack__handle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-primary);
+}
+
+@media (max-width: 560px) {
+  .dg-vtrack {
+    --vt-label-w: 76px;
+  }
+  .dg-vtrack__clock {
+    min-width: 0;
+    font-size: 12px;
+  }
+}

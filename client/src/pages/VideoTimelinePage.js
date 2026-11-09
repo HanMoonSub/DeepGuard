@@ -3,9 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import Navbar from '../components/Navbar';
+import useTheme from '../hooks/useTheme';
+import AmbientBackground from '../components/AmbientBackground';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import VideoSegmentTrack from '../components/VideoSegmentTrack';
 import useCountUp from '../utils/useCountUp';
 import './VideoTimelinePage.css';
 
@@ -13,16 +16,20 @@ import './VideoTimelinePage.css';
 const COLOR_FAKE = '#ff4d4d';
 const DONUT_R = 70;
 
-// 공통 레이아웃: Navbar(light) + 본문 + Footer
-const TimelineLayout = ({ sessionUser, children }) => (
-  <div className="dg-timeline">
-    <Navbar variant="light" sessionUser={sessionUser} />
-    <main className="dg-timeline__main">
-      <div className="dg-timeline__wrap">{children}</div>
-    </main>
-    <Footer />
-  </div>
-);
+// 공통 레이아웃: Navbar(light, 다크/라이트 전환) + 본문 + Footer
+const TimelineLayout = ({ sessionUser, children }) => {
+  const [theme, setTheme] = useTheme();
+  return (
+    <div className="dg-timeline">
+      <AmbientBackground />
+      <Navbar variant="light" sessionUser={sessionUser} theme={theme} onThemeChange={setTheme} />
+      <main className="dg-timeline__main">
+        <div className="dg-timeline__wrap">{children}</div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
 
 const normalizeFrame = (f, i) => {
   const raw = f.score ?? f.fake_score ?? 0;
@@ -83,12 +90,6 @@ const ERROR_VIEWS = {
   },
 };
 
-// 초 → mm:ss
-const formatClock = (sec) => {
-  const s = Math.max(Math.floor(sec || 0), 0);
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-};
-
 const VideoTimelinePage = ({ sessionUser }) => {
   const { state: data } = useLocation();
   const navigate = useNavigate();
@@ -99,7 +100,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
   const [thumbs, setThumbs]       = useState({});   // { frame_index: dataURL } 그래프 hover 미리보기용
   const [hoverIdx, setHoverIdx]   = useState(null); // 그래프에서 커서가 올라간 프레임 순번
   const [duration, setDuration]   = useState(null); // 영상 길이(초) — video 메타데이터에서
-  const [currentTime, setCurrentTime] = useState(0); // 재생 위치(초) — 하단 스크러버 표시용
+  const [isGraphOpen, setIsGraphOpen] = useState(false); // 타임라인 그래프 펼침 (기본 접힘)
 
   const videoId = data?.video_id || data?.id;
   const mediaLoc = data?.video_loc || '';
@@ -212,13 +213,6 @@ const VideoTimelinePage = ({ sessionUser }) => {
           <button type="button" className="dg-timeline__back" onClick={() => navigate(-1)}>
             <span aria-hidden="true">←</span> 뒤로가기
           </button>
-          {data && (
-            <div className="dg-timeline__chips">
-              {data.domain_type && <span>{data.domain_type}</span>}
-              {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
-              {data.version_type && <span>{data.version_type.toUpperCase()}</span>}
-            </div>
-          )}
         </header>
 
         <Card className={`dg-card--static dg-timeline__error dg-timeline__error--${view.tone}`}>
@@ -243,12 +237,13 @@ const VideoTimelinePage = ({ sessionUser }) => {
       video_id: videoId,
       frame_index: frame.frame_index,
       timestamp: frame.timestamp,
+      frame_time: frame.frame_time,
       fake_score: frame.fake_score,
       model_type: data.model_type || 'fast',
       version_type: data.version_type || 'v1',
       video_name: data.video_name,
       // 히트맵 화면에서 이전/다음 구간으로 바로 이동할 수 있게 구간 목록을 함께 전달
-      frames: timelineData.map(f => ({ frame_index: f.frame_index, timestamp: f.timestamp, fake_score: f.fake_score })),
+      frames: timelineData.map(f => ({ frame_index: f.frame_index, timestamp: f.timestamp, frame_time: f.frame_time, fake_score: f.fake_score })),
     }
   });
 
@@ -270,22 +265,6 @@ const VideoTimelinePage = ({ sessionUser }) => {
       ? <>동영상 내 <b className="dg-timeline__tone--fake">{Math.max(fakeSec, 1)}초</b> 동안 위조 흔적이 보입니다</>
       : <>{totalCount}개 구간 중 <b className="dg-timeline__tone--fake">{fakeCount}개</b> 구간에서 위조 흔적이 보입니다</>);
 
-  // 타임라인(E안): 스크러버의 위조 구간(연속된 50% 초과 프레임 묶음)
-  const fakeRuns = [];
-  timelineData.forEach((f, i) => {
-    if (f.fake_score <= 50) return;
-    const last = fakeRuns[fakeRuns.length - 1];
-    if (last && last.end === i - 1) last.end = i;
-    else fakeRuns.push({ start: i, end: i });
-  });
-  const playRatio = videoSec ? Math.min(Math.max(currentTime / videoSec, 0), 1) : 0;
-  const seekTo = (e) => {
-    const v = videoRef.current;
-    if (!v || !videoSec) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    v.currentTime = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) * videoSec;
-  };
-
   // 가장 의심되는 장면: 딥페이크 확률이 가장 높은 프레임 2개
   const topFrames = [...timelineData].sort((a, b) => b.fake_score - a.fake_score).slice(0, 2);
 
@@ -297,12 +276,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
           <button type="button" className="dg-timeline__back" onClick={() => navigate(-1)}>
             <span aria-hidden="true">←</span> 뒤로가기
           </button>
-          <h2 className="dg-timeline__title">동영상 구간별 위조 분석</h2>
-        </div>
-        <div className="dg-timeline__chips">
-          {data.domain_type && <span>{data.domain_type}</span>}
-          {data.model_type && <span>{data.model_type.toUpperCase()}</span>}
-          {data.version_type && <span>{data.version_type.toUpperCase()}</span>}
+          <h2 className="dg-timeline__title">동영상 구간별 분석</h2>
         </div>
       </header>
 
@@ -310,10 +284,12 @@ const VideoTimelinePage = ({ sessionUser }) => {
       <div className="dg-timeline__grid">
         <Card className="dg-card--static dg-timeline__media-card">
           <div className="dg-timeline__media">
-            <video ref={videoRef} src={mediaSrc} controls
-              onLoadedMetadata={e => { if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration); }}
-              onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)} />
+            <video ref={videoRef} src={mediaSrc} playsInline
+              onClick={e => { const v = e.currentTarget; if (v.paused) v.play().catch(() => {}); else v.pause(); }}
+              onLoadedMetadata={e => { if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration); }} />
           </div>
+          {/* 영상 아래: 재생 컨트롤 + Deepfake / Real 구간 (드래그해서 초 단위 이동) */}
+          <VideoSegmentTrack videoRef={videoRef} duration={videoSec} frames={timelineData} />
         </Card>
 
         <aside className="dg-timeline__side">
@@ -352,7 +328,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                   <span className="dg-timeline__top-info">
                     <b className="dg-timeline__top-time">{frame.timestamp}</b>
                     <span className="dg-timeline__top-meta">
-                      딥페이크 확률: <b className={`dg-timeline__tone--${tone}`}>{Math.round(frame.fake_score)}%</b>
+                      딥페이크 확률: <b className={`dg-timeline__tone--${tone}`}>{Number(frame.fake_score).toFixed(1)}%</b>
                     </span>
                   </span>
                   <button type="button" className="dg-timeline__top-btn" onClick={() => goHeatmap(frame)}
@@ -368,12 +344,23 @@ const VideoTimelinePage = ({ sessionUser }) => {
 
       {/* 하단: 타임라인 그래프 & 프레임 데이터 보드 */}
       <Card className="dg-card--static dg-timeline__board">
-        <div className="dg-timeline__board-head">
-          <p className="dg-timeline__eyebrow">타임라인</p>
-          <div className="dg-timeline__board-legend">
-            <span><i className="dg-timeline__swatch dg-timeline__swatch--fake" />변조 의심 (50% 초과)</span>
-            <span><i className="dg-timeline__swatch dg-timeline__swatch--normal" />정상 (50% 이하)</span>
-          </div>
+        <button type="button" className="dg-timeline__board-toggle" onClick={() => setIsGraphOpen(o => !o)}
+          aria-expanded={isGraphOpen} aria-controls="tl-graph">
+          <span className="dg-timeline__board-title">
+            <span className="dg-timeline__eyebrow">타임라인 그래프</span>
+            <span className="dg-timeline__board-desc">구간별 딥페이크 확률을 상세히 알 수 있어요</span>
+          </span>
+          <span className="dg-timeline__board-action">
+            {isGraphOpen ? '접기' : '펼치기'}
+            <svg viewBox="0 0 24 24" aria-hidden="true" className={isGraphOpen ? 'is-open' : ''}><path d="M6 9l6 6 6-6" /></svg>
+          </span>
+        </button>
+
+        {isGraphOpen && (
+        <div id="tl-graph" className="dg-timeline__board-body">
+        <div className="dg-timeline__board-legend">
+          <span><i className="dg-timeline__swatch dg-timeline__swatch--fake" />변조 의심 (50% 초과)</span>
+          <span><i className="dg-timeline__swatch dg-timeline__swatch--normal" />정상 (50% 이하)</span>
         </div>
 
         {isLoading ? (
@@ -407,7 +394,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                       aria-label={`${frame.timestamp} 위조 확률 ${score.toFixed(1)}%, 위조 흔적 보기`}
                     >
                       <b className={`dg-timeline__bar-value dg-timeline__bar-value--${tone}`} style={{ bottom: `calc(${h}% + 6px)` }}>
-                        {Math.round(score)}
+                        {score.toFixed(1)}
                       </b>
                       <span className={`dg-timeline__bar dg-timeline__bar--${tone}`} style={{ height: `${h}%` }} />
                     </button>
@@ -442,25 +429,15 @@ const VideoTimelinePage = ({ sessionUser }) => {
                       <span>{frame.timestamp}</span>
                       <b className={`dg-timeline__tone--${tone}`}>{Number(frame.fake_score).toFixed(1)}%</b>
                     </div>
-                    <span className="dg-timeline__preview-cta">클릭해서 위조 흔적 보기 →</span>
+                    <span className="dg-timeline__preview-cta">클릭해서 위조 흔적 보기</span>
                   </div>
                 );
               })()}
             </div>
 
-            {/* 재생 위치 스크러버: 빨간 구간 = 위조 의심, 클릭하면 해당 위치로 이동 */}
-            <div className="dg-timeline__scrub">
-              <span className="dg-timeline__scrub-label">재생 위치</span>
-              <div className="dg-timeline__scrub-track" onClick={seekTo} role="presentation">
-                {totalCount > 0 && fakeRuns.map(run => (
-                  <span key={run.start} className="dg-timeline__scrub-fake"
-                    style={{ left: `${(run.start / totalCount) * 100}%`, width: `${((run.end - run.start + 1) / totalCount) * 100}%` }} />
-                ))}
-                <span className="dg-timeline__scrub-head" style={{ left: `${playRatio * 100}%` }} />
-              </div>
-              <span className="dg-timeline__scrub-time">{formatClock(currentTime)} / {formatClock(videoSec)}</span>
-            </div>
           </div>
+        )}
+        </div>
         )}
       </Card>
     </TimelineLayout>
