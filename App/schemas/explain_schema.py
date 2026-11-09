@@ -17,7 +17,10 @@ from pydantic import BaseModel, Field, model_validator
 #   - xgradcam     : gradient를 normalized activation으로 스케일링
 #                    → attribution 합이 logit 변화량과 수학적으로 일치, 충실도 높음 (aug_smooth: O, eigen_smooth: O)
 #
-# [BOTH] v1/v2 공통 → low(LayerCAM) + high(EigenGradCAM) CAM을 가중 평균(fuse="mean", low_weight=0.5, 서버 고정)으로 결합
+# [BOTH] v1/v2 공통 → low(LayerCAM) + high(EigenGradCAM) CAM을 가중 평균(fuse="mean", low_weight=0.6, 서버 고정)으로 결합
+#
+# 위조 흔적 임계값(threshold)은 client에서 받지 않고 explainability의 branch별 고정값을 쓴다
+#   - high: 0.8, low: 0.95, both: low/high CAM을 각각 0.95/0.8로 이진화한 뒤 합집합
 #   - fusion       : v1 BranchFusionExplainer / v2 ClipBranchFusionExplainer (aug_smooth: O, eigen_smooth: X)
 
 _LOW_ALLOWED  = {"hirescam", "gradcamelementwise", "layercam"}
@@ -45,11 +48,8 @@ class ExplainImageRequest(BaseModel):
     display_type: Literal["heatmap", "bbox", "heatmap_bbox"] = Field("heatmap_bbox", 
                                                                      description="시각화 형태. heatmap: 전체 분포, bbox: 위조 의심 영역 사각형, heatmap_bbox: 위조 의심 사각형 내부에 블러 처리된 히트맵을 중첩")
     
-    overlay_ratio: float = Field(0.7, ge=0.5, le=1.0, 
+    overlay_ratio: float = Field(0.8, ge=0.5, le=1.0, 
                                  description = "Heatmap 투명도 (0: 히트맵만 강조, 1: 원본 이미지 위주)")
-    
-    threshold: float = Field(0.9, ge=0.5, le=1.0, 
-                             description="contour/bbox 이진화 임계값 (0.0~1.0)")
     
     aug_smooth: bool = Field(False, 
                              description = "TTA(Test Time Augmentation) 적용 여부. 히트맵을 더 객체 중심적으로 정렬")

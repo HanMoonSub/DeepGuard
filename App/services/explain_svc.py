@@ -27,7 +27,7 @@ EXPLAINER_REGISTRY = {
 
 # both(branch 결합) 설정 — client에서 변경 불가
 FUSION_MODE = "mean"
-FUSION_LOW_WEIGHT = 0.5
+FUSION_LOW_WEIGHT = 0.6
 
 # v2(DeepClip)용 explainer
 CLIP_EXPLAINER_REGISTRY = {
@@ -68,7 +68,7 @@ def _get_or_create_explainer(model_name: str, dataset: str | None, explain_req_d
     """캐시에서 Explainer를 조회하거나, 없으면 새로 생성해 캐싱 후 반환한다.
 
     캐시 키는 (model_name, dataset, explainer_type, branch_level) 4개 파라미터로 구성된다.
-    추론 시점 파라미터(aug_smooth, threshold 등)는 키에서 제외해 메모리 사용을 최소화한다.
+    추론 시점 파라미터(aug_smooth, overlay_ratio 등)는 키에서 제외해 메모리 사용을 최소화한다.
 
     Args:
         model_name (str): 추론에 사용할 모델 이름. deepclip_* 이면 Clip explainer를 사용한다.
@@ -122,7 +122,6 @@ def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, 
         explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
             - display_type (str): "heatmap" | "bbox" | "heatmap_bbox"
             - overlay_ratio (float): 히트맵 오버레이 시 원본 이미지 가중치.
-            - threshold (float | str): CAM 이진화 임계값.
             - aug_smooth (bool): Test-time augmentation 가동 여부.
             - eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부.
 
@@ -130,13 +129,13 @@ def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, 
         np.ndarray: 시각화가 적용된 얼굴 이미지 (RGB, np.uint8).
     """
     if explain_req_dict["display_type"] == "heatmap":
-        return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
+        return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"],
                                                  category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
     elif explain_req_dict["display_type"] == "bbox":  
-        return explainer.display_bbox_on_image(image_path, threshold=explain_req_dict["threshold"],
+        return explainer.display_bbox_on_image(image_path,
                                               category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
     else: # display_type == "heatmap_bbox"
-        return explainer.display_heatmap_bbox_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"], 
+        return explainer.display_heatmap_bbox_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], 
                                                        category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 
 def _run_visualization_from_array(explainer: CAMExplainer, face: np.ndarray, category: int, explain_req_dict: dict) -> np.ndarray:
@@ -152,13 +151,13 @@ def _run_visualization_from_array(explainer: CAMExplainer, face: np.ndarray, cat
         np.ndarray: 시각화가 적용된 얼굴 이미지 (RGB, np.uint8).
     """
     if explain_req_dict["display_type"] == "heatmap":
-        return explainer.display_heatmap_from_array(face, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"],
+        return explainer.display_heatmap_from_array(face, image_weight=explain_req_dict["overlay_ratio"],
                                                  category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
     elif explain_req_dict["display_type"] == "bbox":  
-        return explainer.display_bbox_from_array(face, threshold=explain_req_dict["threshold"],
+        return explainer.display_bbox_from_array(face,
                                               category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
     else: # display_type == "heatmap_bbox"
-        return explainer.display_heatmap_bbox_from_array(face, image_weight=explain_req_dict["overlay_ratio"], threshold=explain_req_dict["threshold"], 
+        return explainer.display_heatmap_bbox_from_array(face, image_weight=explain_req_dict["overlay_ratio"], 
                                                        category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 
 @celery_app.task(name="process_explain_image_task")
