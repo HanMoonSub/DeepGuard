@@ -1,0 +1,214 @@
+/* 스크롤 연동 히어로: 섹션 높이만큼 스크롤하는 동안 stage가 화면에 고정됨 */
+.dg-sh {
+  position: relative;
+  height: 520vh;
+  color: var(--color-on-dark);
+  background: linear-gradient(180deg, var(--color-bg-dark), var(--color-bg-dark-2));
+}
+
+.dg-sh__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+/* 은은한 격자 */
+.dg-sh__stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(#ffffff0b 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff0b 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 75% at 62% 50%, #000 25%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 75% at 62% 50%, #000 25%, transparent 75%);
+}
+
+.dg-sh__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dg-sh__copy {
+  position: relative;
+  height: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.dg-sh__step {
+  --dg-sh-shift: 24px;
+  position: absolute;
+  left: var(--gutter);
+  top: 50%;
+  max-width: min(540px, calc(50vw - 40px));
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(calc(-50% + var(--dg-sh-shift)));
+  will-change: opacity, transform;
+}
+
+.dg-landing .dg-sh__title {
+  font-size: clamp(56px, 5.4vw, 78px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.dg-landing .dg-sh__title em,
+.dg-landing .dg-sh__heading em {
+  font-style: normal;
+  color: var(--color-accent);
+}
+.dg-landing .dg-sh__heading {
+  font-size: clamp(44px, 4.2vw, 60px);
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+.dg-landing .dg-sh__lead {
+  margin: 24px 0 0;
+  font-size: clamp(19px, 1.6vw, 22px);
+  line-height: 1.65;
+  color: var(--color-on-dark-muted);
+}
+
+.dg-sh__score {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  line-height: 1;
+}
+.dg-sh__score b {
+  font-size: clamp(80px, 7.4vw, 104px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-danger);
+  text-shadow: 0 0 40px rgba(255, 77, 77, 0.45);
+}
+.dg-sh__score span {
+  font-family: var(--font-mono);
+  font-size: clamp(36px, 3.4vw, 48px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dg-sh__verdict .dg-hero__cta {
+  margin-top: 30px;
+}
+
+/* 오른쪽 진행 표시 */
+.dg-sh__rail {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translateY(-50%);
+}
+.dg-sh__rail li {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: height 0.3s, background 0.3s;
+}
+.dg-sh__rail li.is-on {
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
+.dg-sh__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--color-on-dark-subtle);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.dg-sh__mouse {
+  position: relative;
+  width: 22px;
+  height: 34px;
+  border: 1.5px solid currentColor;
+  border-radius: 12px;
+}
+.dg-sh__mouse::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  width: 3px;
+  height: 7px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: dg-sh-wheel 1.6s ease-in-out infinite;
+}
+@keyframes dg-sh-wheel {
+  0% { opacity: 0; transform: translateY(-3px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(9px); }
+}
+
+@media (max-width: 899px) {
+  .dg-sh {
+    height: 460vh;
+  }
+  /* 모바일: 얼굴은 위, 텍스트는 아래 */
+  .dg-sh__step {
+    top: auto;
+    bottom: 9vh;
+    right: var(--gutter);
+    max-width: none;
+    transform: translateY(var(--dg-sh-shift));
+  }
+  .dg-landing .dg-sh__title {
+    font-size: 46px;
+  }
+  .dg-landing .dg-sh__heading {
+    font-size: 36px;
+  }
+  .dg-landing .dg-sh__lead {
+    margin-top: 14px;
+    font-size: 17px;
+  }
+  .dg-sh__score b {
+    font-size: 64px;
+  }
+  .dg-sh__score span {
+    font-size: 32px;
+  }
+  .dg-sh__verdict .dg-hero__cta {
+    margin-top: 20px;
+  }
+  .dg-sh__rail {
+    right: 12px;
+  }
+  .dg-sh__hint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dg-sh__mouse::after {
+    animation: none;
+  }
+}
