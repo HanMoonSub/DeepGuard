@@ -17,9 +17,9 @@ const POLL_INTERVAL = 2000;
 
 // branch별 XAI 기법 (low: 국소 흔적 / high: 전역 구조 / both: 둘을 결합)
 const EXPLAINER_BY_BRANCH = { low: 'layercam', high: 'eigengradcam', both: 'fusion' };
-// 버전별 표시할 branch와 기본값 (v1: MS-EffGCViT / v2: DeepClip beta)
-const BRANCHES_BY_VERSION = { v1: ['low', 'high', 'both'], v2: ['low', 'high', 'both'] };
-const DEFAULT_BRANCH = { v1: 'both', v2: 'both' };
+// 버전별 표시할 branch와 기본값 (v1: MS-EffGCViT)
+const BRANCHES_BY_VERSION = { v1: ['low', 'high', 'both'] };
+const DEFAULT_BRANCH = { v1: 'both' };
 const extractTaskId = (data) => {
   if (typeof data === 'string') return data;
   return data?.task_id || data?.id || null;
@@ -266,9 +266,22 @@ const HeatmapPage = ({ sessionUser }) => {
           )}
           <div className="dg-ihm__canvas">
             {/* 왼쪽 위: 현재 구간 시각 */}
-            <span className="dg-ihm__frame-chip">
+            {/* 여러 구간이면 칩을 눌러 원하는 초로 바로 이동 (화살표 없이) */}
+            <span className={`dg-ihm__frame-chip${frames.length > 1 ? ' is-select' : ''}`}>
               {secLabel(curFrame) || `#${frame_index}`}
               {frames.length > 1 && curPos >= 0 && <em>{curPos + 1} / {frames.length}</em>}
+              {frames.length > 1 && (
+                <>
+                  <svg className="dg-ihm__frame-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                  <select className="dg-ihm__frame-select" aria-label="이동할 구간 선택"
+                    value={curPos >= 0 ? curPos : ''}
+                    onChange={(e) => goFrame(frames[Number(e.target.value)])}>
+                    {frames.map((f, i) => (
+                      <option key={f.frame_index ?? i} value={i}>{secLabel(f) || `#${f.frame_index}`} ({i + 1} / {frames.length})</option>
+                    ))}
+                  </select>
+                </>
+              )}
             </span>
             {isDone && (
               <HeatmapZoomImage src={heatmapSrc} alt="위조 흔적 히트맵"

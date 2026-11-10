@@ -18,12 +18,6 @@ const SAMPLE_IMAGES = [
   { name: 'western_fake_2.JPG', src: '/samples/images/western_fake_2.JPG', domain: 'western', label: '서양인 Fake' },
 ];
 
-// 모델 버전 — v1: MS-EffGCViT / v2: DeepClip (동양인 도메인 미지원)
-const VERSIONS = [
-  { value: 'v1', label: 'V1' },
-  { value: 'v2', label: 'V2' },
-];
-
 // FAKE/REAL/UNKNOWN → 배지 modifier
 const labelTone = (label) => (label === 'FAKE' ? 'fake' : label === 'REAL' ? 'real' : 'unknown');
 
@@ -54,16 +48,10 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [selectedSample, setSelectedSample] = useState(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
-  const [versionType, setVersionType] = useState('v2');
   const [modelType, setModelType] = useState('fast');
   const [domainType, setDomainType] = useState('western');
-
-  // v2는 동양인 도메인 미지원 → 서양인으로 전환
-  const selectVersion = (v) => {
-    setVersionType(v);
-    if (v === 'v2') setDomainType('western');
-  };
 
   const [result, setResult] = useState(PREVIEW_RESULT);
   const [statusMessage, setStatusMessage] = useState('');
@@ -166,7 +154,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     formData.append('imagefile', file);
     formData.append('model_type', modelType);
     formData.append('domain_type', domainType === 'western' ? '서양인' : '동양인');
-    formData.append('version_type', versionType);
+    formData.append('version_type', 'v1'); // 판정은 v1(MS-EffGCViT)만 사용
 
     setIsAnalyzing(true);
     setStatusMessage('서버 접수 중...');
@@ -194,6 +182,30 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setSelectedSample(null); // 샘플 외 경로로 들어오면 선택 해제
   };
 
+  // 드래그 앤 드롭 업로드 — 웹캠 촬영/분석 중에는 받지 않음
+  const canDrop = !isCameraOpen && !isAnalyzing;
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    if (!canDrop) return;
+    e.dataTransfer.dropEffect = 'copy';
+    if (!isDragOver) setIsDragOver(true);
+  };
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) setIsDragOver(false);
+  };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (!canDrop) return;
+    const dropped = e.dataTransfer.files?.[0];
+    if (!dropped) return;
+    if (!dropped.type.startsWith('image/')) {
+      alert("이미지 파일만 올릴 수 있어요.");
+      return;
+    }
+    handleFileSelect(dropped);
+  };
+
   // 예시 이미지를 File로 변환 후 기존 업로드 흐름에 주입 + 도메인 자동 세팅
   const handleSelectSample = async (sample) => {
     try {
@@ -201,7 +213,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       const blob = await res.blob();
       const file = new File([blob], sample.name, { type: blob.type });
       setDomainType(sample.domain);
-      if (sample.domain === 'asian' && versionType === 'v2') setVersionType('v1');
       handleFileSelect(file);
       setSelectedSample(sample.name); // handleFileSelect 리셋 이후 선택 표시
     } catch (e) {
@@ -407,8 +418,11 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
           <div className="dg-analysis__panes">
             <div
-              className={`dg-analysis__pane dg-analysis__drop${previewUrl ? ' has-preview' : ''}${isCameraOpen ? ' is-camera' : ''}`}
+              className={`dg-analysis__pane dg-analysis__drop${previewUrl ? ' has-preview' : ''}${isCameraOpen ? ' is-camera' : ''}${isDragOver ? ' is-active' : ''}`}
               onClick={() => { if (!previewUrl && !isCameraOpen) document.getElementById('fIn').click(); }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
               {isCameraOpen ? (
                 <WebcamCapture mode="photo" onCapture={handleFileSelect} onClose={() => setIsCameraOpen(false)} />
@@ -421,7 +435,6 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                     <div className="dg-analysis__drop-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V5M7 10l5-5 5 5M5 19h14" /></svg></div>
                   </div>
                   <p className="dg-analysis__drop-title">이미지 업로드</p>
-                  <p className="dg-analysis__drop-desc">클릭해서 이미지를 선택하거나 웹캠으로 촬영하세요</p>
                 </div>
               )}
               {!isCameraOpen && (
@@ -443,24 +456,10 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <h3 className="dg-analysis__settings-title">분석 설정</h3>
 
           <div className="dg-analysis__field">
-            <p className="dg-analysis__field-label">모델 버전</p>
-            <div className="dg-analysis__segment dg-analysis__segment--version">
-              {VERSIONS.map((v) => (
-                <button key={v.value} type="button" className={versionType === v.value ? 'is-on' : ''} onClick={() => selectVersion(v.value)}>
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="dg-analysis__field">
             <p className="dg-analysis__field-label">대상 도메인</p>
             <div className="dg-analysis__segment">
               <button type="button" className={domainType === 'western' ? 'is-on' : ''} onClick={() => setDomainType('western')}>서양인</button>
-              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} disabled={versionType === 'v2'} onClick={() => setDomainType('asian')}>
-                동양인
-                {versionType === 'v2' && <span className="dg-analysis__soon">준비중</span>}
-              </button>
+              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} onClick={() => setDomainType('asian')}>동양인</button>
             </div>
           </div>
 

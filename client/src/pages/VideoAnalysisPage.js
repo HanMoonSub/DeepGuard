@@ -18,12 +18,6 @@ const SAMPLE_VIDEOS = [
   { name: 'western_real.mp4', src: '/samples/videos/western_real.mp4', domain: 'western', label: '서양인 Real' },
 ];
 
-// 모델 버전 — v1: MS-EffGCViT / v2: DeepClip (동양인 도메인 미지원)
-const VERSIONS = [
-  { value: 'v1', label: 'V1' },
-  { value: 'v2', label: 'V2' },
-];
-
 // FAKE/REAL/UNKNOWN → 배지 modifier
 const labelTone = (label) => (label === 'FAKE' ? 'fake' : label === 'REAL' ? 'real' : 'unknown');
 
@@ -58,15 +52,8 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [selectedSample, setSelectedSample] = useState(null);
 
-  const [versionType, setVersionType] = useState('v2');
   const [modelType, setModelType] = useState('fast');
   const [domainType, setDomainType] = useState('western');
-
-  // v2는 동양인 도메인 미지원 → 서양인으로 전환
-  const selectVersion = (v) => {
-    setVersionType(v);
-    if (v === 'v2') setDomainType('western');
-  };
 
   const [result, setResult] = useState(PREVIEW_RESULT);
   const [statusMessage, setStatusMessage] = useState('');
@@ -180,7 +167,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     formData.append('videofile', file);
     formData.append('model_type', modelType);
     formData.append('domain_type', domainType === 'western' ? '서양인' : '동양인');
-    formData.append('version_type', versionType);
+    formData.append('version_type', 'v1'); // 판정은 v1(MS-EffGCViT)만 사용
 
     setIsAnalyzing(true);
     setStatusMessage('서버 접수 중...');
@@ -215,7 +202,6 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       const blob = await res.blob();
       const file = new File([blob], sample.name, { type: blob.type });
       setDomainType(sample.domain);
-      if (sample.domain === 'asian' && versionType === 'v2') setVersionType('v1');
       handleFileSelect(file);
       setSelectedSample(sample.name); // handleFileSelect 리셋 이후 선택 표시
     } catch (e) {
@@ -483,24 +469,10 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
           <h3 className="dg-analysis__settings-title">분석 설정</h3>
 
           <div className="dg-analysis__field">
-            <p className="dg-analysis__field-label">모델 버전</p>
-            <div className="dg-analysis__segment dg-analysis__segment--version">
-              {VERSIONS.map((v) => (
-                <button key={v.value} type="button" className={versionType === v.value ? 'is-on' : ''} onClick={() => selectVersion(v.value)}>
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="dg-analysis__field">
             <p className="dg-analysis__field-label">대상 도메인</p>
             <div className="dg-analysis__segment">
               <button type="button" className={domainType === 'western' ? 'is-on' : ''} onClick={() => setDomainType('western')}>서양인</button>
-              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} disabled={versionType === 'v2'} onClick={() => setDomainType('asian')}>
-                동양인
-                {versionType === 'v2' && <span className="dg-analysis__soon">준비중</span>}
-              </button>
+              <button type="button" className={domainType === 'asian' ? 'is-on' : ''} onClick={() => setDomainType('asian')}>동양인</button>
             </div>
           </div>
 

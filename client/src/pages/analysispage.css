@@ -438,6 +438,11 @@
 .dg-analysis__drop.has-preview::before {
   display: none;
 }
+/* 미리보기가 있는 상태에서 다른 이미지를 끌어다 놓을 때 */
+.dg-analysis__drop.has-preview.is-active {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: -8px;
+}
 .dg-analysis__drop-body {
   position: relative;
   display: flex;
@@ -888,21 +893,6 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
-/* 미지원 도메인 — "준비중" 표기 (버튼은 흐리게, 배지는 또렷하게) */
-.dg-analysis__segment button:disabled:has(.dg-analysis__soon) {
-  opacity: 1;
-  color: #b8c0cc;
-}
-.dg-analysis__soon {
-  margin-left: 6px;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 10px;
-  font-weight: 700;
-  vertical-align: 1px;
-}
 
 
 .dg-analysis__models {
@@ -1059,7 +1049,4 @@
   background: #16224a;
   color: var(--color-ink);
   box-shadow: none;
-}
-:root[data-theme="dark"] .dg-analysis__segment button:disabled:has(.dg-analysis__soon) {
-  color: #4a5675;
 }

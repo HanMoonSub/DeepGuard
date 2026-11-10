@@ -8,6 +8,7 @@ import useTheme from '../hooks/useTheme';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import ArtifactTextPanel from '../components/ArtifactTextPanel';
 import useCountUp from '../utils/useCountUp';
 import './AnalysisDetailPage.css';
 
@@ -28,14 +29,6 @@ const DetailLayout = ({ sessionUser, aside, children }) => {
   </div>
   );
 };
-
-// 결과 옆 정보 목록의 한 줄 (라벨 · 값)
-const InfoRow = ({ label, value, tone }) => (
-  <div className="dg-detail__info-row">
-    <dt>{label}</dt>
-    <dd className={tone ? `dg-detail__tone--${tone}` : ''}>{value}</dd>
-  </div>
-);
 
 // 위조 확률 원형 게이지
 const GAUGE_R = 76;
@@ -292,11 +285,14 @@ const AnalysisDetailPage = ({ sessionUser }) => {
                 )}
               </section>
 
-              <dl className="dg-detail__panel dg-detail__info">
-                <InfoRow label="모델" value={`${(data.version_type || 'v1').toUpperCase()} · ${data.model_type?.toUpperCase() || 'FAST'}`} />
-                <InfoRow label="대상 도메인" value={data.domain_type || '서양인'} />
-                <InfoRow label="판정" value={label} tone={verdictTone} />
-              </dl>
+              {/* FAKE 판정일 때만: DeepClip 부위별 위조 흔적 (20개 텍스트 확률, 버튼 클릭 시 추론) */}
+              {label === 'FAKE' && (
+                <ArtifactTextPanel
+                  media={isVideo ? 'video' : 'image'}
+                  mediaId={isVideo ? (data.video_id ?? state?.video_id) : (data.image_id ?? state?.image_id)}
+                  sessionUser={sessionUser}
+                />
+              )}
             </>
           )}
         </div>
