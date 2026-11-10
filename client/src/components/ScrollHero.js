@@ -40,8 +40,7 @@ const CLIP_EYE = { x: 343, y: 195 }; // 마지막 프레임 눈동자
 const STEPS = [
   { key: 'intro', range: [-1, 0, 0.1, 0.14] },
   { key: 'low', range: [0.36, 0.4, 0.48, 0.52] },
-  { key: 'high', range: [0.64, 0.68, 0.74, 0.78] },
-  { key: 'xai', range: [0.78, 0.82, 0.86, 0.9] },
+  { key: 'xai', range: [0.74, 0.79, 0.86, 0.9] },
   { key: 'verdict', range: [0.9, 0.94, 2, 3] },
 ];
 
@@ -226,7 +225,8 @@ const ScrollHero = ({ onStart, onVideo }) => {
       }
 
       drawAt(k[2], still, STILL_W, STILL_H, clamp((p - 0.65) / 0.05));
-      drawAt(k[3], still, STILL_W, STILL_H, clamp((p - 0.76) / 0.06));
+      // K3는 문구 없이 잠깐 스치고, 히트맵(K4)으로 길게 겹쳐 넘어감
+      drawAt(k[3], still, STILL_W, STILL_H, ease(clamp((p - 0.68) / 0.1)));
 
       // 문구 가독성용 어둡게 깔기 (데스크톱 왼쪽 / 모바일 아래)
       const g = w >= 900 ? ctx.createLinearGradient(0, 0, w * 0.6, 0) : ctx.createLinearGradient(0, h, 0, h * 0.35);
@@ -313,7 +313,6 @@ const ScrollHero = ({ onStart, onVideo }) => {
           </div>
 
           <div className="dg-sh__step" ref={setStep(1)}>
-            <span className="dg-sh__eyebrow">01 · LOW-LEVEL BRANCH</span>
             <h2 className="dg-sh__heading">픽셀 하나까지<br />들여다봅니다</h2>
             <p className="dg-sh__lead">
               고해상도 특징맵에서 텍스처, 합성 경계, 압축 흔적처럼 눈으로는 보이지 않는 국소적인 위조 흔적을 찾습니다.
@@ -321,22 +320,14 @@ const ScrollHero = ({ onStart, onVideo }) => {
           </div>
 
           <div className="dg-sh__step" ref={setStep(2)}>
-            <span className="dg-sh__eyebrow">02 · HIGH-LEVEL BRANCH</span>
-            <h2 className="dg-sh__heading">얼굴 전체의<br />앞뒤를 맞춰봅니다</h2>
-            <p className="dg-sh__lead">
-              저해상도 특징맵에서 조명, 기하 구조, 그림자가 서로 맞아떨어지는지 전역 어텐션으로 확인합니다.
-            </p>
-          </div>
-
-          <div className="dg-sh__step" ref={setStep(3)}>
-            <span className="dg-sh__eyebrow">03 · EXPLAINABLE AI</span>
+            <span className="dg-sh__eyebrow">EXPLAINABLE AI</span>
             <h2 className="dg-sh__heading">어디가, 왜 가짜인지<br />보여드립니다</h2>
             <p className="dg-sh__lead">
               두 갈래의 판단 근거를 히트맵으로 시각화해, 결과를 직접 눈으로 확인할 수 있습니다.
             </p>
           </div>
 
-          <div className="dg-sh__step dg-sh__verdict" ref={setStep(4)}>
+          <div className="dg-sh__step dg-sh__verdict" ref={setStep(3)}>
             <span className="dg-sh__eyebrow is-danger">VERDICT · MS-EffGCViT</span>
             <div className="dg-sh__score">
               <b>FAKE</b>
