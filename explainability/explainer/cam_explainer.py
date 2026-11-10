@@ -24,7 +24,6 @@ def _cam_kwargs(kwargs: dict) -> dict:
     """display_* kwargs에서 CAM 생성에 쓰는 인자만 골라낸다."""
     return {
         "category": kwargs.get("category", 1),
-        "artifact_idx": kwargs.get("artifact_idx"),
         "aug_smooth": kwargs.get("aug_smooth", False),
         "eigen_smooth": kwargs.get("eigen_smooth", False),
     }
@@ -40,8 +39,7 @@ class CAMDisplayMixin:
     def _prepare_cam(self, img_path: str,
                      category: int = 1,
                      aug_smooth: bool = False,
-                     eigen_smooth: bool = False,
-                     artifact_idx: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+                     eigen_smooth: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """흑백 CAM을 생성하고, 모델 입력 시 발생한 패딩 제거 및 원래 얼굴 해상도로 복원한다.
 
         Args:
@@ -49,22 +47,20 @@ class CAMDisplayMixin:
             category (int, optional): 타겟 클래스 인덱스. Defaults to 1.
             aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
             eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
-            artifact_idx (int | None, optional): DeepClip artifact 인덱스(PAIR_ORDER). 주면 category 대신 해당 artifact logit을 타겟으로 한다. Defaults to None.
 
         Returns:
             tuple[np.ndarray, np.ndarray]: 
                 - cam_recovered: 원본 얼굴 크기로 복원된 CAM 맵 (H_face, W_face).
                 - face: 크롭된 원본 얼굴 이미지 배열 (RGB).
         """
-        grayscale_cam, tensor, face = self._build_grayscale_cam(img_path, category, aug_smooth, eigen_smooth, artifact_idx)
+        grayscale_cam, tensor, face = self._build_grayscale_cam(img_path, category, aug_smooth, eigen_smooth)
         cam_recovered = remove_padding_and_resize(grayscale_cam, face.shape, tensor.shape)
         return cam_recovered, face
     
     def _prepare_cam_from_array(self, face: np.ndarray,
                                 category: int = 1,
                                 aug_smooth: bool = False,
-                                eigen_smooth: bool = False,
-                                artifact_idx: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+                                eigen_smooth: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """얼굴 배열로부터 흑백 CAM을 생성하고 원래 얼굴 해상도로 복원한다.
 
         Args:
@@ -72,14 +68,13 @@ class CAMDisplayMixin:
             category (int, optional): 타겟 클래스 인덱스. Defaults to 1.
             aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
             eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
-            artifact_idx (int | None, optional): DeepClip artifact 인덱스(PAIR_ORDER). 주면 category 대신 해당 artifact logit을 타겟으로 한다. Defaults to None.
 
         Returns:
             tuple[np.ndarray, np.ndarray]: 
                 - cam_recovered: 원본 얼굴 크기로 복원된 CAM 맵 (H_face, W_face).
                 - face: 입력받은 원본 얼굴 이미지 배열.
         """
-        grayscale_cam, tensor, face = self._build_grayscale_cam_from_array(face, category, aug_smooth, eigen_smooth, artifact_idx)
+        grayscale_cam, tensor, face = self._build_grayscale_cam_from_array(face, category, aug_smooth, eigen_smooth)
         cam_recovered = remove_padding_and_resize(grayscale_cam, face.shape, tensor.shape)
         return cam_recovered, face
     
@@ -265,25 +260,10 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
         """
         pass
 
-    def _make_targets(self, category: int, artifact_idx: int | None = None) -> list:
-        """CAM 타겟을 만든다. DeepGuard 모델은 (B,1) fake logit만 있으므로 artifact_idx를 지원하지 않는다.
-
-        Args:
-            category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
-            artifact_idx (int | None): DeepClip artifact 인덱스. DeepGuard 모델에서는 None이어야 한다.
-
-        Raises:
-            ValueError: artifact_idx가 주어진 경우.
-        """
-        if artifact_idx is not None:
-            raise ValueError(f"{self.model_name}은(는) artifact 출력이 없어 artifact_idx를 지원하지 않습니다 (DeepClip 전용).")
-        return [BinaryClassifierOutputTarget(category)]
-
     def _build_grayscale_cam(self, img_path: str,
                              category: int = 1,
                              aug_smooth: bool = False,
-                             eigen_smooth: bool = False,
-                             artifact_idx: int | None = None) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
+                             eigen_smooth: bool = False) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
         """이미지 경로를 받아 전처리를 수행하고 raw 흑백(Grayscale) CAM을 생성한다.
 
         Args:
@@ -291,7 +271,6 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
             category (int, optional): 타겟 클래스 인덱스 (위조: 1, 정상: 0). Defaults to 1.
             aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
             eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
-            artifact_idx (int | None, optional): DeepClip artifact 인덱스(PAIR_ORDER). Defaults to None.
 
         Returns:
             tuple[np.ndarray, torch.Tensor, np.ndarray]: 
@@ -302,7 +281,7 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
         
         face, tensor = self._get_transform(img_path)
         tensor = tensor.to(self.device)
-        targets = self._make_targets(category, artifact_idx)
+        targets = [BinaryClassifierOutputTarget(category)]
         
         grayscale_cam = self.cam(
             input_tensor=tensor,
@@ -316,8 +295,7 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
                                         face: np.ndarray,
                                         category: int = 1,
                                         aug_smooth: bool = False,
-                                        eigen_smooth: bool = False,
-                                        artifact_idx: int | None = None) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
+                                        eigen_smooth: bool = False) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
         """이미 크롭된 얼굴 이미지 배열로부터 raw 흑백(Grayscale) CAM을 생성한다.
 
         Args:
@@ -325,7 +303,6 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
             category (int, optional): 타겟 클래스 인덱스. Defaults to 1.
             aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
             eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
-            artifact_idx (int | None, optional): DeepClip artifact 인덱스(PAIR_ORDER). Defaults to None.
 
         Returns:
             tuple[np.ndarray, torch.Tensor, np.ndarray]: 
@@ -335,7 +312,7 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
         """
         face, tensor = self._get_transform_from_array(face)
         tensor = tensor.to(self.device)
-        targets = self._make_targets(category, artifact_idx)
+        targets = [BinaryClassifierOutputTarget(category)]
         
         grayscale_cam = self.cam(
             input_tensor=tensor,

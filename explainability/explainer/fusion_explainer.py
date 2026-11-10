@@ -89,14 +89,13 @@ class BranchFusionExplainer(CAMDisplayMixin):
         category: int = 1,
         aug_smooth: bool = False,
         eigen_smooth: bool = False,
-        artifact_idx: int | None = None,
     ) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
         """얼굴 배열로부터 low/high CAM을 각각 만들고 결합한 raw 흑백 CAM을 반환한다."""
         low_cam, tensor, face = self.low_explainer._build_grayscale_cam_from_array(
-            face, category, aug_smooth, eigen_smooth, artifact_idx
+            face, category, aug_smooth, eigen_smooth
         )
         high_cam, _, _ = self.high_explainer._build_grayscale_cam_from_array(
-            face, category, aug_smooth, eigen_smooth, artifact_idx
+            face, category, aug_smooth, eigen_smooth
         )
         return self._fuse_cams(low_cam, high_cam), tensor, face
 
@@ -106,12 +105,11 @@ class BranchFusionExplainer(CAMDisplayMixin):
         category: int = 1,
         aug_smooth: bool = False,
         eigen_smooth: bool = False,
-        artifact_idx: int | None = None,
     ) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
         """이미지 경로에서 얼굴을 한 번만 탐지/크롭한 뒤 결합 CAM을 만든다."""
         face = self.low_explainer._preprocess_img(img_path)
         return self._build_grayscale_cam_from_array(
-            face, category, aug_smooth, eigen_smooth, artifact_idx
+            face, category, aug_smooth, eigen_smooth
         )
 
     def _prepare_masked_cam_from_array(
