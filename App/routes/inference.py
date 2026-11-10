@@ -16,19 +16,13 @@ router = APIRouter(prefix="/inference", tags=["inference"])
              response_class=JSONResponse, summary="딥페이크 비동기 이미지 추론 접수") 
 async def predict_image(
                         imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
-                        version_type: Literal["v1","v2"] = Form("v1", description="모델 엔진 버전 (v1: MS-EffGCViT, v2: DeepClip beta)"),
+                        version_type: Literal["v1"] = Form("v1", description="모델 엔진 버전 (v1: MS-EffGCViT만 사용)"),
                         model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
                         domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
                         conn: Connection = Depends(context_get_conn), # 이미지 File 저장
                         session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
                         ):
         
-    # v2(beta)는 아직 동양인 도메인 미지원
-    if not inference_svc.is_supported(version_type, model_type, domain_type):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{version_type} 모델은 아직 {domain_type} 도메인을 제공하지 않습니다",
-        )
 
     user_id = None
     user_email = None
@@ -76,19 +70,13 @@ async def get_image_result(
              response_class=JSONResponse, summary="딥페이크 비동기 비디오 추론 접수")
 async def predict_video(
                         videofile: UploadFile = File(...), # 사용자가 업로드한 비디오 객체
-                        version_type: Literal["v1","v2"] = Form("v1", description="모델 엔진 버전 (v1: MS-EffGCViT, v2: DeepClip beta)"),
+                        version_type: Literal["v1"] = Form("v1", description="모델 엔진 버전 (v1: MS-EffGCViT만 사용)"),
                         model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
                         domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
                         conn: Connection = Depends(context_get_conn), # 비디오 File 저장
                         session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
                         ):
     
-    # v2(beta)는 아직 동양인 도메인 미지원
-    if not inference_svc.is_supported(version_type, model_type, domain_type):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{version_type} 모델은 아직 {domain_type} 도메인을 제공하지 않습니다",
-        )
 
     user_id = None
     user_email = None

@@ -308,7 +308,6 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
         conn (Connection): SQLAlchemy 비동기 DB 커넥션.
         image_id (int): 업데이트할 이미지 레코드 PK.
         analysis (dict): 추론 결과값. prob 포함.
-            v2(DeepClip)는 artifact_idx, artifact_prob도 포함 (없으면 NULL 저장).
         result_msg (str): 처리 결과 메세지.
         status (str): 추론 상태 ("success" | "warning" | "failed").
 
@@ -330,8 +329,6 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
             SET status = :status,
                 label = :label, 
                 score = :score, 
-                artifact_idx = :artifact_idx,
-                artifact_prob = :artifact_prob,
                 result_msg = :result_msg
             WHERE id = :image_id
         """
@@ -343,8 +340,6 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
             "status": db_status,
             "label": label,
             "score": analysis["prob"],
-            "artifact_idx": analysis.get("artifact_idx"),   # v2(DeepClip)만 존재, 그 외 None
-            "artifact_prob": analysis.get("artifact_prob"),
             "result_msg": result_msg,
             "image_id": image_id
         })
@@ -371,7 +366,7 @@ async def get_image_result(conn: Connection, image_id: int):
     """
     try:
         query = text("""
-            SELECT id, user_id, image_loc, status, label, score, artifact_idx, artifact_prob, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, user_id, image_loc, status, label, score, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
             WHERE id = :image_id
         """)
@@ -389,8 +384,6 @@ async def get_image_result(conn: Connection, image_id: int):
             status = row.status,
             label = row.label,
             score = row.score,
-            artifact_idx = row.artifact_idx,
-            artifact_prob = row.artifact_prob,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,
@@ -474,7 +467,7 @@ async def get_user_history(conn: Connection, image_id: int):
     """
     try:
         query = """
-            SELECT id, image_loc, status, label, score, artifact_idx, artifact_prob, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, image_loc, status, label, score, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
             WHERE id = :image_id;
         """
@@ -491,8 +484,6 @@ async def get_user_history(conn: Connection, image_id: int):
             status = row.status,
             label = row.label,
             score = row.score,
-            artifact_idx = row.artifact_idx,
-            artifact_prob = row.artifact_prob,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,

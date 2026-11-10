@@ -8,7 +8,7 @@ from typing import List
 from preprocess.face_detector import FaceDetector2
 from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
-from .utils import ClipPredictorMixin, PredictorError, top_artifact
+from .utils import ClipPredictorMixin, PredictorError
 
 class ImagePredictor:
     def __init__(
@@ -138,17 +138,16 @@ class ClipImagePredictor(ClipPredictorMixin, ImagePredictor):
 
     def predict_img_artifacts(self, img_path: str, tta_hflip: float = 0) -> dict:
         """
-        Same as predict_img, plus the most likely artifact:
-            artifact_idx  : index in PAIR_ORDER (5 * region + type)
-            artifact_prob : its probability
+        Returns the probabilities of the 20 artifact texts:
+            artifact_probs : list of 20 floats in PAIR_ORDER (idx = 5 * region + type)
         """
         img = self._preprocess_img(img_path)
 
         transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
         img = transforms(image=img)['image'].unsqueeze(0).to(self.device)
-        probs, artifact_probs = self._forward_artifacts(img)
+        _, artifact_probs = self._forward_artifacts(img)
 
-        return {"prob": float(probs[0]), **top_artifact(artifact_probs[0])}
+        return {"artifact_probs": artifact_probs[0].tolist()}
 
     def __repr__(self):
         return super().__repr__().replace("ImagePredictor", "ClipImagePredictor", 1)

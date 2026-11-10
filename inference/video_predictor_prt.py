@@ -8,7 +8,7 @@ from preprocess.frame_extractor import FrameExtractor
 from preprocess.face_detector import FaceDetector2
 from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
-from .utils import ClipPredictorMixin, PredictorError, top_artifact
+from .utils import ClipPredictorMixin, PredictorError
 
 class VideoPredictor:
     def __init__(self,
@@ -246,25 +246,18 @@ class ClipVideoPredictor(ClipPredictorMixin, VideoPredictor):
         self._check_model_name(model_name)
         super().__init__(margin_ratio, conf_thres, model_name, dataset=None)
 
-    def predict_video_artifacts(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> dict:
+    def predict_video_artifacts(self, video_path: str, tta_hflip: float = 0) -> dict:
         """
-        Same as predict_video, plus the most likely artifact (artifact_idx: index in PAIR_ORDER, artifact_prob)
-        for each frame in frame_results and for the video (argmax of the mean over the frames).
+        Returns the probabilities of the 20 artifact texts for the whole video (mean over the frames):
+            artifact_probs : list of 20 floats in PAIR_ORDER (idx = 5 * region + type)
         """
-        (cropped_frames, frame_times,
-         fps, total_frames, num_sampled, num_extracted, num_detected) = self._preprocess_frames(video_path)
+        cropped_frames = self._preprocess_frames(video_path)[0]
 
         transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
         batch_frames = torch.stack([transforms(image=f)['image'] for f in cropped_frames]).to(self.device)
-        preds, artifact_probs = self._forward_artifacts(batch_frames) # (num_frames,), (num_frames,20)
+        _, artifact_probs = self._forward_artifacts(batch_frames) # (num_frames,), (num_frames,20)
 
-        result = self._build_result(preds, frame_times,
-                                    fps, total_frames, num_sampled, num_extracted, num_detected, agg_mode)
-        for frame, probs in zip(result["frame_results"], artifact_probs):
-            frame.update(top_artifact(probs))
-        result.update(top_artifact(artifact_probs.mean(axis=0)))
-
-        return result
+        return {"artifact_probs": artifact_probs.mean(axis=0).tolist()}
 
     def __repr__(self):
         return super().__repr__().replace("VideoPredictor", "ClipVideoPredictor", 1)

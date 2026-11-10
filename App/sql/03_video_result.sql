@@ -9,10 +9,6 @@ create table video_result (
     label varchar(10) not null,                    -- 최종 판정 결과 (예: 'Fake', 'Real')
     score float not null, 
     
-    -- 분석 품질 및 메타데이터
-    artifact_idx tinyint null, -- DeepClip(v2) 프레임 평균 기준 top-1 artifact 인덱스 (PAIR_ORDER), v1은 null
-    artifact_prob float null, -- top-1 artifact 평균 확률, v1은 null
-    
     -- 분석 환경 정보
     version_type varchar(10) not null,
     model_type varchar(10) not null,

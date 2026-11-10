@@ -112,8 +112,7 @@ def _get_or_create_explainer(model_name: str, dataset: str | None, explain_req_d
             )
     return _explainer_cache[cache_key]
         
-def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, explain_req_dict: dict,
-                       artifact_idx: int | None = None) -> np.ndarray:
+def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, explain_req_dict: dict) -> np.ndarray:
     """이미지 경로를 받아 display_type에 따라 시각화 이미지를 생성한다.
 
     Args:
@@ -125,23 +124,21 @@ def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, 
             - overlay_ratio (float): 히트맵 오버레이 시 원본 이미지 가중치.
             - aug_smooth (bool): Test-time augmentation 가동 여부.
             - eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부.
-        artifact_idx (int | None): v2(DeepClip) FAKE 결과의 top-1 artifact 인덱스. 주면 category 대신 해당 artifact를 타겟으로 CAM 생성.
 
     Returns:
         np.ndarray: 시각화가 적용된 얼굴 이미지 (RGB, np.uint8).
     """
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"],
-                                                 category=category, artifact_idx=artifact_idx, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+                                                 category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
     elif explain_req_dict["display_type"] == "bbox":  
         return explainer.display_bbox_on_image(image_path,
-                                              category=category, artifact_idx=artifact_idx, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
+                                              category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
     else: # display_type == "heatmap_bbox"
         return explainer.display_heatmap_bbox_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"], 
-                                                       category=category, artifact_idx=artifact_idx, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+                                                       category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 
-def _run_visualization_from_array(explainer: CAMExplainer, face: np.ndarray, category: int, explain_req_dict: dict,
-                                  artifact_idx: int | None = None) -> np.ndarray:
+def _run_visualization_from_array(explainer: CAMExplainer, face: np.ndarray, category: int, explain_req_dict: dict) -> np.ndarray:
     """크롭된 얼굴 배열을 받아 display_type에 따라 시각화 이미지를 생성한다.
 
     Args:
@@ -149,20 +146,19 @@ def _run_visualization_from_array(explainer: CAMExplainer, face: np.ndarray, cat
         face (np.ndarray): 전처리(크롭)가 완료된 얼굴 이미지 배열 (RGB).
         category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
         explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리. (_run_visualization과 동일)
-        artifact_idx (int | None): v2(DeepClip) FAKE 결과의 top-1 artifact 인덱스. 주면 category 대신 해당 artifact를 타겟으로 CAM 생성.
 
     Returns:
         np.ndarray: 시각화가 적용된 얼굴 이미지 (RGB, np.uint8).
     """
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_from_array(face, image_weight=explain_req_dict["overlay_ratio"],
-                                                 category=category, artifact_idx=artifact_idx, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+                                                 category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
     elif explain_req_dict["display_type"] == "bbox":  
         return explainer.display_bbox_from_array(face,
-                                              category=category, artifact_idx=artifact_idx, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
+                                              category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"]) 
     else: # display_type == "heatmap_bbox"
         return explainer.display_heatmap_bbox_from_array(face, image_weight=explain_req_dict["overlay_ratio"], 
-                                                       category=category, artifact_idx=artifact_idx, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
+                                                       category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 
 @celery_app.task(name="process_explain_image_task")
 def process_explain_image_task(user_email: str, 
@@ -171,8 +167,7 @@ def process_explain_image_task(user_email: str,
                                image_loc: str,
                                image_id: int,
                                category: int,
-                               explain_req_dict: dict,
-                               artifact_idx: int | None = None) -> dict:
+                               explain_req_dict: dict) -> dict:
     """딥페이크 이미지 위조 흔적 시각화를 처리하는 Celery 비동기 태스크.
 
     CAMExplainer로 시각화 이미지를 생성하고 서버에 저장한다.
@@ -186,7 +181,6 @@ def process_explain_image_task(user_email: str,
         image_id (int): 이미지 레코드 PK.
         category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
         explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
-        artifact_idx (int | None): v2(DeepClip) FAKE 결과의 top-1 artifact 인덱스. 주면 category 대신 해당 artifact를 타겟으로 CAM 생성.
 
     Returns:
         dict:
@@ -207,7 +201,7 @@ def process_explain_image_task(user_email: str,
 
             # 시각화 이미지 생성 시작
             try:
-                image = _run_visualization(explainer, image_path, category, explain_req_dict, artifact_idx)
+                image = _run_visualization(explainer, image_path, category, explain_req_dict)
             except Exception:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -256,8 +250,7 @@ def process_explain_frame_task(user_email: str,
                                video_id: int,
                                category: int,
                                frame_time: float, 
-                               explain_req_dict: dict,
-                               artifact_idx: int | None = None) -> dict:
+                               explain_req_dict: dict) -> dict:
     """딥페이크 비디오 특정 프레임의 위조 흔적 시각화를 처리하는 Celery 비동기 태스크.
 
     비디오에서 프레임을 추출하고 얼굴을 크롭한 뒤 CAMExplainer로 시각화 이미지를 생성해 저장한다.
@@ -272,7 +265,6 @@ def process_explain_frame_task(user_email: str,
         category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
         frame_time (float): 시각화할 프레임의 타임스탬프 (초 단위).
         explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
-        artifact_idx (int | None): v2(DeepClip) FAKE 결과의 top-1 artifact 인덱스. 주면 category 대신 해당 artifact를 타겟으로 CAM 생성.
 
     Returns:
         dict:
@@ -295,7 +287,7 @@ def process_explain_frame_task(user_email: str,
             
             # 비디오 프레임 시각화 생성 시작
             try:
-                image = _run_visualization_from_array(explainer, face, category, explain_req_dict, artifact_idx)
+                image = _run_visualization_from_array(explainer, face, category, explain_req_dict)
             except Exception:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

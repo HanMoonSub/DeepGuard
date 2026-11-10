@@ -11,7 +11,7 @@ from inference.image_predictor_prt import ImagePredictor, ClipImagePredictor
 from inference.video_predictor_prt import VideoPredictor, ClipVideoPredictor
 from inference.utils import PredictorError
 
-# v1: MS-EffGCViT (dataset별 가중치) / v2(beta): DeepClip (dataset 없음, 동양인 미지원)
+# 판정은 v1(MS-EffGCViT, dataset별 가중치)만 사용
 MODEL_CONFIG = {
     'v1': {
         'fast': {
@@ -22,16 +22,11 @@ MODEL_CONFIG = {
             '서양인': ("ms_eff_gcvit_b5", "ff++"),
             '동양인': ("ms_eff_gcvit_b5", "kodf")
         }
-    },
-    'v2': {
-        'fast': {'서양인': ("deepclip_b0", None)},
-        'pro':  {'서양인': ("deepclip_b5", None)}
     }
 }
 
-def is_supported(version_type: str, model_type: str, domain_type: str) -> bool:
-    """MODEL_CONFIG에 (버전, 모델, 도메인) 조합이 있는지 확인한다."""
-    return domain_type in MODEL_CONFIG.get(version_type, {}).get(model_type, {})
+# DeepClip: FAKE 결과의 20개 텍스트(부위 x 유형) 확률 온디맨드 분석용 (dataset 없음, services/artifact_svc.py)
+DEEPCLIP_MODEL = {'fast': 'deepclip_b0', 'pro': 'deepclip_b5'}
 
 _image_cache: dict = {}
 _video_cache: dict = {}
@@ -47,7 +42,7 @@ def _get_or_create_predictor(
 
     Args:
         model_name (str): 추론에 사용할 모델 아키텍처 이름.
-        dataset (str): 모델 학습에 사용된 데이터셋 이름.
+        dataset (str | None): 모델 학습에 사용된 데이터셋 이름 (DeepClip은 None).
         predictor_mode (Literal["image", "video"]): Predictor 종류 선택.
 
     Returns:
@@ -93,8 +88,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     Returns:
         dict:
             - analysis (dict): prob 포함.
-              v2(DeepClip)는 artifact_idx, artifact_prob도 포함.
-              얼굴 미감지 또는 오류 발생 시 모든 값 -1 (artifact 없음).
+              얼굴 미감지 또는 오류 발생 시 모든 값 -1.
             - message (str): 처리 결과 메세지.
             - status (str): "success" | "warning" | "failed"
     """
@@ -105,11 +99,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     image_path = "." + image_loc
     
     try:
-        # v2(DeepClip)는 top-1 artifact(artifact_idx, artifact_prob)도 함께 반환
-        if isinstance(predictor, ClipImagePredictor):
-            analysis = predictor.predict_img_artifacts(image_path)
-        else:
-            analysis = predictor.predict_img(image_path)
+        analysis = predictor.predict_img(image_path)
         
         print(f"딥페이크 확률 값: {analysis['prob']}")
     
@@ -210,7 +200,6 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     Returns:
         dict:
             - analysis (dict): prob, frame_results, fps, total_frames, num_sampled, num_extracted, num_detected 포함.
-              v2(DeepClip)는 영상/프레임별 artifact_idx, artifact_prob도 포함.
               오류 발생 시 주요 수치 값 -1.
             - message (str): 처리 결과 메세지.
             - status (str): "success" | "warning" | "failed"
@@ -221,11 +210,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     video_path = "." + video_loc
     
     try:
-        # v2(DeepClip)는 영상/프레임별 top-1 artifact(artifact_idx, artifact_prob)도 함께 반환
-        if isinstance(predictor, ClipVideoPredictor):
-            analysis = predictor.predict_video_artifacts(video_path)
-        else:
-            analysis = predictor.predict_video(video_path)
+        analysis = predictor.predict_video(video_path)
         
         print(f"딥페이크 확률 값: {analysis['prob']}")
     
