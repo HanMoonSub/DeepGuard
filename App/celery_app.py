@@ -18,6 +18,7 @@ celery_app = Celery(
     # 비동기 추론 작업 파일
     include=["services.inference_svc", # process_image_task, process_video_task 
              "services.explain_svc", # process_explain_image_task
+             "services.artifact_svc", # process_artifact_image_task, process_artifact_video_task
              "services.image_svc", # cleanup_anonymous_image, cleanup_image_cam
              "services.video_svc"] # cleanup_anonymous_video
 )

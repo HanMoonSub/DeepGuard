@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
-from services import session_svc, video_svc
+from services import session_svc, video_svc, artifact_svc
 from sqlalchemy import Connection
 from db.database import context_get_conn 
 from fastapi.responses import JSONResponse
@@ -63,6 +63,7 @@ async def delete_video_history(
     if history.status == "SUCCESS":
         await video_svc.delete_video_meta_result(conn, video_id)
         await video_svc.delete_video_frame_result(conn, video_id)
+        await artifact_svc.delete_artifact(conn, "video", video_id)
 
     await video_svc.delete_video_db(conn, video_id)
     await video_svc.delete_video(history.video_loc)
