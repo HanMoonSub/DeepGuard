@@ -8,7 +8,7 @@ from typing import List
 from preprocess.face_detector import FaceDetector2
 from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
-from .utils import ClipPredictorMixin, PredictorError, to_artifact_scores
+from .utils import ClipPredictorMixin, PredictorError, top_artifact
 
 class ImagePredictor:
     def __init__(
@@ -146,8 +146,12 @@ class ClipImagePredictor(ClipPredictorMixin, ImagePredictor):
         self._check_model_name(model_name)
         super().__init__(margin_ratio, conf_thres, model_name, dataset=None)
 
-    def predict_img(self, img_path: str, tta_hflip: float = 0) -> dict:
-        """Same as ImagePredictor.predict_img, plus "artifacts": {region: {artifact type: probability}}"""
+    def predict_img_artifacts(self, img_path: str, tta_hflip: float = 0) -> dict:
+        """
+        Same as predict_img, plus the most likely artifact:
+            artifact_idx  : index in PAIR_ORDER (5 * region + type)
+            artifact_prob : its probability
+        """
         img, face_conf, face_ratio, face_brightness = self._preprocess_img(img_path)
 
         transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
@@ -159,7 +163,7 @@ class ClipImagePredictor(ClipPredictorMixin, ImagePredictor):
             "face_conf": face_conf,
             "face_ratio": face_ratio,
             "face_brightness": face_brightness,
-            "artifacts": to_artifact_scores(artifact_probs[0]),
+            **top_artifact(artifact_probs[0]),
         }
 
     def __repr__(self):

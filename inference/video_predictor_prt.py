@@ -8,7 +8,7 @@ from preprocess.frame_extractor import FrameExtractor
 from preprocess.face_detector import FaceDetector2
 from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
-from .utils import ClipPredictorMixin, PredictorError, to_artifact_scores
+from .utils import ClipPredictorMixin, PredictorError, top_artifact
 
 class VideoPredictor:
     def __init__(self,
@@ -217,45 +217,41 @@ class VideoPredictor:
         except Exception as e:
             raise e 
     
-    def predict_video(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> np.ndarray:
-        try:
-            (preds, face_confs, face_ratios, face_brightnesses, frame_times,
-             fps, total_frames, num_sampled, num_extracted, num_detected) = self._get_predict(video_path, tta_hflip)
+    def _build_result(self, preds: np.ndarray, face_confs: List[float], face_ratios: List[float],
+                      face_brightnesses: List[float], frame_times: List[int], fps: float, total_frames: int,
+                      num_sampled: int, num_extracted: int, num_detected: int, agg_mode: str) -> dict:
+        """프레임별 예측값을 집계해 predict_video 결과 dict를 만든다."""
+        agg_prob, agg_conf, agg_ratio, agg_brightness = self._frame_aggregate(
+            preds, face_confs, face_ratios, face_brightnesses, agg_mode
+        )
 
-
-            agg_prob, agg_conf, agg_ratio, agg_brightness = self._frame_aggregate(
-                preds, face_confs, face_ratios, face_brightnesses, agg_mode
-            )
-            
-            frame_results = [
-                {
-                    "frame_index":     i,
-                    "frame_time":      frame_times[i],
-                    "score":           float(preds[i]),
-                    "face_conf":       float(face_confs[i]),
-                    "face_ratio":      float(face_ratios[i]),
-                    "face_brightness": float(face_brightnesses[i]),
-                }
-                for i in range(len(preds))
-            ]
-            
-            return {
-                "prob":            float(agg_prob),
-                "face_conf":       float(agg_conf),
-                "face_ratio":      float(agg_ratio),
-                "face_brightness": float(agg_brightness),
-                "frame_results":   frame_results,
-                "fps":             round(fps, 2),
-                "total_frames":    total_frames,
-                "num_sampled":     num_sampled,
-                "num_extracted":   num_extracted,
-                "num_detected":    num_detected,
+        frame_results = [
+            {
+                "frame_index":     i,
+                "frame_time":      frame_times[i],
+                "score":           float(preds[i]),
+                "face_conf":       float(face_confs[i]),
+                "face_ratio":      float(face_ratios[i]),
+                "face_brightness": float(face_brightnesses[i]),
             }
-            
-        except PredictorError as e:
-            raise e
-        except Exception as e :
-            raise e
+            for i in range(len(preds))
+        ]
+
+        return {
+            "prob":            float(agg_prob),
+            "face_conf":       float(agg_conf),
+            "face_ratio":      float(agg_ratio),
+            "face_brightness": float(agg_brightness),
+            "frame_results":   frame_results,
+            "fps":             round(fps, 2),
+            "total_frames":    total_frames,
+            "num_sampled":     num_sampled,
+            "num_extracted":   num_extracted,
+            "num_detected":    num_detected,
+        }
+
+    def predict_video(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> dict:
+        return self._build_result(*self._get_predict(video_path, tta_hflip), agg_mode)
         
     def __repr__(self):
         return (f"VideoPredictor(model_name='{self.model_name}', "
@@ -273,10 +269,10 @@ class ClipVideoPredictor(ClipPredictorMixin, VideoPredictor):
         self._check_model_name(model_name)
         super().__init__(margin_ratio, conf_thres, model_name, dataset=None)
 
-    def predict_video(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> dict:
+    def predict_video_artifacts(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> dict:
         """
-        Same as VideoPredictor.predict_video, plus "artifacts" for the video (mean over the frames)
-        and for each frame in frame_results.
+        Same as predict_video, plus the most likely artifact (artifact_idx: index in PAIR_ORDER, artifact_prob)
+        for each frame in frame_results and for the video (argmax of the mean over the frames).
         """
         (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
          fps, total_frames, num_sampled, num_extracted, num_detected) = self._preprocess_frames(video_path)
@@ -285,36 +281,13 @@ class ClipVideoPredictor(ClipPredictorMixin, VideoPredictor):
         batch_frames = torch.stack([transforms(image=f)['image'] for f in cropped_frames]).to(self.device)
         preds, artifact_probs = self._forward_artifacts(batch_frames) # (num_frames,), (num_frames,20)
 
-        agg_prob, agg_conf, agg_ratio, agg_brightness = self._frame_aggregate(
-            preds, face_confs, face_ratios, face_brightnesses, agg_mode
-        )
+        result = self._build_result(preds, face_confs, face_ratios, face_brightnesses, frame_times,
+                                    fps, total_frames, num_sampled, num_extracted, num_detected, agg_mode)
+        for frame, probs in zip(result["frame_results"], artifact_probs):
+            frame.update(top_artifact(probs))
+        result.update(top_artifact(artifact_probs.mean(axis=0)))
 
-        frame_results = [
-            {
-                "frame_index":     i,
-                "frame_time":      frame_times[i],
-                "score":           float(preds[i]),
-                "face_conf":       float(face_confs[i]),
-                "face_ratio":      float(face_ratios[i]),
-                "face_brightness": float(face_brightnesses[i]),
-                "artifacts":       to_artifact_scores(artifact_probs[i]),
-            }
-            for i in range(len(preds))
-        ]
-
-        return {
-            "prob":            float(agg_prob),
-            "face_conf":       float(agg_conf),
-            "face_ratio":      float(agg_ratio),
-            "face_brightness": float(agg_brightness),
-            "artifacts":       to_artifact_scores(artifact_probs.mean(axis=0)),
-            "frame_results":   frame_results,
-            "fps":             round(fps, 2),
-            "total_frames":    total_frames,
-            "num_sampled":     num_sampled,
-            "num_extracted":   num_extracted,
-            "num_detected":    num_detected,
-        }
+        return result
 
     def __repr__(self):
         return super().__repr__().replace("VideoPredictor", "ClipVideoPredictor", 1)

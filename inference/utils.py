@@ -27,6 +27,14 @@ def to_artifact_scores(artifact_probs: np.ndarray) -> dict[str, dict[str, float]
         scores.setdefault(region, {})[type_] = float(prob)
     return scores
 
+def top_artifact(artifact_probs: np.ndarray) -> dict:
+    """
+    (20,) artifact probabilities -> {"artifact_idx": index in PAIR_ORDER, "artifact_prob": its probability}
+    of the most likely (region, artifact type) pair. idx = 5 * region + type.
+    """
+    idx = int(np.argmax(artifact_probs))
+    return {"artifact_idx": idx, "artifact_prob": float(artifact_probs[idx])}
+
 class ClipPredictorMixin:
     """
     DeepClip parts shared by the Clip predictors (pip and web versions).
