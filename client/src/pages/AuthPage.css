@@ -36,13 +36,13 @@
     radial-gradient(900px 500px at 78% 40%, #1a3f9c55, transparent),
     linear-gradient(180deg, var(--color-bg-dark), var(--color-bg-dark-2));
 }
-/* 이클립스 링: 제목 뒤 왼쪽 위로 치우치게 */
+/* 이클립스 링: 문구 블록(.dg-auth__copy) 정중앙에 */
 .dg-auth__hero .dg-eclipse {
-  left: 42%;
-  top: 48%;
   width: 560px;
 }
 .dg-auth__logo {
+  position: relative;
+  z-index: 1; /* 문구 블록 안 이클립스가 로고를 덮지 않도록 */
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -61,9 +61,16 @@
   filter: drop-shadow(0 0 10px rgba(32, 108, 253, 0.65));
 }
 .dg-auth__copy {
+  position: relative;
+  isolation: isolate;
   margin: auto 0;
   max-width: 480px;
   padding: 48px 0;
+}
+/* 로그인: 문구 블록을 패널 가운데에 두고 이클립스를 그 중앙에 겹침 */
+.dg-auth__copy--centered {
+  margin: auto;
+  max-width: 440px;
 }
 .dg-auth__title {
   margin-top: 0;
@@ -72,6 +79,10 @@
   line-height: 1.2;
   letter-spacing: -1.2px;
   word-break: keep-all;
+}
+.dg-auth__title em {
+  font-style: normal;
+  color: var(--color-accent);
 }
 .dg-auth__lead {
   margin-top: 20px;

@@ -46,13 +46,16 @@ const LoginPage = ({ setSessionUser }) => {
     <div className="dg-auth">
       <div className="dg-auth__split">
         <aside className="dg-auth__hero">
-          {/* 메인 히어로와 같은 이클립스 링 (장식용) */}
-          <Eclipse />
           <a className="dg-auth__logo" href="/main" onClick={go('/main')}>
             <img className="dg-auth__mark" src={logoMark} alt="" aria-hidden="true" />DeepGuard
           </a>
-          <div className="dg-auth__copy">
-            <h1 className="dg-auth__title">미세한 조작까지 잡아내는 딥페이크 탐지</h1>
+          <div className="dg-auth__copy dg-auth__copy--centered">
+            {/* 메인 히어로와 같은 이클립스 링 (장식용) — 문구 블록 중앙에 맞춤 */}
+            <Eclipse />
+            <h1 className="dg-auth__title">딥페이크,<br /><em>눈으로 확인</em>하세요</h1>
+            <p className="dg-auth__lead">
+              이미지와 영상 속 위조 흔적을 탐지하고, 어디가 왜 가짜인지 시각적 근거까지 제공하는 딥페이크 탐지 서비스.
+            </p>
           </div>
         </aside>
 
