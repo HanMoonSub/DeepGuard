@@ -10,9 +10,6 @@ create table video_result (
     score float not null, 
     
     -- 분석 품질 및 메타데이터
-    face_conf float not null,
-    face_ratio float not null,
-    face_brightness float not null,
     artifact_idx tinyint null, -- DeepClip(v2) 프레임 평균 기준 top-1 artifact 인덱스 (PAIR_ORDER), v1은 null
     artifact_prob float null, -- top-1 artifact 평균 확률, v1은 null
     

@@ -4,9 +4,6 @@ create table video_frame_result (
     frame_index integer not null, -- 영상 내 프레임 순번.
     frame_time float not null, -- 영상 내 타임스탬프(초)
     score float not null,-- 해당 프레임의 딥페이크 의심 점수 (0.0~1.0)
-    face_conf float not null,-- 얼굴 검출 신뢰도. 낮으면 score 신뢰도도 낮음.
-    face_ratio float not null,-- 프레임 대비 얼굴 면적 비율 (0.0~1.0)
-    face_brightness float not null,-- 얼굴 영역 평균 밝기 (조도 품질 지표)
     artifact_idx tinyint null, -- DeepClip(v2) 해당 프레임 top-1 artifact 인덱스 (PAIR_ORDER), v1은 null
     artifact_prob float null, -- 해당 프레임 top-1 artifact 확률, v1은 null
     

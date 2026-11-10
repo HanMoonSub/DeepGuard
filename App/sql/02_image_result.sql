@@ -5,9 +5,6 @@ create table image_result (
     status varchar(20) not null default "PENDING", -- status 추가
     label varchar(10) not null,
     score float not null,
-    face_conf float not null,
-    face_ratio float not null,
-    face_brightness float not null,
     artifact_idx tinyint null, -- DeepClip(v2) top-1 artifact 인덱스 (PAIR_ORDER: 5 * region + type), v1은 null
     artifact_prob float null, -- top-1 artifact 확률, v1은 null
     version_type varchar(10) not null,
