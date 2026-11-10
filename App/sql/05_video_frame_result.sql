@@ -7,6 +7,8 @@ create table video_frame_result (
     face_conf float not null,-- 얼굴 검출 신뢰도. 낮으면 score 신뢰도도 낮음.
     face_ratio float not null,-- 프레임 대비 얼굴 면적 비율 (0.0~1.0)
     face_brightness float not null,-- 얼굴 영역 평균 밝기 (조도 품질 지표)
+    artifact_idx tinyint null, -- DeepClip(v2) 해당 프레임 top-1 artifact 인덱스 (PAIR_ORDER), v1은 null
+    artifact_prob float null, -- 해당 프레임 top-1 artifact 확률, v1은 null
     
     index video_id_idx(video_id)
 );
