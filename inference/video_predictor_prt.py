@@ -101,17 +101,12 @@ class VideoPredictor:
         return face_results, frames
     
     def _crop_face(self, frame: np.ndarray, bbox: List[float]):
-        
-        img_h, img_w = frame.shape[:2]
+
         xmin, ymin, xmax, ymax = bbox
-        
+
         w = xmax - xmin
         h = ymax - ymin
-        
-        # Calculate Face Ratio in Frame
-        face_area = w * h; total_area = img_w * img_h
-        face_ratio = (face_area / total_area) * 100
-        
+
         pad_w = int(w * self.margin_ratio)
         pad_h = int(h * self.margin_ratio)
         
@@ -121,8 +116,8 @@ class VideoPredictor:
         x2 = min(int(xmax + pad_w), frame.shape[1])
         
         cropped_frame = frame[y1:y2,x1:x2]
-        
-        return cropped_frame, face_ratio
+
+        return cropped_frame
     
     def _preprocess_frames(self, video_path: str) -> List[np.ndarray]:
         """
@@ -138,26 +133,20 @@ class VideoPredictor:
             if not any(face_results):
                 raise PredictorError(f"추출한 {len(frames)}개의 Frame에서 모두 얼굴 탐지에 실패하였습니다 ")
             
-            cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times = [], [], [], [], []
-            
+            cropped_frames, frame_times = [], []
+
             for i, face_result in enumerate(face_results):
                 if len(face_result) == 0: continue
-                
+
                 bbox = face_result[:4]
-                conf = face_result[4] * 100
-                cropped_frame, face_ratio = self._crop_face(frames[i], bbox)
-                
+                cropped_frame = self._crop_face(frames[i], bbox)
+
                 # 랜드마크 추출
                 keypoint = self.landmark_detector.detect_batch([cropped_frame])[0]
-                if len(keypoint) == 0: 
+                if len(keypoint) == 0:
                     continue
-                
-                face_gray = cv2.cvtColor(cropped_frame, cv2.COLOR_RGB2GRAY)
-                
+
                 cropped_frames.append(cropped_frame)
-                face_confs.append(conf)
-                face_ratios.append(face_ratio)
-                face_brightnesses.append((np.mean(face_gray) / 255) * 100)
                 frame_times.append(i)
                 
             if not cropped_frames:
@@ -165,42 +154,41 @@ class VideoPredictor:
         
             num_detected = len(cropped_frames)
 
-            return (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
+            return (cropped_frames, frame_times,
                 fps, total_frames, num_sampled, num_extracted, num_detected)
-        
+
         except PredictorError as e:
             raise e
         except Exception as e:
             raise e
-        
-    def _frame_aggregate(self, preds: np.ndarray, face_confs: List[float], face_ratios: List[float],
-                        face_brightnesses: List[float], agg_mode: str) -> np.ndarray:
-        
+
+    def _frame_aggregate(self, preds: np.ndarray, agg_mode: str) -> float:
+
         sz = len(preds) # num_frames
-        
+
         if agg_mode == "mean":
-            return np.mean(preds), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
-        
+            return np.mean(preds)
+
         elif agg_mode == "vote":
-            return np.sum(preds > 0.5) / sz, np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
-        
+            return np.sum(preds > 0.5) / sz
+
         elif agg_mode == 'conf':
             t_fake = 0.8
             t_real = 0.2
-            
+
             fakes = preds[preds > t_fake]
             num_fakes = len(fakes)
-            
+
             if num_fakes > (sz // 2.5):
-                return np.mean(fakes), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
+                return np.mean(fakes)
             elif np.count_nonzero(preds < t_real) > 0.9 * sz:
-                return np.mean(preds[preds < t_real]), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
+                return np.mean(preds[preds < t_real])
             else:
-                return np.mean(preds), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
-        
+                return np.mean(preds)
+
     def _get_predict(self, video_path: str, tta_hflip: float) -> np.ndarray:
         try:
-            (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
+            (cropped_frames, frame_times,
             fps, total_frames, num_sampled, num_extracted, num_detected) = self._preprocess_frames(video_path)
 
             transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
@@ -209,7 +197,7 @@ class VideoPredictor:
                             
             preds = self._forward(batch_frames) # (num_frames,)
             
-            return (preds, face_confs, face_ratios, face_brightnesses, frame_times,
+            return (preds, frame_times,
                 fps, total_frames, num_sampled, num_extracted, num_detected)
         
         except PredictorError as e:
@@ -217,31 +205,20 @@ class VideoPredictor:
         except Exception as e:
             raise e 
     
-    def _build_result(self, preds: np.ndarray, face_confs: List[float], face_ratios: List[float],
-                      face_brightnesses: List[float], frame_times: List[int], fps: float, total_frames: int,
+    def _build_result(self, preds: np.ndarray, frame_times: List[int], fps: float, total_frames: int,
                       num_sampled: int, num_extracted: int, num_detected: int, agg_mode: str) -> dict:
         """프레임별 예측값을 집계해 predict_video 결과 dict를 만든다."""
-        agg_prob, agg_conf, agg_ratio, agg_brightness = self._frame_aggregate(
-            preds, face_confs, face_ratios, face_brightnesses, agg_mode
-        )
-
         frame_results = [
             {
-                "frame_index":     i,
-                "frame_time":      frame_times[i],
-                "score":           float(preds[i]),
-                "face_conf":       float(face_confs[i]),
-                "face_ratio":      float(face_ratios[i]),
-                "face_brightness": float(face_brightnesses[i]),
+                "frame_index": i,
+                "frame_time":  frame_times[i],
+                "score":       float(preds[i]),
             }
             for i in range(len(preds))
         ]
 
         return {
-            "prob":            float(agg_prob),
-            "face_conf":       float(agg_conf),
-            "face_ratio":      float(agg_ratio),
-            "face_brightness": float(agg_brightness),
+            "prob":            float(self._frame_aggregate(preds, agg_mode)),
             "frame_results":   frame_results,
             "fps":             round(fps, 2),
             "total_frames":    total_frames,
@@ -274,14 +251,14 @@ class ClipVideoPredictor(ClipPredictorMixin, VideoPredictor):
         Same as predict_video, plus the most likely artifact (artifact_idx: index in PAIR_ORDER, artifact_prob)
         for each frame in frame_results and for the video (argmax of the mean over the frames).
         """
-        (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
+        (cropped_frames, frame_times,
          fps, total_frames, num_sampled, num_extracted, num_detected) = self._preprocess_frames(video_path)
 
         transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
         batch_frames = torch.stack([transforms(image=f)['image'] for f in cropped_frames]).to(self.device)
         preds, artifact_probs = self._forward_artifacts(batch_frames) # (num_frames,), (num_frames,20)
 
-        result = self._build_result(preds, face_confs, face_ratios, face_brightnesses, frame_times,
+        result = self._build_result(preds, frame_times,
                                     fps, total_frames, num_sampled, num_extracted, num_detected, agg_mode)
         for frame, probs in zip(result["frame_results"], artifact_probs):
             frame.update(top_artifact(probs))
