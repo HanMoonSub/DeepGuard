@@ -92,7 +92,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
 
     Returns:
         dict:
-            - analysis (dict): prob, face_conf, face_ratio, face_brightness 포함.
+            - analysis (dict): prob 포함.
               v2(DeepClip)는 artifact_idx, artifact_prob도 포함.
               얼굴 미감지 또는 오류 발생 시 모든 값 -1 (artifact 없음).
             - message (str): 처리 결과 메세지.
@@ -111,7 +111,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
         else:
             analysis = predictor.predict_img(image_path)
         
-        print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
+        print(f"딥페이크 확률 값: {analysis['prob']}")
     
         # 분석 성공 시
         return {
@@ -122,7 +122,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     except PredictorError as e:
         print(e.message)
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1},
+            "analysis": {"prob": -1},
             "message": e.message,
             "status": "warning",
         }
@@ -131,7 +131,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     except Exception as e:
         print(str(e))
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1},
+            "analysis": {"prob": -1},
             "message": f"이미지 분석 중 치명적인 오류가 발생했습니다.",
             "status": "failed"
         }
@@ -176,7 +176,7 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
                     await image_svc.update_image_result(
                         conn, 
                         image_id, 
-                        {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                        {"prob": -1}, 
                         "이미지 추론 결과 업데이트 중 오류가 발생하였습니다.", 
                         "failed"
                     )
@@ -209,8 +209,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
 
     Returns:
         dict:
-            - analysis (dict): prob, face_conf, face_ratio, face_brightness,
-              frame_results, fps, total_frames, num_sampled, num_extracted, num_detected 포함.
+            - analysis (dict): prob, frame_results, fps, total_frames, num_sampled, num_extracted, num_detected 포함.
               v2(DeepClip)는 영상/프레임별 artifact_idx, artifact_prob도 포함.
               오류 발생 시 주요 수치 값 -1.
             - message (str): 처리 결과 메세지.
@@ -228,7 +227,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
         else:
             analysis = predictor.predict_video(video_path)
         
-        print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
+        print(f"딥페이크 확률 값: {analysis['prob']}")
     
         # 분석 성공 시
         return {
@@ -239,7 +238,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except PredictorError as e:
         print(e.message)
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+            "analysis": {"prob": -1, "frame_results": [],
                          "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": e.message,
             "status": "warning",
@@ -249,7 +248,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except Exception as e:
         print(str(e))
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+            "analysis": {"prob": -1, "frame_results": [],
                          "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": f"비디오 분석 중 치명적인 오류가 발생했습니다.",
             "status": "failed"
@@ -313,7 +312,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     await video_svc.update_video_result(
                         conn, 
                         video_id, 
-                        {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                        {"prob": -1}, 
                         "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
                         "failed"
                     )          
