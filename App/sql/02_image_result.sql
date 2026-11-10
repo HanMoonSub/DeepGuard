@@ -5,9 +5,6 @@ create table image_result (
     status varchar(20) not null default "PENDING", -- status 추가
     label varchar(10) not null,
     score float not null,
-    face_conf float not null,
-    face_ratio float not null,
-    face_brightness float not null,
     version_type varchar(10) not null,
     model_type varchar(10) not null,
     domain_type varchar(20) not null,

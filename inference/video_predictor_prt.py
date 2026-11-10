@@ -8,7 +8,7 @@ from preprocess.frame_extractor import FrameExtractor
 from preprocess.face_detector import FaceDetector2
 from preprocess.landmark_detector import LandmarkDetector
 from deepguard.data import get_test_transforms
-from .utils import PredictorError
+from .utils import ClipPredictorMixin, PredictorError
 
 class VideoPredictor:
     def __init__(self,
@@ -24,13 +24,21 @@ class VideoPredictor:
         self.face_detector = FaceDetector2(conf_thres)
         self.landmark_detector = LandmarkDetector()
         self.model_name = model_name
-        self.model = timm.create_model(model_name, pretrained=True, dataset=dataset)
+        self.model = self._load_model(model_name, dataset)
         self.img_size = [224,224] if model_name.split("_")[-1] == "b0" else [384,384]
         
         # Model Inference Mode
         self.model.to(self.device)
         self.model.eval()
-        
+
+    def _load_model(self, model_name: str, dataset: str):
+        return timm.create_model(model_name, pretrained=True, dataset=dataset)
+
+    def _forward(self, batch: torch.Tensor) -> np.ndarray:
+        """(B,3,H,W) -> (B,) fake probabilities"""
+        with torch.no_grad():
+            return torch.sigmoid(self.model(batch).view(-1)).cpu().numpy()
+
     def _extract_frames(self, video_path: str) -> Dict[int, np.ndarray]:
         """
         Extracts frames from the video and returns a dictionary in the format {frame_index: frame_data}.
@@ -93,17 +101,12 @@ class VideoPredictor:
         return face_results, frames
     
     def _crop_face(self, frame: np.ndarray, bbox: List[float]):
-        
-        img_h, img_w = frame.shape[:2]
+
         xmin, ymin, xmax, ymax = bbox
-        
+
         w = xmax - xmin
         h = ymax - ymin
-        
-        # Calculate Face Ratio in Frame
-        face_area = w * h; total_area = img_w * img_h
-        face_ratio = (face_area / total_area) * 100
-        
+
         pad_w = int(w * self.margin_ratio)
         pad_h = int(h * self.margin_ratio)
         
@@ -113,8 +116,8 @@ class VideoPredictor:
         x2 = min(int(xmax + pad_w), frame.shape[1])
         
         cropped_frame = frame[y1:y2,x1:x2]
-        
-        return cropped_frame, face_ratio
+
+        return cropped_frame
     
     def _preprocess_frames(self, video_path: str) -> List[np.ndarray]:
         """
@@ -130,26 +133,20 @@ class VideoPredictor:
             if not any(face_results):
                 raise PredictorError(f"추출한 {len(frames)}개의 Frame에서 모두 얼굴 탐지에 실패하였습니다 ")
             
-            cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times = [], [], [], [], []
-            
+            cropped_frames, frame_times = [], []
+
             for i, face_result in enumerate(face_results):
                 if len(face_result) == 0: continue
-                
+
                 bbox = face_result[:4]
-                conf = face_result[4] * 100
-                cropped_frame, face_ratio = self._crop_face(frames[i], bbox)
-                
+                cropped_frame = self._crop_face(frames[i], bbox)
+
                 # 랜드마크 추출
                 keypoint = self.landmark_detector.detect_batch([cropped_frame])[0]
-                if len(keypoint) == 0: 
+                if len(keypoint) == 0:
                     continue
-                
-                face_gray = cv2.cvtColor(cropped_frame, cv2.COLOR_RGB2GRAY)
-                
+
                 cropped_frames.append(cropped_frame)
-                face_confs.append(conf)
-                face_ratios.append(face_ratio)
-                face_brightnesses.append((np.mean(face_gray) / 255) * 100)
                 frame_times.append(i)
                 
             if not cropped_frames:
@@ -157,53 +154,50 @@ class VideoPredictor:
         
             num_detected = len(cropped_frames)
 
-            return (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
+            return (cropped_frames, frame_times,
                 fps, total_frames, num_sampled, num_extracted, num_detected)
-        
+
         except PredictorError as e:
             raise e
         except Exception as e:
             raise e
-        
-    def _frame_aggregate(self, preds: np.ndarray, face_confs: List[float], face_ratios: List[float],
-                        face_brightnesses: List[float], agg_mode: str) -> np.ndarray:
-        
+
+    def _frame_aggregate(self, preds: np.ndarray, agg_mode: str) -> float:
+
         sz = len(preds) # num_frames
-        
+
         if agg_mode == "mean":
-            return np.mean(preds), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
-        
+            return np.mean(preds)
+
         elif agg_mode == "vote":
-            return np.sum(preds > 0.5) / sz, np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
-        
+            return np.sum(preds > 0.5) / sz
+
         elif agg_mode == 'conf':
             t_fake = 0.8
             t_real = 0.2
-            
+
             fakes = preds[preds > t_fake]
             num_fakes = len(fakes)
-            
+
             if num_fakes > (sz // 2.5):
-                return np.mean(fakes), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
+                return np.mean(fakes)
             elif np.count_nonzero(preds < t_real) > 0.9 * sz:
-                return np.mean(preds[preds < t_real]), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
+                return np.mean(preds[preds < t_real])
             else:
-                return np.mean(preds), np.mean(face_confs), np.mean(face_ratios), np.mean(face_brightnesses)
-        
+                return np.mean(preds)
+
     def _get_predict(self, video_path: str, tta_hflip: float) -> np.ndarray:
         try:
-            (cropped_frames, face_confs, face_ratios, face_brightnesses, frame_times,
+            (cropped_frames, frame_times,
             fps, total_frames, num_sampled, num_extracted, num_detected) = self._preprocess_frames(video_path)
 
             transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
             frames_list = [transforms(image=f)['image'] for f in cropped_frames]
             batch_frames = torch.stack(frames_list).to(self.device) # (num_frames,3,H,W)
                             
-            with torch.no_grad():
-                outs = self.model(batch_frames) # (num_frames,1)
-                preds = torch.sigmoid(outs.view(-1)).cpu().numpy() # (num_frames,)
+            preds = self._forward(batch_frames) # (num_frames,)
             
-            return (preds, face_confs, face_ratios, face_brightnesses, frame_times,
+            return (preds, frame_times,
                 fps, total_frames, num_sampled, num_extracted, num_detected)
         
         except PredictorError as e:
@@ -211,48 +205,59 @@ class VideoPredictor:
         except Exception as e:
             raise e 
     
-    def predict_video(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> np.ndarray:
-        try:
-            (preds, face_confs, face_ratios, face_brightnesses, frame_times,
-             fps, total_frames, num_sampled, num_extracted, num_detected) = self._get_predict(video_path, tta_hflip)
-
-
-            agg_prob, agg_conf, agg_ratio, agg_brightness = self._frame_aggregate(
-                preds, face_confs, face_ratios, face_brightnesses, agg_mode
-            )
-            
-            frame_results = [
-                {
-                    "frame_index":     i,
-                    "frame_time":      frame_times[i],
-                    "score":           float(preds[i]),
-                    "face_conf":       float(face_confs[i]),
-                    "face_ratio":      float(face_ratios[i]),
-                    "face_brightness": float(face_brightnesses[i]),
-                }
-                for i in range(len(preds))
-            ]
-            
-            return {
-                "prob":            float(agg_prob),
-                "face_conf":       float(agg_conf),
-                "face_ratio":      float(agg_ratio),
-                "face_brightness": float(agg_brightness),
-                "frame_results":   frame_results,
-                "fps":             round(fps, 2),
-                "total_frames":    total_frames,
-                "num_sampled":     num_sampled,
-                "num_extracted":   num_extracted,
-                "num_detected":    num_detected,
+    def _build_result(self, preds: np.ndarray, frame_times: List[int], fps: float, total_frames: int,
+                      num_sampled: int, num_extracted: int, num_detected: int, agg_mode: str) -> dict:
+        """프레임별 예측값을 집계해 predict_video 결과 dict를 만든다."""
+        frame_results = [
+            {
+                "frame_index": i,
+                "frame_time":  frame_times[i],
+                "score":       float(preds[i]),
             }
-            
-        except PredictorError as e:
-            raise e
-        except Exception as e :
-            raise e
+            for i in range(len(preds))
+        ]
+
+        return {
+            "prob":            float(self._frame_aggregate(preds, agg_mode)),
+            "frame_results":   frame_results,
+            "fps":             round(fps, 2),
+            "total_frames":    total_frames,
+            "num_sampled":     num_sampled,
+            "num_extracted":   num_extracted,
+            "num_detected":    num_detected,
+        }
+
+    def predict_video(self, video_path: str, agg_mode: str = 'conf', tta_hflip: float = 0) -> dict:
+        return self._build_result(*self._get_predict(video_path, tta_hflip), agg_mode)
         
     def __repr__(self):
         return (f"VideoPredictor(model_name='{self.model_name}', "
                 f"margin_ratio='{self.margin_ratio}', "
                 f"device='{self.device}', "
                 f"img_size={self.img_size})")
+
+class ClipVideoPredictor(ClipPredictorMixin, VideoPredictor):
+    def __init__(
+        self,
+        margin_ratio: float,
+        conf_thres: float,
+        model_name: str,
+    ):
+        self._check_model_name(model_name)
+        super().__init__(margin_ratio, conf_thres, model_name, dataset=None)
+
+    def predict_video_artifacts(self, video_path: str, tta_hflip: float = 0) -> dict:
+        """
+        Returns the probabilities of the 20 artifact texts for the whole video (mean over the frames):
+            artifact_probs : list of 20 floats in PAIR_ORDER (idx = 5 * region + type)
+        """
+        cropped_frames = self._preprocess_frames(video_path)[0]
+
+        transforms = get_test_transforms(img_size=self.img_size, tta_hflip=tta_hflip)
+        batch_frames = torch.stack([transforms(image=f)['image'] for f in cropped_frames]).to(self.device)
+        _, artifact_probs = self._forward_artifacts(batch_frames) # (num_frames,), (num_frames,20)
+
+        return {"artifact_probs": artifact_probs.mean(axis=0).tolist()}
+
+    def __repr__(self):
+        return super().__repr__().replace("VideoPredictor", "ClipVideoPredictor", 1)

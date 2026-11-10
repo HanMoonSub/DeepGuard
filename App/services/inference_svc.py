@@ -7,16 +7,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from services import image_svc, video_svc
 from db.database import celery_db_conn
 from celery_app import celery_app
-from inference.image_predictor_prt import ImagePredictor
-from inference.video_predictor_prt import VideoPredictor
+from inference.image_predictor_prt import ImagePredictor, ClipImagePredictor
+from inference.video_predictor_prt import VideoPredictor, ClipVideoPredictor
 from inference.utils import PredictorError
 
+# 판정은 v1(MS-EffGCViT, dataset별 가중치)만 사용
 MODEL_CONFIG = {
     'v1': {
-        'fast': {'서양인': ("ms_eff_vit_b0", "ff++")},
-        'pro':  {'서양인': ("ms_eff_vit_b5", "ff++")}
-    },
-    'v2': {
         'fast': {
             '서양인': ("ms_eff_gcvit_b0", "ff++"),
             '동양인': ("ms_eff_gcvit_b0", "kodf")
@@ -28,12 +25,15 @@ MODEL_CONFIG = {
     }
 }
 
+# DeepClip: FAKE 결과의 20개 텍스트(부위 x 유형) 확률 온디맨드 분석용 (dataset 없음, services/artifact_svc.py)
+DEEPCLIP_MODEL = {'fast': 'deepclip_b0', 'pro': 'deepclip_b5'}
+
 _image_cache: dict = {}
 _video_cache: dict = {}
 
 def _get_or_create_predictor(
     model_name: str,
-    dataset: str,
+    dataset: str | None,
     predictor_mode: Literal["image", "video"],
 ) -> ImagePredictor | VideoPredictor:
     """캐시에서 Predictor를 조회하거나, 없으면 새로 생성해 캐싱 후 반환한다.
@@ -42,31 +42,38 @@ def _get_or_create_predictor(
 
     Args:
         model_name (str): 추론에 사용할 모델 아키텍처 이름.
-        dataset (str): 모델 학습에 사용된 데이터셋 이름.
+        dataset (str | None): 모델 학습에 사용된 데이터셋 이름 (DeepClip은 None).
         predictor_mode (Literal["image", "video"]): Predictor 종류 선택.
 
     Returns:
         ImagePredictor | VideoPredictor: 캐시된 또는 새로 생성된 Predictor 인스턴스.
     """
     cache_key = (model_name, dataset)
- 
+    is_clip = model_name.startswith("deepclip") # DeepClip은 dataset 인자 없음
+
     if predictor_mode == "image":
         if cache_key not in _image_cache:
-            _image_cache[cache_key] = ImagePredictor(
+            if is_clip:
+                _image_cache[cache_key] = ClipImagePredictor(margin_ratio=0.2, conf_thres=0.5, model_name=model_name)
+            else:
+                _image_cache[cache_key] = ImagePredictor(
+                    margin_ratio=0.2,
+                    conf_thres=0.5,
+                    model_name=model_name,
+                    dataset=dataset,
+                )
+        return _image_cache[cache_key]
+
+    if cache_key not in _video_cache:
+        if is_clip:
+            _video_cache[cache_key] = ClipVideoPredictor(margin_ratio=0.2, conf_thres=0.5, model_name=model_name)
+        else:
+            _video_cache[cache_key] = VideoPredictor(
                 margin_ratio=0.2,
                 conf_thres=0.5,
                 model_name=model_name,
                 dataset=dataset,
             )
-        return _image_cache[cache_key]
- 
-    if cache_key not in _video_cache:
-        _video_cache[cache_key] = VideoPredictor(
-            margin_ratio=0.2,
-            conf_thres=0.5,
-            model_name=model_name,
-            dataset=dataset,
-        )
     return _video_cache[cache_key]
 
 def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str) -> dict:
@@ -80,7 +87,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
 
     Returns:
         dict:
-            - analysis (dict): prob, face_conf, face_ratio, face_brightness 포함.
+            - analysis (dict): prob 포함.
               얼굴 미감지 또는 오류 발생 시 모든 값 -1.
             - message (str): 처리 결과 메세지.
             - status (str): "success" | "warning" | "failed"
@@ -94,7 +101,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     try:
         analysis = predictor.predict_img(image_path)
         
-        print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
+        print(f"딥페이크 확률 값: {analysis['prob']}")
     
         # 분석 성공 시
         return {
@@ -105,7 +112,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     except PredictorError as e:
         print(e.message)
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1},
+            "analysis": {"prob": -1},
             "message": e.message,
             "status": "warning",
         }
@@ -114,7 +121,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     except Exception as e:
         print(str(e))
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1},
+            "analysis": {"prob": -1},
             "message": f"이미지 분석 중 치명적인 오류가 발생했습니다.",
             "status": "failed"
         }
@@ -159,7 +166,7 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
                     await image_svc.update_image_result(
                         conn, 
                         image_id, 
-                        {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                        {"prob": -1}, 
                         "이미지 추론 결과 업데이트 중 오류가 발생하였습니다.", 
                         "failed"
                     )
@@ -192,8 +199,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
 
     Returns:
         dict:
-            - analysis (dict): prob, face_conf, face_ratio, face_brightness,
-              frame_results, fps, total_frames, num_sampled, num_extracted, num_detected 포함.
+            - analysis (dict): prob, frame_results, fps, total_frames, num_sampled, num_extracted, num_detected 포함.
               오류 발생 시 주요 수치 값 -1.
             - message (str): 처리 결과 메세지.
             - status (str): "success" | "warning" | "failed"
@@ -206,7 +212,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     try:
         analysis = predictor.predict_video(video_path)
         
-        print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
+        print(f"딥페이크 확률 값: {analysis['prob']}")
     
         # 분석 성공 시
         return {
@@ -217,7 +223,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except PredictorError as e:
         print(e.message)
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+            "analysis": {"prob": -1, "frame_results": [],
                          "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": e.message,
             "status": "warning",
@@ -227,7 +233,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     except Exception as e:
         print(str(e))
         return {
-            "analysis": {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1, "frame_results": [],
+            "analysis": {"prob": -1, "frame_results": [],
                          "fps": None, "total_frames": None, "num_sampled": None, "num_extracted": None, "num_detected": None,},
             "message": f"비디오 분석 중 치명적인 오류가 발생했습니다.",
             "status": "failed"
@@ -291,7 +297,7 @@ def process_video_task(video_id: int, video_loc: str, version_type: str, model_t
                     await video_svc.update_video_result(
                         conn, 
                         video_id, 
-                        {"prob": -1, "face_conf": -1, "face_ratio": -1, "face_brightness": -1}, 
+                        {"prob": -1}, 
                         "비디오 추론 결과 업데이트 중 오류가 발생하였습니다.", 
                         "failed"
                     )          

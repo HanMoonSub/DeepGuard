@@ -3,18 +3,13 @@ import argparse
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from colorama import Fore, Style
-from sklearn.metrics import (
-    confusion_matrix, ConfusionMatrixDisplay, 
-    PrecisionRecallDisplay, RocCurveDisplay
-    )
 from sklearn.metrics import (
     roc_auc_score, accuracy_score, 
     recall_score, precision_score, f1_score, 
-    log_loss
+    log_loss, confusion_matrix
 )
-from .video_predictor import VideoPredictor
+from .video_predictor import ClipVideoPredictor, VideoPredictor
 
 c_ = Fore.BLUE
 g_ = Fore.GREEN
@@ -22,6 +17,22 @@ r_ = Fore.RED
 y_ = Fore.YELLOW
 s_ = Style.BRIGHT
 rs_ = Style.RESET_ALL
+
+def rule_based_fake_prob(result: dict) -> float:
+    """
+    predict_video_artifacts 결과로 최종 fake 확률 계산 (rule-base)
+      - real(1-prob), prob(1-real), artifact 20개 = 22개 확률 중 argmax
+      - real이 가장 크면 prob 사용, 아니면 가장 큰 fake 쪽 확률(prob 또는 artifact) 사용
+    얼굴 미검출(artifacts None)이면 prob(0.5)를 그대로 사용
+    """
+    prob = result["prob"]
+    artifacts = result["artifacts"]
+    if artifacts is None:
+        return prob
+
+    artifact_probs = [p for types in artifacts.values() for p in types.values()]
+    fake_max = max([prob] + artifact_probs)
+    return prob if 1 - prob >= fake_max else fake_max
 
 def main():
     parser = argparse.ArgumentParser(description="Predict DeepFake Video")
@@ -36,17 +47,14 @@ def main():
     parser.add_argument("--margin-ratio", default=0.2, type=float, help="Margin ratio around the detected face crop")
     parser.add_argument("--conf-thres", default=0.5, type=float, help="Confidence threshold for face detection")
     parser.add_argument("--min-face-ratio", default=0.01, type=float, help="Minimum face-to-frame size ratio to process")
-    parser.add_argument("--model-name", default='ms_eff_vit_b0', type=str, help="Name of the model architecture")
-    parser.add_argument("--model-dataset", default='celeb_df_v2', type=str, help="Dataset used for model pre-training")
+    parser.add_argument("--model-name", default='ms_eff_vit_b0', type=str, help="Name of the model architecture (ms_eff_vit_*, ms_eff_gcvit_*, deepclip_b0, deepclip_b5)")
+    parser.add_argument("--model-dataset", default='celeb_df_v2', type=str, help="Dataset used for model pre-training (ignored for deepclip models)")
 
     # --- Inference Strategy ---
     parser.add_argument("--num-frames", default=20, type=int, help="Number of frames to sample per video")
     parser.add_argument("--agg-mode", default='conf', type=str, help="Aggregation method for frame-level predictions")
     parser.add_argument("--tta-hflip", default=0.0, type=float, help="Probability of horizontal flip for Test-Time Augmentation (TTA)")
-    
-    # --- Display Result ---
-    parser.add_argument("--save-result", default=True, type=bool, help="Save figure file")
-    
+
     args = parser.parse_args()
     
     
@@ -73,15 +81,24 @@ def main():
     
     
     print(f"\n🤖 {s_}{c_}[2/4] 모델 로딩 중...{rs_} ({g_}{args.model_name}{rs_})")
-    video_predictor = VideoPredictor(args.margin_ratio, args.conf_thres, args.min_face_ratio,
-                   args.model_name, args.model_dataset)
+    is_clip = args.model_name.startswith("deepclip")
+    if is_clip:
+        video_predictor = ClipVideoPredictor(args.margin_ratio, args.conf_thres, args.min_face_ratio, args.model_name)
+    else:
+        video_predictor = VideoPredictor(args.margin_ratio, args.conf_thres, args.min_face_ratio,
+                       args.model_name, args.model_dataset)
+    model_desc = args.model_name if is_clip else args.model_dataset
     
     print(f"\n🔍 {s_}{c_}[3/4] 비디오 분석 시작{rs_} (프레임: {y_}{args.num_frames}{rs_}, 집계: {y_}{args.agg_mode}{rs_}, TTA: {y_}{args.tta_hflip}{rs_})")
     all_pred = []
     all_true = meta_df[args.label_col]
     
-    for video_path in tqdm(meta_df['video_path'], total=len(meta_df), desc=f"Test Evaluation (Data: {args.dataset} | Model: {args.model_dataset})"):
-        pred = video_predictor.predict_video(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
+    for video_path in tqdm(meta_df['video_path'], total=len(meta_df), desc=f"Test Evaluation (Data: {args.dataset} | Model: {model_desc})"):
+        if is_clip:
+            result = video_predictor.predict_video_artifacts(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
+            pred = rule_based_fake_prob(result)
+        else:
+            pred = video_predictor.predict_video(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
         all_pred.append(pred)
         
     all_pred = np.array(all_pred)
@@ -93,7 +110,11 @@ def main():
     auc = roc_auc_score(all_true, all_pred)
     acc = accuracy_score(all_true, y_pred_bin)
     loss = log_loss(all_true, all_pred)
-    
+    macro_f1 = f1_score(all_true, y_pred_bin, average="macro")
+
+    # Confusion Matrix (임계값 0.5)
+    tn, fp, fn, tp = confusion_matrix(all_true, y_pred_bin, labels=[0, 1]).ravel()
+
     # REAL(0) recall, precision, f1
     real_recall = recall_score(all_true, y_pred_bin, pos_label=0)
     real_precision = precision_score(all_true, y_pred_bin, pos_label=0)
@@ -108,7 +129,13 @@ def main():
     print(f"🏆 {s_}최종 평가 결과 (Final Metrics){rs_}")
     print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
 
-    print(f"   Overall  ▶  {s_}AUC:{rs_} {g_}{auc:.4f}{rs_}  |  {s_}ACC:{rs_} {g_}{acc * 100:.2f}%{rs_}  |  {s_}Log LOSS:{rs_} {g_}{loss:.4f}{rs_}")
+    print(f"   Overall  ▶  {s_}AUC:{rs_} {g_}{auc:.4f}{rs_}  |  {s_}ACC:{rs_} {g_}{acc * 100:.2f}%{rs_}  |  {s_}Log LOSS:{rs_} {g_}{loss:.4f}{rs_}  |  {s_}Macro F1:{rs_} {g_}{macro_f1:.4f}{rs_}")
+    print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
+
+    print(f"   CONFUSION MATRIX  │  PRED REAL  │  PRED FAKE")
+    print(f"   ------------------│-------------│-----------")
+    print(f"   {s_}TRUE REAL (0){rs_}     │  {g_}{tn:>9}{rs_}  │  {r_}{fp:>9}{rs_}")
+    print(f"   {s_}TRUE FAKE (1){rs_}     │  {r_}{fn:>9}{rs_}  │  {g_}{tp:>9}{rs_}")
     print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
 
     print(f"   CATEGORY  │  PRECISION  │   RECALL     │     F1    ")
@@ -119,36 +146,5 @@ def main():
     print(f"{s_}{y_}" + "=" * 65 + f"{rs_}")
     print(f"✨ {s_}{g_}모든 분석이 완료되었습니다!{rs_}\n")
     
-    if args.save_result:
-        plt.style.use('seaborn-v0_8-whitegrid')
-        
-        fig, ax = plt.subplots(1, 3, figsize=(20, 6))
-        
-        # [1] Confusion Matrix
-        cm = confusion_matrix(all_true.astype(int), (all_pred >= 0.5).astype(int), labels=[0,1], normalize='true')
-        cm_disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Real', 'Fake'])
-        cm_disp.plot(ax=ax[0], cmap='Blues', colorbar=False)
-        ax[0].set_title("Confusion Matrix")
-        
-        # [2] ROC Curve
-        RocCurveDisplay.from_predictions(all_true, all_pred, pos_label=0, ax=ax[1], name="Class 0 (Real)", color='royalblue')
-        RocCurveDisplay.from_predictions(all_true, all_pred, pos_label=1, ax=ax[1], name="Class 1 (Fake)", color='darkorange')
-        ax[1].set_title("ROC Curve (Real vs Fake)")
-        ax[1].grid(True, linestyle='--', alpha=0.5)
-        
-        # [3] Precision-Recall Curve
-        PrecisionRecallDisplay.from_predictions(all_true, all_pred, pos_label=0, ax=ax[2], name="Class 0 (Real)", color='royalblue')
-        PrecisionRecallDisplay.from_predictions(all_true, all_pred, pos_label=1, ax=ax[2], name="Class 1 (Fake)", color='darkorange')
-        ax[2].set_title("Precision-Recall Curve (Real vs Fake)")
-        ax[2].grid(True, linestyle='--', alpha=0.5)
-        
-        plt.tight_layout()
-        
-        save_path = f"result_{args.dataset}_{args.model_name}.png"
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        plt.close(fig)
-        
-        print(f"📈 시각화 결과가 저장되었습니다: {s_}{g_}{save_path}{rs_}")
-        
 if __name__ == "__main__":
     main()

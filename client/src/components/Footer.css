@@ -1,0 +1,90 @@
+.dg-footer {
+  background: var(--color-bg-dark);
+  color: var(--color-on-dark-subtle);
+  padding: 64px 0 32px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+/* 내비와 같은 전체 폭 + 좌우 gutter */
+.dg-footer__inner {
+  padding: 0 var(--gutter);
+}
+
+.dg-footer__top {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(3, 1fr);
+  gap: 40px;
+}
+
+.dg-footer__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-on-dark);
+  margin-bottom: 12px;
+}
+.dg-footer__mark {
+  display: block;
+  height: 26px;
+  width: auto;
+  /* 원본 파란 사각형의 box-shadow: 0 0 18px var(--color-primary) 느낌의 은은한 빛 */
+  filter: drop-shadow(0 0 10px rgba(32, 108, 253, 0.65));
+}
+.dg-footer__brand p {
+  margin: 0;
+  max-width: 320px;
+}
+
+.dg-footer__col h4 {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-on-dark);
+}
+.dg-footer__col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dg-footer__col a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.dg-footer__col a:hover {
+  color: var(--color-on-dark);
+}
+
+.dg-footer__bottom {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .dg-footer__top {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dg-footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .dg-footer__top {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}

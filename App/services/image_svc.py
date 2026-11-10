@@ -274,12 +274,10 @@ async def register_image_result(conn: Connection, user_id: int | None, image_loc
     try:
         query = """
             INSERT INTO image_result (
-                user_id, image_loc, status, label, score, face_conf, face_ratio,
-                face_brightness, version_type, model_type, domain_type, result_msg
+                user_id, image_loc, status, label, score, version_type, model_type, domain_type, result_msg
             )
             VALUES (
-                :user_id, :image_loc, 'PENDING', 'UNKNOWN', -1.0, -1.0, -1.0,
-                -1.0, :version_type, :model_type, :domain_type, '분석 대기 중...')
+                :user_id, :image_loc, 'PENDING', 'UNKNOWN', -1.0, :version_type, :model_type, :domain_type, '분석 대기 중...')
         """
         
         stmt = text(query)
@@ -309,7 +307,7 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
     Args:
         conn (Connection): SQLAlchemy 비동기 DB 커넥션.
         image_id (int): 업데이트할 이미지 레코드 PK.
-        analysis (dict): 추론 결과값. prob, face_conf, face_ratio, face_brightness 포함.
+        analysis (dict): 추론 결과값. prob 포함.
         result_msg (str): 처리 결과 메세지.
         status (str): 추론 상태 ("success" | "warning" | "failed").
 
@@ -331,9 +329,6 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
             SET status = :status,
                 label = :label, 
                 score = :score, 
-                face_conf = :face_conf, 
-                face_ratio = :face_ratio, 
-                face_brightness = :face_brightness, 
                 result_msg = :result_msg
             WHERE id = :image_id
         """
@@ -345,9 +340,6 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
             "status": db_status,
             "label": label,
             "score": analysis["prob"],
-            "face_conf": analysis["face_conf"],
-            "face_ratio": analysis["face_ratio"],
-            "face_brightness": analysis["face_brightness"],
             "result_msg": result_msg,
             "image_id": image_id
         })
@@ -374,8 +366,7 @@ async def get_image_result(conn: Connection, image_id: int):
     """
     try:
         query = text("""
-            SELECT id, user_id, image_loc, status, label, score, face_conf, face_ratio,
-                   face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, user_id, image_loc, status, label, score, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
             WHERE id = :image_id
         """)
@@ -393,9 +384,6 @@ async def get_image_result(conn: Connection, image_id: int):
             status = row.status,
             label = row.label,
             score = row.score,
-            face_conf = row.face_conf,
-            face_ratio = row.face_ratio,
-            face_brightness = row.face_brightness,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,
@@ -479,7 +467,7 @@ async def get_user_history(conn: Connection, image_id: int):
     """
     try:
         query = """
-            SELECT id, image_loc, status, label, score, face_conf, face_ratio, face_brightness, version_type, model_type, domain_type, result_msg, created_at
+            SELECT id, image_loc, status, label, score, version_type, model_type, domain_type, result_msg, created_at
             FROM image_result
             WHERE id = :image_id;
         """
@@ -496,9 +484,6 @@ async def get_user_history(conn: Connection, image_id: int):
             status = row.status,
             label = row.label,
             score = row.score,
-            face_conf = row.face_conf,
-            face_ratio = row.face_ratio,
-            face_brightness = row.face_brightness,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,

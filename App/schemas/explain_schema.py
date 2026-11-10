@@ -16,9 +16,16 @@ from pydantic import BaseModel, Field, model_validator
 #   - gradcamplusplus   : 2차 gradient 활용 → 다중 위조 영역 동시 포착, 작은 영역에 강함 (aug_smooth: O, eigen_smooth: X)
 #   - xgradcam     : gradient를 normalized activation으로 스케일링
 #                    → attribution 합이 logit 변화량과 수학적으로 일치, 충실도 높음 (aug_smooth: O, eigen_smooth: O)
+#
+# [BOTH] v1/v2 공통 → low(LayerCAM) + high(EigenGradCAM) CAM을 가중 평균(fuse="mean", low_weight=0.6, 서버 고정)으로 결합
+#
+# 위조 흔적 임계값(threshold)은 client에서 받지 않고 explainability의 branch별 고정값을 쓴다
+#   - high: 0.8, low: 0.95, both: low/high CAM을 각각 0.95/0.8로 이진화한 뒤 합집합
+#   - fusion       : v1 BranchFusionExplainer / v2 ClipBranchFusionExplainer (aug_smooth: O, eigen_smooth: X)
 
 _LOW_ALLOWED  = {"hirescam", "gradcamelementwise", "layercam"}
 _HIGH_ALLOWED = {"eigengradcam", "gradcamplusplus", "xgradcam"}
+_BOTH_ALLOWED = {"fusion"}
 _EIGEN_ALLOWED = {"gradcamelementwise", "layercam", "xgradcam"}
 
 
@@ -32,20 +39,17 @@ class ExplainImageRequest(BaseModel):
     model_type: Literal["fast", "pro"] = Field("fast",
                                                description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)")
     
-    branch_level: Literal["low","high"] = Field("high", 
-                                                description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역 위조 흔적 포착")
+    branch_level: Literal["low","high","both"] = Field("high",
+                                                description="브랜치 레벨\nlow: 국소 위조 흔적 포착\nhigh: 전역 위조 흔적 포착\nboth: low + high 결합")
     
     explainer_type: str = Field("eigengradcam", 
-                                description = ("선택 가능한 XAI 기법. low: [hirescam, gradcamelementwise, layercam], ""high: [eigengradcam, gradcamplusplus, xgradcam]"))
+                                description = ("선택 가능한 XAI 기법. low: [hirescam, gradcamelementwise, layercam], ""high: [eigengradcam, gradcamplusplus, xgradcam], both: [fusion]"))
     
     display_type: Literal["heatmap", "bbox", "heatmap_bbox"] = Field("heatmap_bbox", 
                                                                      description="시각화 형태. heatmap: 전체 분포, bbox: 위조 의심 영역 사각형, heatmap_bbox: 위조 의심 사각형 내부에 블러 처리된 히트맵을 중첩")
     
-    overlay_ratio: float = Field(0.7, ge=0.5, le=1.0, 
+    overlay_ratio: float = Field(0.8, ge=0.5, le=1.0, 
                                  description = "Heatmap 투명도 (0: 히트맵만 강조, 1: 원본 이미지 위주)")
-    
-    threshold: float = Field(0.9, ge=0.5, le=1.0, 
-                             description="contour/bbox 이진화 임계값 (0.0~1.0)")
     
     aug_smooth: bool = Field(False, 
                              description = "TTA(Test Time Augmentation) 적용 여부. 히트맵을 더 객체 중심적으로 정렬")
@@ -55,7 +59,7 @@ class ExplainImageRequest(BaseModel):
     
     @model_validator(mode="after")
     def validate_explainer_for_branch(self) -> "ExplainImageRequest":
-        branch_allowed = {"low": _LOW_ALLOWED, "high": _HIGH_ALLOWED}
+        branch_allowed = {"low": _LOW_ALLOWED, "high": _HIGH_ALLOWED, "both": _BOTH_ALLOWED}
         if self.explainer_type not in branch_allowed[self.branch_level]:
             raise ValueError(
                 f"branch_level='{self.branch_level}'에서 허용된 기법: "

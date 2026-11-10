@@ -17,40 +17,30 @@ class BaseExplainer:
             "eff_b0", "eff_b5",
             "low_eff_gcvit_b0", "low_eff_gcvit_b5",
             "high_eff_gcvit_b0", "high_eff_gcvit_b5",
+            # DeepClip models (ClipExplainerMixin)
+            "deepclip_b0", "deepclip_b5",
         ],
-        dataset: Literal["celeb_df_v2", "ff++", "kodf"], 
+        dataset: Optional[Literal["celeb_df_v2", "ff++", "kodf"]] = None, # DeepClip 모델은 dataset 불필요
         margin_ratio: float = 0.2,
         conf_thres: float = 0.5,
-        branch_level: Literal["low", "high", "both"] = "high", # "both"는 ms_eff_* 모델만 가능
-        l_stage_idx: int = -1, # gcvit low branch stage index (0~3)
-        block_idx: int = -1, # vit, gcvit block index
+        branch_level: Literal["low", "high"] = "high", # 두 branch 결합은 BranchFusionExplainer 사용
         model: Optional[torch.nn.Module] = None,
-    ):  
-        
+    ):
+
         self.device = "cuda:0" if torch.cuda.is_available() else 'cpu'
         self.margin_ratio = margin_ratio
         self.conf_thres = conf_thres
         self.model_name = model_name
         self.dataset = dataset
         self.branch_level = branch_level
-        self.l_stage_idx = l_stage_idx
-        self.block_idx = block_idx
-                
+
         # Parse Model Metadata
         self.model_variant = model_name.split("_")[-1] # b0, b5
-        # vit, gcvit, cnn (eff_b0/eff_b5: transformer 없는 EfficientNet baseline)
-        if "gcvit" in model_name:
-            self.transformer_type = "gcvit"
-        elif "vit" in model_name:
-            self.transformer_type = "vit"
-        else:
-            self.transformer_type = "cnn"
+        self.transformer_type = self._get_transformer_type()
         self._validate_branch_level()
 
         # Model & Tools setup
-        self.model = model if model is not None else timm.create_model(
-        model_name, pretrained=True, dataset=dataset
-        )
+        self.model = model if model is not None else self._load_model(model_name, dataset)
         self.face_detector = FaceDetector2(conf_thres)
         self.img_size = [224,224] if self.model_variant == "b0" else [384,384]
         self.transforms = get_test_transforms(img_size=self.img_size)
@@ -60,6 +50,26 @@ class BaseExplainer:
         # Explainability setup
         self.reshape_fn = self._get_reshape_fn()
         self.target_layers = self._resolve_target_layers()
+
+    def _load_model(self, model_name: str, dataset: Optional[str]) -> torch.nn.Module:
+        """timm에 등록된 사전학습 모델을 불러온다."""
+        return timm.create_model(model_name, pretrained=True, dataset=dataset)
+
+    def _get_transformer_type(self) -> Literal["gcvit", "vit", "cnn"]:
+        """모델 이름으로 branch의 transformer 종류를 판별한다.
+
+        Returns:
+            str: "gcvit", "vit", "cnn" (eff_b0/eff_b5: transformer 없는 EfficientNet baseline).
+        """
+        if "gcvit" in self.model_name:
+            return "gcvit"
+        if "vit" in self.model_name:
+            return "vit"
+        return "cnn"
+
+    def _branch_root(self) -> torch.nn.Module:
+        """feat_extractor와 l_/h_ branch를 가진 모듈을 반환한다."""
+        return self.model
 
     def _get_reshape_fn(self) -> Callable[[torch.Tensor], torch.Tensor]:
         """모델 종류에 맞는 Feature map reshape 함수를 반환한다.
@@ -77,6 +87,8 @@ class BaseExplainer:
         Raises:
             ValueError: low_/high_ 단일 branch 모델에 존재하지 않는 branch를 요청한 경우 발생.
         """
+        if self.branch_level not in ("low", "high"):
+            raise ValueError(f"branch_level은 'low' 또는 'high'만 가능합니다 (입력: {self.branch_level!r}). 두 branch 결합은 BranchFusionExplainer를 사용하세요.")
         if self.transformer_type == "cnn" and self.branch_level != "high":
             raise ValueError(f"{self.model_name}은 마지막 feature map만 사용하므로 branch_level='high'만 가능합니다.")
         if self.model_name.startswith("low_") and self.branch_level != "low":
@@ -86,7 +98,7 @@ class BaseExplainer:
 
     def _get_backbone_layer(self, feature_idx: int) -> torch.nn.Module:
         """EfficientNet backbone에서 feature_idx 단계의 출력 모듈을 찾는다."""
-        backbone = self.model.feat_extractor.backbone
+        backbone = self._branch_root().feat_extractor.backbone
         name = backbone.feature_info[feature_idx]["module"]  # e.g. "blocks.6"
         modules = dict(backbone.named_modules())
         # timm FeatureListNet은 이름의 '.'를 '_'로 바꾸는 경우가 있어 둘 다 시도
@@ -98,68 +110,35 @@ class BaseExplainer:
     def _resolve_target_layers(self) -> list[torch.nn.Module]:
         """시각화(XAI)의 대상이 될 Target Layer들을 선택한다.
 
-        Returns:
-            list[torch.nn.Module]: 분석 대상 정규화(Normalization) 레이어 리스트.
+        각 branch의 마지막 block 정규화 레이어로 고정한다.
+            - gcvit: 마지막 stage 마지막 GCViTBlock의 norm2
+            - vit: 마지막 ViTBlock의 norm1
+            - cnn: backbone의 마지막 feature map
 
-        Raises:
-            ValueError: l_stage_idx나 block_idx가 모델 범위를 벗어날 경우 발생.
+        Returns:
+            list[torch.nn.Module]: 분석 대상 레이어 리스트.
         """
+        root = self._branch_root()
         layers = []
 
         if self.transformer_type == "cnn":
             # eff_b0/eff_b5: transformer가 없으므로 backbone의 마지막 feature map을 직접 사용
-            layers.append(self._get_backbone_layer(self.model.h_meta["feature_idx"]))
+            layers.append(self._get_backbone_layer(root.h_meta["feature_idx"]))
 
         elif self.transformer_type == "gcvit":
-            if self.branch_level in ("low", "both"):
-                n_stages  = len(self.model.l_gcvit.stages)
-                stage_idx = self.l_stage_idx if self.l_stage_idx >= 0 else n_stages + self.l_stage_idx
-
-                if not (0 <= stage_idx < n_stages):
-                    raise ValueError(f"l_stage_idx={self.l_stage_idx} 범위 초과 (stage 수: {n_stages})")
-
-                n_blocks = len(self.model.l_gcvit.stages[stage_idx].blocks)
-                blk      = self._resolve_block_idx(self.block_idx, n_blocks, f"l_gcvit stage[{stage_idx}]")
-                layers.append(self.model.l_gcvit.stages[stage_idx].blocks[blk].norm2)
-
-            if self.branch_level in ("high", "both"):
-                n_blocks = len(self.model.h_gcvit.stages[0].blocks)
-                blk      = self._resolve_block_idx(self.block_idx, n_blocks, "h_gcvit stage[0]")
-                layers.append(self.model.h_gcvit.stages[0].blocks[blk].norm2)
+            if self.branch_level == "low":
+                layers.append(root.l_gcvit.stages[-1].blocks[-1].norm2)
+            else:
+                layers.append(root.h_gcvit.stages[-1].blocks[-1].norm2)
 
         else:  # vit
-            if self.branch_level in ("low", "both"):
-                n_blocks = len(self.model.l_vit.blocks)
-                blk      = self._resolve_block_idx(self.block_idx, n_blocks, "l_vit")
-                layers.append(self.model.l_vit.blocks[blk].norm1)
-
-            if self.branch_level in ("high", "both"):
-                n_blocks = len(self.model.h_vit.blocks)
-                blk      = self._resolve_block_idx(self.block_idx, n_blocks, "h_vit")
-                layers.append(self.model.h_vit.blocks[blk].norm1)
+            if self.branch_level == "low":
+                layers.append(root.l_vit.blocks[-1].norm1)
+            else:
+                layers.append(root.h_vit.blocks[-1].norm1)
 
         return layers
 
-    @staticmethod
-    def _resolve_block_idx(block_idx: int, n_blocks: int, name: str) -> int:
-        """음수 인덱싱을 지원하며, 해당 블록의 유효한 인덱스를 계산 및 검증한다.
-
-        Args:
-            block_idx (int): 접근하려는 블록 인덱스 (음수 가능).
-            n_blocks (int): 해당 스테이지/모델의 총 블록 개수.
-            name (str): 에러 메시지 출력용 모듈 이름.
-
-        Returns:
-            int: 정제된 양수 형태의 블록 인덱스.
-
-        Raises:
-            ValueError: 인덱스가 유효 범위를 벗어난 경우 발생.
-        """
-        idx = block_idx if block_idx >= 0 else n_blocks + block_idx
-        if not (0 <= idx < n_blocks):
-            raise ValueError(f"block_idx={block_idx} 범위 초과 ({name} block 수: {n_blocks})")
-        return idx
-    
     def _get_face_bbox(self, img: np.ndarray) -> List[float]:
         """얼굴 탐지기(YOLO)를 통해 이미지에서 얼굴 바운딩 박스를 좌표를 추출한다.
 
@@ -236,5 +215,4 @@ class BaseExplainer:
         return (f"{self.__class__.__name__}("
                 f"model={self.model_name}, dataset={self.dataset}, "
                 f"margin_ratio={self.margin_ratio}, conf_thres={self.conf_thres}, "
-                f"branch_level={self.branch_level}, l_stage_idx={self.l_stage_idx}, block_idx={self.block_idx},"
-                f"device={self.device})")
+                f"branch_level={self.branch_level}, device={self.device})")

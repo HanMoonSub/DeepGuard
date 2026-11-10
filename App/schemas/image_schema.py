@@ -15,7 +15,7 @@ class ImageData(BaseModel):
     image_id: int = Field(..., description="이미지 분석 레코드 고유 ID (image_result.id)")
     image_loc: str = Field(..., description="서버 내 저장된 이미지 파일 경로 (DB 저장 형식, 예: /static/uploads/user@a.com/img_1700000000.png)")
     label: str = Field(..., description="딥페이크 판정 결과 라벨 (FAKE / REAL / UNKNOWN)")
-    version_type: str = Field(..., description="사용된 모델 버전 (v1 / v2)")
+    version_type: str = Field(..., description="사용된 모델 버전 (현재 v1만 사용)")
     model_type: str = Field(..., description="모델 속도/정확도 모드 (fast / pro)")
     domain_type: str = Field(..., description="얼굴 도메인 타입 (서양인 / 동양인)")
     created_at: datetime = Field(..., description="분석 요청 생성 시각 (UTC)")
@@ -30,9 +30,6 @@ class ImageInference(BaseModel):
     - services: image_svc.get_user_history, image_svc.get_image_result
     """
     score: float = Field(..., description="딥페이크 확률 점수 (0.0~1.0, 0.5 이상이면 FAKE 판정). 분석 실패 시 -1.0")
-    face_conf: float = Field(..., description="얼굴 탐지 신뢰도 (0.0~1.0). 분석 실패 시 -1.0")
-    face_ratio: float = Field(..., description="이미지 내 얼굴이 차지하는 면적 비율 (0.0~1.0). 분석 실패 시 -1.0")
-    face_brightness: float = Field(..., description="얼굴 영역 평균 밝기 값. 분석 실패 시 -1.0")
     result_msg: str = Field(..., description="분석 결과에 대한 상세 메시지 (성공/경고/실패 사유)")
 
 

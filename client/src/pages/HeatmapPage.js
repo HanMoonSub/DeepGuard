@@ -2,15 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+import Navbar from '../components/Navbar';
+import useTheme from '../hooks/useTheme';
+import Footer from '../components/Footer';
+import Button from '../components/Button';
+import Card from '../components/Card';
+import HeatmapVisualSettings, { DEFAULT_DISPLAY } from '../components/HeatmapVisualSettings';
+import AmbientBackground from '../components/AmbientBackground';
+import HeatmapZoomImage from '../components/HeatmapZoomImage';
+import './HeatmapPage.css';
+import './ImageHeatmapPage.css';
 
 const POLL_INTERVAL = 2000;
 
-const BRANCH_OPTIONS = {
-  low:  { branch_level: 'low',  explainer_type: 'layercam',     display_type: 'heatmap_bbox', overlay_ratio: 0.7, threshold: 0.9 },
-  high: { branch_level: 'high', explainer_type: 'eigengradcam', display_type: 'heatmap_bbox', overlay_ratio: 0.7, threshold: 0.9 },
-};
-const MODEL_OPTIONS = ['fast', 'pro'];
-
+// branch별 XAI 기법 (low: 국소 흔적 / high: 전역 구조 / both: 둘을 결합)
+const EXPLAINER_BY_BRANCH = { low: 'layercam', high: 'eigengradcam', both: 'fusion' };
+// 버전별 표시할 branch와 기본값 (v1: MS-EffGCViT)
+const BRANCHES_BY_VERSION = { v1: ['low', 'high', 'both'] };
+const DEFAULT_BRANCH = { v1: 'both' };
 const extractTaskId = (data) => {
   if (typeof data === 'string') return data;
   return data?.task_id || data?.id || null;
@@ -20,67 +29,126 @@ const toAbsoluteUrl = (path) => {
   if (path.startsWith('http') || path.startsWith('blob')) return path;
   return path;
 };
+// 공통 레이아웃: Navbar(light) + 본문 + Footer
+const HeatmapLayout = ({ sessionUser, children }) => {
+  const [theme, setTheme] = useTheme();
+  return (
+    <div className="dg-heatmap">
+      <AmbientBackground />
+      <Navbar variant="light" sessionUser={sessionUser} theme={theme} onThemeChange={setTheme} />
+      <main className="dg-heatmap__main">
+        <div className="dg-heatmap__wrap">{children}</div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+// 구간 시각 → 'N초' (60초 이상은 'M분 N초'). frame_time 우선, 없으면 'mm:ss' 타임스탬프 해석
+const secondsOf = (f) => {
+  if (!f) return null;
+  if (f.frame_time != null && Number.isFinite(Number(f.frame_time))) return Math.round(Number(f.frame_time));
+  const m = /^(\d+):(\d{1,2})$/.exec(String(f.timestamp || '').trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+const secLabel = (f) => {
+  const s = secondsOf(f);
+  if (s == null) return f?.timestamp || '';
+  return s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
+};
 
 const HeatmapPage = ({ sessionUser }) => {
   const { state } = useLocation();
   const navigate  = useNavigate();
-  const { video_id, frame_index, timestamp, fake_score, model_type, video_name } = state || {};
+  const { video_id, frame_index, timestamp, frame_time, fake_score, model_type, version_type } = state || {};
+  const modelType = model_type || 'fast'; // 분석에 사용한 모델 그대로 사용
+  const versionType = BRANCHES_BY_VERSION[version_type] ? version_type : 'v1';
+  const branches = BRANCHES_BY_VERSION[versionType];
+  const defaultBranch = DEFAULT_BRANCH[versionType];
 
-  const [tempBranch, setTempBranch]         = useState('low');
-  const [tempModel, setTempModel]           = useState(model_type || 'fast');
-  const [selectedBranch, setSelectedBranch] = useState(null);
-  const [selectedModel, setSelectedModel]   = useState(null);
-  const [status, setStatus]                 = useState('idle');
-  const [heatmapSrc, setHeatmapSrc]         = useState(null);
+  const [branch, setBranch]           = useState(defaultBranch);
+  const [draft, setDraft]             = useState(DEFAULT_DISPLAY);
+  const [applied, setApplied]         = useState({ branch: defaultBranch, ...DEFAULT_DISPLAY });
+  const [status, setStatus]           = useState('idle');
+  const [heatmapSrc, setHeatmapSrc]   = useState(null);
   const [, setTaskId]                 = useState(null);
-  const [errorMsg, setErrorMsg]             = useState('');
-  const [errorDetail, setErrorDetail]       = useState('');
-  const [elapsed, setElapsed]               = useState(0);
+  const [errorMsg, setErrorMsg]       = useState('');
+  const [errorDetail, setErrorDetail] = useState('');
 
   const pollingRef = useRef(null);
-  const timerRef   = useRef(null);
   const isMounted  = useRef(true);
+  const requestedFrameRef = useRef(-1); // 마지막으로 요청한 frame_index (StrictMode 중복 요청 방지)
+  const appliedRef = useRef(null);      // 구간 이동 시 그대로 쓸 현재 적용 설정
+  const reqIdRef   = useRef(0);         // 최신 요청만 반영
+
+  // 타임라인에서 넘어온 구간 목록 (없으면 현재 구간 하나)
+  const frames = Array.isArray(state?.frames) && state.frames.length
+    ? state.frames
+    : (state ? [{ frame_index, timestamp, frame_time, fake_score }] : []);
+  const curPos = frames.findIndex(f => f.frame_index === frame_index);
+  const prevFrame = curPos > 0 ? frames[curPos - 1] : null;
+  const nextFrame = curPos >= 0 && curPos < frames.length - 1 ? frames[curPos + 1] : null;
 
   useEffect(() => {
     isMounted.current = true;
-    return () => { isMounted.current = false; stopPolling(); clearInterval(timerRef.current); };
+    return () => { isMounted.current = false; stopPolling(); };
   }, []);
+
+  // 진입 시 기본 설정으로 생성, 이후 구간을 옮기면 지금 적용된 설정 그대로 다시 생성
+  useEffect(() => {
+    if (!state) return;
+    const key = frame_index ?? 0;
+    if (requestedFrameRef.current === key) return;
+    const isFirst = requestedFrameRef.current === -1;
+    requestedFrameRef.current = key;
+    if (isFirst || !appliedRef.current) requestHeatmap(defaultBranch, DEFAULT_DISPLAY);
+    else requestHeatmap(appliedRef.current.branch, appliedRef.current);
+  }, [frame_index]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 이전/다음 구간으로 이동 — 히스토리를 쌓지 않아 '타임라인으로'는 그대로 한 번에 돌아감
+  const goFrame = (f) => {
+    if (!f) return;
+    navigate('/heatmap', {
+      replace: true,
+      state: { ...state, frame_index: f.frame_index, timestamp: f.timestamp, frame_time: f.frame_time, fake_score: f.fake_score },
+    });
+  };
 
   const stopPolling = () => {
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
   };
 
-  const handleBranchSelect = (branch, m) => {
-    setSelectedBranch(branch);
-    setSelectedModel(m);
-    setTempBranch(branch);
-    setTempModel(m);
-    requestHeatmap(branch, m);
-  };
-
-  const requestHeatmap = async (branch, m) => {
+  const requestHeatmap = async (nextBranch, display) => {
     if (video_id == null) { setErrorMsg('video_id가 없습니다.'); setStatus('error'); return; }
+    const myId = ++reqIdRef.current;
     stopPolling();
-    clearInterval(timerRef.current);
-    setElapsed(0);
     setStatus('submitting');
     setHeatmapSrc(null);
     setErrorMsg('');
     setErrorDetail('');
     setTaskId(null);
+    const nextApplied = { branch: nextBranch, display_type: display.display_type, overlay_ratio: display.overlay_ratio };
+    appliedRef.current = nextApplied;
+    setApplied(nextApplied);
 
-    const body = { model_type: m, ...BRANCH_OPTIONS[branch] };
+    const body = {
+      model_type: modelType,
+      branch_level: nextBranch,
+      explainer_type: EXPLAINER_BY_BRANCH[nextBranch],
+      display_type: display.display_type,
+      overlay_ratio: display.overlay_ratio,
+    };
 
     try {
       const res = await axios.post(`/explain/video/${video_id}/frame/${frame_index ?? 0}`, body);
+      if (myId !== reqIdRef.current) return;
       const tid = extractTaskId(res.data);
       if (!tid) throw new Error(`task_id 추출 실패. 응답: ${JSON.stringify(res.data)}`);
       setTaskId(tid);
       setStatus('polling');
-      timerRef.current = setInterval(() => setElapsed(p => p + 1), 1000);
-      startPolling(tid);
+      startPolling(tid, myId);
     } catch (e) {
-      if (!isMounted.current) return;
+      if (!isMounted.current || myId !== reqIdRef.current) return;
       const detail = e.response?.data?.detail;
       let msg;
       if (Array.isArray(detail)) msg = detail.map(d => `[${d.loc?.join('.')}] ${d.msg} (입력값: ${JSON.stringify(d.input)})`).join(' / ');
@@ -93,12 +161,14 @@ const HeatmapPage = ({ sessionUser }) => {
     }
   };
 
-  const startPolling = (tid) => {
+  const startPolling = (tid, myId) => {
+    if (!isMounted.current) return;
     let cnt = 0;
     pollingRef.current = setInterval(async () => {
       if (!isMounted.current) return;
       try {
         const res = await axios.get(`/explain/frame/result/${tid}`);
+        if (myId !== reqIdRef.current) return;
         cnt = 0;
         const d = res.data;
         if (d === null || d === undefined) return;
@@ -110,196 +180,173 @@ const HeatmapPage = ({ sessionUser }) => {
           loc = d.cam_loc ?? d.result_loc ?? d.image_loc ?? d.heatmap_loc ?? d.file_loc ?? d.result_path ?? d.path ?? d.url ?? d.output_path ?? null;
           if (!loc) {
             const st = (d.status || '').toUpperCase();
-            if (st === 'FAILED' || st === 'ERROR') { stopPolling(); clearInterval(timerRef.current); setErrorMsg('히트맵 생성 실패'); setErrorDetail(d.result_msg || d.message || '서버 오류'); setStatus('error'); return; }
+            if (st === 'FAILED' || st === 'ERROR') { stopPolling(); setErrorMsg('히트맵 생성 실패'); setErrorDetail(d.result_msg || d.message || '서버 오류'); setStatus('error'); return; }
             return;
           }
         }
-        if (loc) { stopPolling(); clearInterval(timerRef.current); setHeatmapSrc(toAbsoluteUrl(loc)); setStatus('done'); }
+        if (loc) { stopPolling(); setHeatmapSrc(toAbsoluteUrl(loc)); setStatus('done'); }
       } catch (e) {
+        if (myId !== reqIdRef.current) return;
         cnt++;
-        if (cnt >= 5) { stopPolling(); clearInterval(timerRef.current); setErrorMsg('서버 연결 실패'); setErrorDetail(e.message); setStatus('error'); }
+        if (cnt >= 5) { stopPolling(); setErrorMsg('서버 연결 실패'); setErrorDetail(e.message); setStatus('error'); }
       }
     }, POLL_INTERVAL);
   };
 
+  const handleReset = () => { setBranch(defaultBranch); setDraft(DEFAULT_DISPLAY); };
+  const handleApply = () => requestHeatmap(branch, draft);
+  const handleRetry = () => requestHeatmap(applied.branch, applied);
+
   const isFake = (fake_score ?? 0) > 50;
   const isProcessing = status === 'submitting' || status === 'polling';
+  const tone = isFake ? 'fake' : 'real';
+  const dirtyCount = [
+    branch !== applied.branch,
+    draft.display_type !== applied.display_type,
+    draft.overlay_ratio !== applied.overlay_ratio,
+  ].filter(Boolean).length;
+  const canReset = branch !== defaultBranch
+    || draft.display_type !== DEFAULT_DISPLAY.display_type
+    || draft.overlay_ratio !== DEFAULT_DISPLAY.overlay_ratio;
+  const isDone = status === 'done' && !!heatmapSrc;
 
   if (!state) return (
-    <div style={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
-      <p>전송된 프레임 데이터가 없습니다.</p>
-      <button onClick={() => navigate(-1)} style={{ marginLeft: '15px', padding: '8px 16px', backgroundColor: '#1A2C50', color: '#39FF14', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>뒤로가기</button>
-    </div>
+    <HeatmapLayout sessionUser={sessionUser}>
+      <Card className="dg-card--static dg-heatmap__error">
+        <div className="dg-heatmap__error-icon" aria-hidden="true">!</div>
+        <p className="dg-heatmap__error-title">전송된 프레임 데이터가 없습니다</p>
+        <p className="dg-heatmap__error-desc">타임라인 화면에서 확인할 프레임의 ‘히트맵’ 버튼으로 들어와 주세요.</p>
+        <div className="dg-heatmap__error-actions">
+          <Button variant="primary" onClick={() => navigate('/video-analysis')}>동영상 분석으로</Button>
+          <Button variant="outline" onClick={() => navigate(-1)}>뒤로가기</Button>
+        </div>
+      </Card>
+    </HeatmapLayout>
   );
 
+  // 시각화 설정 위 요약 (이미지 위조 흔적과 같은 구성)
+  const stats = [
+    { label: '딥페이크 확률', value: `${Number(fake_score ?? 0).toFixed(1)}%`, tone },
+    { label: '판정 결과',     value: isFake ? 'FAKE' : 'REAL',                 tone },
+    { label: '모델',          value: `${versionType.toUpperCase()} · ${modelType.toUpperCase()}` },
+  ];
+  const curFrame = curPos >= 0 ? frames[curPos] : { timestamp, frame_time };
+
   return (
-    <div style={{ backgroundColor: '#000', minHeight: '100vh', width: '100vw', color: 'white', fontFamily: 'sans-serif', overflowX: 'hidden', position: 'relative' }}>
-      <div style={{ position: 'fixed', inset: 0, backgroundImage: 'linear-gradient(rgba(57,255,20,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,20,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px', pointerEvents: 'none', zIndex: 0 }} />
-      <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(57,255,20,0.04) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
-      <div style={{ position: 'fixed', bottom: '-20%', left: '-10%', width: '500px', height: '500px', borderRadius: '50%', background: `radial-gradient(circle, ${isFake ? 'rgba(255,75,75,0.04)' : 'rgba(57,255,20,0.04)'} 0%, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
+    <HeatmapLayout sessionUser={sessionUser}>
+      {/* 상단: 뒤로가기 + 제목 */}
+      <header className="dg-heatmap__head">
+        <button type="button" className="dg-heatmap__back" onClick={() => navigate(-1)}>
+          <span aria-hidden="true">←</span> 타임라인으로
+        </button>
+        <h2 className="dg-heatmap__title">프레임 위조 흔적 분석</h2>
+      </header>
 
-      <div style={{ position: 'relative', zIndex: 1, padding: '32px 60px', maxWidth: '1400px', margin: '0 auto' }}>
-
-        {/* 헤더 */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' }}>
-          <button onClick={() => navigate(-1)}
-            style={{ color: '#999', background: 'none', border: '1px solid #1A1A1A', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', transition: 'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#39FF14'; e.currentTarget.style.color = '#39FF14'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#999'; }}>
-            ← 타임라인으로
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: '900', letterSpacing: '2px', backgroundColor: isFake ? 'rgba(255,75,75,0.1)' : 'rgba(57,255,20,0.08)', color: isFake ? '#FF4B4B' : '#39FF14', border: `1px solid ${isFake ? 'rgba(255,75,75,0.4)' : 'rgba(57,255,20,0.3)'}` }}>
-              {isFake ? 'FAKE' : 'REAL'}
-            </div>
-            <div style={{ padding: '6px 16px', backgroundColor: '#0A0A0A', borderRadius: '6px', fontSize: '12px', color: '#39FF14', border: '1px solid #1A1A1A', fontWeight: 'bold', letterSpacing: '1px' }}>FRAME FORGERY TRACE</div>
-            {sessionUser && (
-              <div style={{ backgroundColor: '#0A0A0A', padding: '6px 14px', borderRadius: '6px', border: '1px solid #1A1A1A', fontSize: '12px' }}>
-                <span style={{ color: '#999' }}>담당: </span>
-                <span style={{ color: '#39FF14', fontWeight: 'bold' }}>{sessionUser.name}</span>
-              </div>
-            )}
-          </div>
-        </header>
-
-        {/* 스탯 바 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '24px' }}>
-          {[
-            { label: 'VIDEO',        value: video_name || `ID_${video_id}`,            color: '#fff' },
-            { label: 'TIMESTAMP',    value: timestamp || `#${frame_index}`,             color: '#39FF14', big: true },
-            { label: 'FRAME INDEX',  value: `#${frame_index ?? 0}`,                    color: '#fff' },
-            { label: 'FORGERY RISK', value: `${Number(fake_score ?? 0).toFixed(1)}%`,  color: isFake ? '#FF4B4B' : '#39FF14', big: true },
-            { label: 'VERDICT',      value: isFake ? 'FAKE' : 'REAL',                  color: isFake ? '#FF4B4B' : '#39FF14', big: true },
-          ].map((item, i) => (
-            <div key={i} style={{ backgroundColor: '#050505', border: '1px solid #1A1A1A', borderRadius: '12px', padding: '16px 20px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${item.color}40, transparent)` }} />
-              <p style={{ color: '#999', fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px', margin: '0 0 6px 0' }}>{item.label}</p>
-              <p style={{ color: item.color, fontWeight: '900', fontFamily: 'monospace', fontSize: item.big ? '20px' : '14px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* 히트맵 패널 */}
-        <div style={{ backgroundColor: '#050505', borderRadius: '16px', border: `1px solid ${isProcessing ? 'rgba(57,255,20,0.2)' : status === 'done' ? 'rgba(57,255,20,0.15)' : '#1A1A1A'}`, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', transition: 'border-color 0.5s' }}>
-          {isProcessing && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, #39FF14, transparent)', animation: 'slideRight 2s linear infinite', zIndex: 2 }} />}
-
-          <div style={{ padding: '14px 22px', borderBottom: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#030303' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isProcessing ? '#39FF14' : status === 'done' ? '#39FF14' : '#333', boxShadow: isProcessing ? '0 0 8px #39FF14' : 'none', animation: isProcessing ? 'pulse 1.5s ease-in-out infinite' : 'none' }} />
-              <span style={{ color: '#999', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px' }}>HEATMAP + BBOX OVERLAY</span>
-              {selectedBranch && <span style={{ color: '#2A2A2A', fontSize: '10px', fontFamily: 'monospace' }}>{selectedBranch.toUpperCase()} / {(selectedModel || '').toUpperCase()}</span>}
-            </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              {isProcessing && <span style={{ fontSize: '11px', color: '#39FF14', fontFamily: 'monospace' }}>{elapsed}s</span>}
-              {status === 'done' && heatmapSrc && (
-                <a href={heatmapSrc} download={`heatmap_f${frame_index}_${selectedBranch}_${selectedModel}.png`}
-                  style={{ fontSize: '11px', color: '#39FF14', textDecoration: 'none', border: '1px solid rgba(57,255,20,0.3)', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold' }}>
-                  ↓ SAVE
-                </a>
+      {/* 왼쪽 히트맵 | 오른쪽 시각화 설정 (이미지 위조 흔적과 같은 구성) */}
+      <div className="dg-ihm">
+        <section className={`dg-ihm__stage dg-ihm__stage--nav${isProcessing ? ' is-active' : ''}`} aria-label="히트맵 결과">
+          {/* 이전/다음 구간: 히트맵 왼쪽·오른쪽 가운데 화살표, 아래에 'N초' */}
+          {frames.length > 1 && (
+            <>
+              <button type="button" className="dg-ihm__nav dg-ihm__nav--prev" onClick={() => goFrame(prevFrame)}
+                disabled={!prevFrame} aria-label={prevFrame ? `이전 구간 ${secLabel(prevFrame)}` : '이전 구간 없음'}>
+                <span className="dg-ihm__nav-arrow" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></svg>
+                </span>
+                <span className="dg-ihm__nav-time">{prevFrame ? secLabel(prevFrame) : '처음'}</span>
+              </button>
+              <button type="button" className="dg-ihm__nav dg-ihm__nav--next" onClick={() => goFrame(nextFrame)}
+                disabled={!nextFrame} aria-label={nextFrame ? `다음 구간 ${secLabel(nextFrame)}` : '다음 구간 없음'}>
+                <span className="dg-ihm__nav-arrow" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+                </span>
+                <span className="dg-ihm__nav-time">{nextFrame ? secLabel(nextFrame) : '마지막'}</span>
+              </button>
+            </>
+          )}
+          <div className="dg-ihm__canvas">
+            {/* 왼쪽 위: 현재 구간 시각 */}
+            {/* 여러 구간이면 칩을 눌러 원하는 초로 바로 이동 (화살표 없이) */}
+            <span className={`dg-ihm__frame-chip${frames.length > 1 ? ' is-select' : ''}`}>
+              {secLabel(curFrame) || `#${frame_index}`}
+              {frames.length > 1 && curPos >= 0 && <em>{curPos + 1} / {frames.length}</em>}
+              {frames.length > 1 && (
+                <>
+                  <svg className="dg-ihm__frame-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                  <select className="dg-ihm__frame-select" aria-label="이동할 구간 선택"
+                    value={curPos >= 0 ? curPos : ''}
+                    onChange={(e) => goFrame(frames[Number(e.target.value)])}>
+                    {frames.map((f, i) => (
+                      <option key={f.frame_index ?? i} value={i}>{secLabel(f) || `#${f.frame_index}`} ({i + 1} / {frames.length})</option>
+                    ))}
+                  </select>
+                </>
               )}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '48px', minHeight: '480px' }}>
-
-            {/* 옵션 선택 */}
-            {(status === 'idle' || status === 'error') && !isProcessing && (
-              <div style={{ textAlign: 'center', width: '100%', maxWidth: '400px' }}>
-                {status === 'error' && (
-                  <div style={{ marginBottom: '28px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid rgba(255,75,75,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '20px', backgroundColor: 'rgba(255,75,75,0.06)' }}>⚠</div>
-                    <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#FF4B4B', marginBottom: '6px' }}>{errorMsg}</p>
-                    {errorDetail && <p style={{ fontSize: '10px', color: '#999', lineHeight: '1.7', fontFamily: 'monospace', wordBreak: 'break-all', backgroundColor: '#0A0A0A', padding: '10px', borderRadius: '6px', border: '1px solid #1A1A1A', textAlign: 'left', marginBottom: '20px' }}>{errorDetail}</p>}
-                  </div>
-                )}
-
-                {/* Branch */}
-                <p style={{ color: '#999', fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 10px 0' }}>BRANCH LEVEL</p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '22px' }}>
-                  {Object.keys(BRANCH_OPTIONS).map(branch => (
-                    <button key={branch} onClick={() => setTempBranch(branch)}
-                      style={{ padding: '12px 36px', backgroundColor: tempBranch === branch ? 'rgba(57,255,20,0.08)' : 'transparent', border: `1px solid ${tempBranch === branch ? '#39FF14' : '#333'}`, borderRadius: '8px', color: tempBranch === branch ? '#39FF14' : '#999', fontSize: '13px', fontWeight: 'bold', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase' }}>
-                      {branch}
-                      <span style={{ display: 'block', fontSize: '9px', color: tempBranch === branch ? 'rgba(57,255,20,0.5)' : '#2A2A2A', fontWeight: 'normal', marginTop: '3px' }}>
-                        {branch === 'low' ? '국소 흔적' : '전역 구조'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Model */}
-                <p style={{ color: '#999', fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 10px 0' }}>MODEL TYPE</p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '32px' }}>
-                  {MODEL_OPTIONS.map(m => (
-                    <button key={m} onClick={() => setTempModel(m)}
-                      style={{ padding: '12px 36px', backgroundColor: tempModel === m ? 'rgba(57,255,20,0.08)' : 'transparent', border: `1px solid ${tempModel === m ? '#39FF14' : '#333'}`, borderRadius: '8px', color: tempModel === m ? '#39FF14' : '#999', fontSize: '13px', fontWeight: 'bold', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase' }}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handleBranchSelect(tempBranch, tempModel)}
-                  style={{ padding: '14px 56px', backgroundColor: '#1A2C50', border: '1px solid #2A4C80', borderRadius: '10px', color: '#fff', fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#243870'; }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#1A2C50'; }}>
-                  GENERATE
-                </button>
-              </div>
+            </span>
+            {isDone && (
+              <HeatmapZoomImage src={heatmapSrc} alt="위조 흔적 히트맵"
+                hasBoxes={applied.display_type !== 'heatmap'} zoomable={applied.branch === 'low'}
+                onError={(e) => { e.target.style.display = 'none'; setErrorMsg('이미지 로드 실패'); setErrorDetail(`URL: ${heatmapSrc}`); setStatus('error'); }}
+              />
             )}
 
             {/* 로딩 */}
-            {isProcessing && (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ width: '48px', height: '48px', border: '3px solid #1A1A1A', borderTop: '3px solid #39FF14', borderRadius: '50%', margin: '0 auto 24px', animation: 'spin 0.8s linear infinite' }} />
-                <p style={{ fontSize: '13px', color: '#39FF14', letterSpacing: '2px', fontWeight: 'bold', margin: '0 0 8px 0' }}>GENERATING HEATMAP</p>
-                <p style={{ fontSize: '11px', color: '#999', margin: '0 0 6px 0' }}>프레임 위조 흔적 시각화 처리 중...</p>
-                <p style={{ fontSize: '11px', color: '#888', fontFamily: 'monospace', margin: '0 0 4px 0' }}>{(selectedBranch || tempBranch || '').toUpperCase()} BRANCH · {(selectedModel || tempModel || '').toUpperCase()} MODEL</p>
-                <p style={{ fontSize: '12px', color: '#999', fontFamily: 'monospace', margin: 0 }}>{elapsed}s elapsed</p>
+            {(isProcessing || status === 'idle') && (
+              <div className="dg-ihm__state">
+                <div className="dg-heatmap__spinner" />
+                <p className="dg-ihm__state-title">위조 흔적을 그리는 중이에요</p>
               </div>
             )}
 
-            {/* 결과 */}
-            {status === 'done' && heatmapSrc && (
-              <div style={{ width: '100%', textAlign: 'center' }}>
-                <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-                  <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 2, padding: '4px 10px', backgroundColor: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.3)', borderRadius: '6px', fontSize: '10px', color: '#39FF14', fontWeight: 'bold' }}>
-                    ✓ {(selectedBranch || '').toUpperCase()} / {(selectedModel || '').toUpperCase()}
-                  </div>
-                  <img src={heatmapSrc} alt="Heatmap"
-                    style={{ maxWidth: '100%', maxHeight: '600px', borderRadius: '10px', objectFit: 'contain', display: 'block', margin: '0 auto', boxShadow: '0 0 40px rgba(57,255,20,0.08), 0 8px 32px rgba(0,0,0,0.6)' }}
-                    onError={(e) => { e.target.style.display = 'none'; setErrorMsg('이미지 로드 실패'); setErrorDetail(`URL: ${heatmapSrc}`); setStatus('error'); }}
-                  />
+            {/* 에러 */}
+            {status === 'error' && (
+              <div className="dg-ihm__state dg-heatmap__options">
+                <div className="dg-heatmap__alert">
+                  <div className="dg-heatmap__alert-icon" aria-hidden="true">!</div>
+                  <p className="dg-heatmap__alert-msg">{errorMsg}</p>
+                  {errorDetail && <p className="dg-heatmap__alert-detail">{errorDetail}</p>}
                 </div>
-                {/* 재선택 */}
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '20px', flexWrap: 'wrap' }}>
-                  {Object.keys(BRANCH_OPTIONS).flatMap(branch => MODEL_OPTIONS.map(m => ({ branch, m }))).map(({ branch, m }) => (
-                    <button key={branch + m} onClick={() => handleBranchSelect(branch, m)}
-                      style={{ padding: '6px 14px', backgroundColor: (selectedBranch === branch && selectedModel === m) ? 'rgba(57,255,20,0.1)' : 'transparent', border: `1px solid ${(selectedBranch === branch && selectedModel === m) ? '#39FF14' : '#2A2A2A'}`, borderRadius: '6px', color: (selectedBranch === branch && selectedModel === m) ? '#39FF14' : '#999', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s' }}>
-                      {branch.toUpperCase()} / {m.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+                <Button variant="primary" onClick={handleRetry}>다시 시도</Button>
               </div>
             )}
 
             {status === 'done' && !heatmapSrc && (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ color: '#999', marginBottom: '16px' }}>결과 이미지를 받지 못했습니다.</p>
-                <button onClick={() => requestHeatmap(selectedBranch, selectedModel)} style={{ padding: '10px 24px', backgroundColor: 'transparent', color: '#39FF14', border: '1px solid rgba(57,255,20,0.4)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>재시도</button>
+              <div className="dg-ihm__state">
+                <p className="dg-ihm__state-title">결과 이미지를 받지 못했어요</p>
+                <Button variant="outline" onClick={handleRetry}>재시도</Button>
               </div>
             )}
-          </div>
-        </div>
-      </div>
 
-      <style>{`
-        @keyframes scanLine   { 0% { top:-2px; opacity:0; } 10% { opacity:1; } 90% { opacity:1; } 100% { top:100%; opacity:0; } }
-        @keyframes slideRight { 0% { transform:translateX(-100%); } 100% { transform:translateX(100%); } }
-        @keyframes spin       { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
-        @keyframes pulse      { 0%,100% { opacity:1; box-shadow:0 0 8px #39FF14; } 50% { opacity:0.4; box-shadow:0 0 3px #39FF14; } }
-      `}</style>
-    </div>
+            {/* 왼쪽 아래 작은 범례 · 오른쪽 위 저장 아이콘 (그림을 가리지 않게) */}
+            {isDone && applied.display_type !== 'bbox' && (
+              <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
+                <span>낮음</span><i aria-hidden="true" /><span>높음</span>
+              </div>
+            )}
+            {isDone && (
+              <a className="dg-ihm__download" href={heatmapSrc}
+                download={`heatmap_f${frame_index}_${applied.branch}_${modelType}_${applied.display_type}.png`} aria-label="이미지 저장" title="이미지 저장">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+              </a>
+            )}
+          </div>
+        </section>
+
+        <aside className="dg-ihm__side">
+          <dl className="dg-ihm__summary">
+            {stats.map(item => (
+              <div key={item.label} className="dg-ihm__summary-row">
+                <dt>{item.label}</dt>
+                <dd className={item.tone ? `dg-heatmap__tone--${item.tone}` : ''}>{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <HeatmapVisualSettings branches={branches} branch={branch} setBranch={setBranch}
+            draft={draft} setDraft={setDraft} dirtyCount={dirtyCount} isProcessing={isProcessing}
+            onApply={handleApply} onReset={handleReset} canReset={canReset} />
+        </aside>
+      </div>
+    </HeatmapLayout>
   );
 };
 

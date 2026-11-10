@@ -9,11 +9,6 @@ create table video_result (
     label varchar(10) not null,                    -- 최종 판정 결과 (예: 'Fake', 'Real')
     score float not null, 
     
-    -- 분석 품질 및 메타데이터
-    face_conf float not null,
-    face_ratio float not null,
-    face_brightness float not null,
-    
     -- 분석 환경 정보
     version_type varchar(10) not null,
     model_type varchar(10) not null,

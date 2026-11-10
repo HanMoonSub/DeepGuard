@@ -134,11 +134,25 @@ CAM-based explainers are assigned per branch based on empirical performance, not
 - **high-level branch**: `EigenGradCAM`, `GradCAM++`, `XGradCAM` (favor cleaner class-discriminative
   global maps)
 
-`explainability/explainer/base_explainer.py` defines the shared interface
-(`display_heatmap_on_image`, `display_bbox_on_image`, `display_heatmap_bbox_on_image`); concrete
-explainers in `cam_explainer.py`, `eigenvalue_explainer.py`, `gradient_explainer.py`,
-`misc_explainer.py`, `perturbation_explainer.py` subclass it. `branch_level` (`"low"`/`"high"`) is
-a required constructor arg that determines which backbone feature stage the hooks attach to.
+Only these six methods are supported; don't add others back without a reason.
+
+- `explainability/explainer/base_explainer.py` — `BaseExplainer`: model loading, face detect/crop,
+  transforms, and target-layer resolution. `branch_level` (`"low"`/`"high"`/`"both"`, default
+  `"high"`) picks which branch the hooks attach to. The target layer is fixed per branch (no
+  stage/block args): GCViT → `stages[-1].blocks[-1].norm2`, ViT → `blocks[-1].norm1`,
+  `eff_b0`/`eff_b5` (CNN baseline) → last backbone feature map. Subclass hooks: `_load_model`,
+  `_get_transformer_type`, `_branch_root`. `dataset` is optional (unused by DeepClip).
+- `explainability/explainer/cam_explainer.py` — abstract `CAMExplainer` (the
+  `display_heatmap_*` / `display_bbox_*` / `display_heatmap_bbox_*` methods, each with an
+  `_on_image(img_path)` and `_from_array(face)` variant) plus the six concrete explainers, grouped
+  into low/high-branch sections.
+- `explainability/explainer/clip_explainer.py` — `ClipExplainerMixin` + `Clip<Method>Explainer` for
+  each of the six, for DeepClip (`deepclip_b0`/`deepclip_b5`; no dataset; branches live under
+  `model.image_encoder`). Same mixin pattern as `ClipImagePredictor` in `inference/`. deepclip is an
+  optional extra: `explainability/utils/deepclip.py` does the guarded import and raises
+  `ImportError("DeepClip models need the deepclip package: pip install deepguard[deepclip]")` at
+  construction time, so `import explainability` works without it. Clip explainers target only the
+  fake/real output (`BinaryClassifierOutputTarget`); there are no per-artifact CAM targets.
 `explainability/metrics/` (`road.py`, `perturbation_confidence.py`, `cam_mult_image.py`) implement
 CAM-quality metrics used by `explainability/cam_evaluator.py`.
 
@@ -172,7 +186,7 @@ the real/fake class imbalance inherent to these benchmarks (e.g. Celeb-DF-v2 is 
 ### Web app (`App/` + `client/`)
 
 FastAPI backend follows router → service → db layering:
-- `App/routes/*.py` — thin route handlers (`auth`, `home`, `image`, `video`, `inference`, `explain`),
+- `App/routes/*.py` — thin route handlers (`artifact`, `auth`, `home`, `image`, `video`, `inference`, `explain`),
   mounted under `/api` via `App/routes/__init__.py`'s `api_router`.
 - `App/services/*.py` — business logic, DB access, and file I/O per domain; several functions
   (e.g. in `image_svc.py`, `video_svc.py`, `explain_svc.py`) are Celery tasks for async
@@ -182,6 +196,12 @@ FastAPI backend follows router → service → db layering:
   `context_get_conn` dependency) and one unpooled (`celery_engine`/`celery_db_conn`, used inside
   Celery tasks since they run outside the FastAPI request lifecycle).
 - `App/schemas/*.py` — Pydantic request/response models per domain.
+- Verdicts (`/inference`) use only v1 (MS-EffGCViT, `inference_svc.MODEL_CONFIG['v1']`). DeepClip is
+  used only for the on-demand "20 artifact texts" feature (4 regions × 5 types, `PAIR_ORDER` order):
+  `routes/artifact.py` + `services/artifact_svc.py` (Celery tasks, `DEEPCLIP_MODEL` fast→`deepclip_b0`,
+  pro→`deepclip_b5`), stored in `image_artifact_result` / `video_artifact_result` (`App/sql/06_*`,
+  `07_*`; video stores the mean over frames). Only offered for logged-in users' FAKE results; the
+  detail page shows it via `client/src/components/ArtifactTextPanel.js` (BETA).
 - Session auth is cookie-based via Redis (`App/utils/middleware.py`'s `RedisSessionMiddleware`,
   checked in routes via `services.session_svc`), not JWT.
 - Uploaded/generated images, videos, and CAM overlays are served from `/static` (mounted to the
@@ -202,3 +222,11 @@ at `127.0.0.1:8000` — the backend must be running for `npm start` to work end-
 - `dataset` values are always one of the literal strings `celeb_df_v2`, `ff++`, `kodf`; `model_name`
   values are always one of `ms_eff_vit_b0`, `ms_eff_vit_b5`, `ms_eff_gcvit_b0`, `ms_eff_gcvit_b5`
   — these show up as string args across training, inference, and explainability APIs.
+
+
+# 리디자인 규칙
+- 모든 응답과 설명은 한국어로 작성
+- 백엔드 응답 스키마/API 호출 로직 변경 금지 (예외: DeepClip 20개 텍스트 확률 기능의 artifact 테이블/스키마/라우트 분리는 사용자 승인 하에 변경함)
+- 디자인 레퍼런스: client/design/index.html (색/타이포/카드 스타일 기준)
+- 공통 컴포넌트: Navbar(dark/light), Footer, Button, Card로 분리
+- 페이지 하나 끝날 때마다 npm start로 확인 후 커밋
