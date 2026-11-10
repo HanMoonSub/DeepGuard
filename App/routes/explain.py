@@ -42,6 +42,9 @@ async def explain_image(
             detail="Pro 모델은 aug_smooth 기능을 지원하지 않습니다",
         )
         
+    # v2(DeepClip) + FAKE 결과면 top-1 artifact를 CAM 타겟으로 사용 (텍스트와 heatmap 일치), 그 외는 fake/real 타겟
+    artifact_idx = result.artifact_idx if (result.version_type == "v2" and result.label == "FAKE") else None
+
     # Celery Task 호출(Redis Broker 활용)
     task = explain_svc.process_explain_image_task.delay(
                                 user_email = session_user["email"],
@@ -50,7 +53,8 @@ async def explain_image(
                                 image_loc = result.image_loc,
                                 image_id = result.image_id,
                                 category = 1 if result.label == "FAKE" else 0,
-                                explain_req_dict = explain_req.model_dump())
+                                explain_req_dict = explain_req.model_dump(),
+                                artifact_idx = artifact_idx)
     return {
         "message": "딥페이크 이미지 위조 흔적 시각화 접수 완료. 시각화 분석 시작 ...",
         "task_id": task.id, 
@@ -126,8 +130,11 @@ async def explain_frame(
             detail="Pro 모델은 aug_smooth 기능을 지원하지 않습니다",
         )
     
-    # 비디오 내 해당 frame이 몇초에 위치한 frame인지 확인
-    frame_time = await video_svc.get_video_frame_by_index(conn, video_id, frame_index)
+    # 비디오 내 해당 frame이 몇초에 위치한 frame인지, 해당 frame의 top-1 artifact 확인
+    frame_time, frame_artifact_idx = await video_svc.get_video_frame_by_index(conn, video_id, frame_index)
+
+    # v2(DeepClip) + FAKE 결과면 해당 frame의 top-1 artifact를 CAM 타겟으로 사용, 그 외는 fake/real 타겟
+    artifact_idx = frame_artifact_idx if (result.version_type == "v2" and result.label == "FAKE") else None
         
     # Celery Task 호출(Redis Broker 활용)
     task = explain_svc.process_explain_frame_task.delay(
@@ -138,7 +145,8 @@ async def explain_frame(
                                 video_id = video_id,
                                 category = 1 if result.label == "FAKE" else 0,
                                 frame_time = frame_time, 
-                                explain_req_dict = explain_req.model_dump())
+                                explain_req_dict = explain_req.model_dump(),
+                                artifact_idx = artifact_idx)
     return {
         "message": "딥페이크 비디오 프레임 위조 흔적 시각화 접수 완료. 시각화 분석 시작 ...",
         "task_id": task.id, 

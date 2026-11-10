@@ -93,7 +93,8 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     Returns:
         dict:
             - analysis (dict): prob, face_conf, face_ratio, face_brightness 포함.
-              얼굴 미감지 또는 오류 발생 시 모든 값 -1.
+              v2(DeepClip)는 artifact_idx, artifact_prob도 포함.
+              얼굴 미감지 또는 오류 발생 시 모든 값 -1 (artifact 없음).
             - message (str): 처리 결과 메세지.
             - status (str): "success" | "warning" | "failed"
     """
@@ -104,7 +105,11 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
     image_path = "." + image_loc
     
     try:
-        analysis = predictor.predict_img(image_path)
+        # v2(DeepClip)는 top-1 artifact(artifact_idx, artifact_prob)도 함께 반환
+        if isinstance(predictor, ClipImagePredictor):
+            analysis = predictor.predict_img_artifacts(image_path)
+        else:
+            analysis = predictor.predict_img(image_path)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     
@@ -206,6 +211,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
         dict:
             - analysis (dict): prob, face_conf, face_ratio, face_brightness,
               frame_results, fps, total_frames, num_sampled, num_extracted, num_detected 포함.
+              v2(DeepClip)는 영상/프레임별 artifact_idx, artifact_prob도 포함.
               오류 발생 시 주요 수치 값 -1.
             - message (str): 처리 결과 메세지.
             - status (str): "success" | "warning" | "failed"
@@ -216,7 +222,11 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
     video_path = "." + video_loc
     
     try:
-        analysis = predictor.predict_video(video_path)
+        # v2(DeepClip)는 영상/프레임별 top-1 artifact(artifact_idx, artifact_prob)도 함께 반환
+        if isinstance(predictor, ClipVideoPredictor):
+            analysis = predictor.predict_video_artifacts(video_path)
+        else:
+            analysis = predictor.predict_video(video_path)
         
         print(f"딥페이크 확률 값: {analysis['prob']}, 얼굴 신뢰도: {analysis['face_conf']}, 얼굴 비율: {analysis['face_ratio']}, 얼굴 밝기: {analysis['face_brightness']}")
     

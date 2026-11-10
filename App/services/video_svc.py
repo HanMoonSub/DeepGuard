@@ -175,7 +175,7 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int) -> Vid
         if user_id is not None:
             stmt = text("""
                 SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
-                        face_brightness, version_type, model_type, domain_type, result_msg, created_at
+                        face_brightness, artifact_idx, artifact_prob, version_type, model_type, domain_type, result_msg, created_at
                 FROM video_result
                 WHERE id = :video_id AND user_id = :user_id
             """)
@@ -183,7 +183,7 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int) -> Vid
         else:
             stmt = text("""
                 SELECT id, user_id, video_loc, status, label, score, face_conf, face_ratio,
-                        face_brightness, version_type, model_type, domain_type, result_msg, created_at
+                        face_brightness, artifact_idx, artifact_prob, version_type, model_type, domain_type, result_msg, created_at
                 FROM video_result
                 WHERE id = :video_id
             """)
@@ -203,6 +203,8 @@ async def get_user_history(conn: Connection, user_id: int, video_id: int) -> Vid
             face_conf = row.face_conf,
             face_ratio = row.face_ratio,
             face_brightness = row.face_brightness,
+            artifact_idx = row.artifact_idx,
+            artifact_prob = row.artifact_prob,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,
@@ -279,6 +281,7 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
         conn (Connection): SQLAlchemy 비동기 DB 커넥션.
         video_id (int): 업데이트할 비디오 레코드 PK.
         analysis (dict): 추론 결과값. prob, face_conf, face_ratio, face_brightness 포함.
+            v2(DeepClip)는 artifact_idx, artifact_prob도 포함 (없으면 NULL 저장).
         result_msg (str): 처리 결과 메세지.
         status (str): 추론 상태 ("success" | "warning" | "failed").
 
@@ -299,6 +302,8 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
                 face_conf = :face_conf, 
                 face_ratio = :face_ratio, 
                 face_brightness = :face_brightness, 
+                artifact_idx = :artifact_idx,
+                artifact_prob = :artifact_prob,
                 result_msg = :result_msg
             WHERE id = :video_id
         """
@@ -313,6 +318,8 @@ async def update_video_result(conn: Connection, video_id: int, analysis: dict,
             "face_conf": analysis["face_conf"],
             "face_ratio": analysis["face_ratio"],
             "face_brightness": analysis["face_brightness"],
+            "artifact_idx": analysis.get("artifact_idx"),   # v2(DeepClip)만 존재, 그 외 None
+            "artifact_prob": analysis.get("artifact_prob"),
             "result_msg": result_msg,
             "video_id": video_id
         })
@@ -357,6 +364,8 @@ async def get_video_result(conn: Connection, video_id: int) -> VideoDetailData:
             face_conf = row.face_conf,
             face_ratio = row.face_ratio,
             face_brightness = row.face_brightness,
+            artifact_idx = row.artifact_idx,
+            artifact_prob = row.artifact_prob,
             version_type = row.version_type,
             model_type = row.model_type,
             domain_type = row.domain_type,
@@ -418,7 +427,7 @@ async def save_video_frame_result(conn: Connection, video_id: int, frame_results
         video_id (int): 비디오 레코드 PK.
         frame_results (list): 프레임별 분석 결과 딕셔너리 리스트.
             각 항목은 frame_index, frame_time, score, face_conf,
-            face_ratio, face_brightness 키를 포함해야 한다.
+            face_ratio, face_brightness 키를 포함해야 한다. v2(DeepClip)는 artifact_idx, artifact_prob도 포함.
 
     Raises:
         SQLAlchemyError: DB INSERT 실패 시 그대로 re-raise.
@@ -426,9 +435,11 @@ async def save_video_frame_result(conn: Connection, video_id: int, frame_results
     try:
         query = """
             INSERT INTO video_frame_result
-                (video_id, frame_index, frame_time, score, face_conf, face_ratio, face_brightness)
+                (video_id, frame_index, frame_time, score, face_conf, face_ratio, face_brightness,
+                 artifact_idx, artifact_prob)
             VALUES
-                (:video_id, :frame_index, :frame_time, :score, :face_conf, :face_ratio, :face_brightness)
+                (:video_id, :frame_index, :frame_time, :score, :face_conf, :face_ratio, :face_brightness,
+                 :artifact_idx, :artifact_prob)
         """
         rows = [
             {
@@ -439,6 +450,8 @@ async def save_video_frame_result(conn: Connection, video_id: int, frame_results
                 "face_conf":       frame["face_conf"],
                 "face_ratio":      frame["face_ratio"],
                 "face_brightness": frame["face_brightness"],
+                "artifact_idx":    frame.get("artifact_idx"),   # v2(DeepClip)만 존재, 그 외 None
+                "artifact_prob":   frame.get("artifact_prob"),
             }
             for frame in frame_results
         ]
@@ -590,7 +603,8 @@ async def get_video_frame_result(conn: Connection, video_id: int) -> list[VideoF
     """
     try:
         query = text("""
-            SELECT frame_index, frame_time, score, face_conf, face_ratio, face_brightness
+            SELECT frame_index, frame_time, score, face_conf, face_ratio, face_brightness,
+                   artifact_idx, artifact_prob
             FROM video_frame_result
             WHERE video_id = :video_id
             ORDER BY frame_index ASC
@@ -605,6 +619,8 @@ async def get_video_frame_result(conn: Connection, video_id: int) -> list[VideoF
                 face_conf=r.face_conf,
                 face_ratio=r.face_ratio,
                 face_brightness=r.face_brightness,
+                artifact_idx=r.artifact_idx,
+                artifact_prob=r.artifact_prob,
             )
             for r in result
         ]
@@ -617,8 +633,8 @@ async def get_video_frame_result(conn: Connection, video_id: int) -> list[VideoF
         raise HTTPException(status_code=500, detail="알수없는 이유로 문제가 발생하였습니다.")
 
 
-async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index: int) -> float:
-    """video_id와 frame_index로 특정 프레임의 frame_time을 조회한다.
+async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index: int) -> tuple[float, int | None]:
+    """video_id와 frame_index로 특정 프레임의 frame_time과 top-1 artifact 인덱스를 조회한다.
 
     Args:
         conn (Connection): SQLAlchemy 비동기 DB 커넥션.
@@ -626,7 +642,7 @@ async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index:
         frame_index (int): 조회할 프레임 인덱스.
 
     Returns:
-        float: 해당 프레임의 타임스탬프 (초 단위).
+        tuple[float, int | None]: (해당 프레임의 타임스탬프(초 단위), artifact_idx). artifact_idx는 v1이면 None.
 
     Raises:
         HTTPException 404: 해당 frame_index가 없을 때.
@@ -635,7 +651,7 @@ async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index:
     """
     try:
         query = text("""
-            SELECT frame_time
+            SELECT frame_time, artifact_idx
             FROM video_frame_result
             WHERE video_id = :video_id AND frame_index = :frame_index
         """)
@@ -647,7 +663,7 @@ async def get_video_frame_by_index(conn: Connection, video_id: int, frame_index:
         
         row = result.fetchone()
         
-        return row.frame_time
+        return row.frame_time, row.artifact_idx
         
     except SQLAlchemyError as e:
         print(f"[Frame Query Error] {e}")
