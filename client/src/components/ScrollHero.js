@@ -54,7 +54,7 @@ const loadImage = (src) => {
 };
 const ready = (im) => im && im.complete && im.naturalWidth > 0;
 
-const ScrollHero = ({ onStart, onVideo }) => {
+const ScrollHero = ({ onStart }) => {
   const secRef = useRef(null);
   const canvasRef = useRef(null);
   const stepRefs = useRef([]);
@@ -315,28 +315,26 @@ const ScrollHero = ({ onStart, onVideo }) => {
           <div className="dg-sh__step" ref={setStep(1)}>
             <h2 className="dg-sh__heading">픽셀 하나까지<br />들여다봅니다</h2>
             <p className="dg-sh__lead">
-              고해상도 특징맵에서 텍스처, 합성 경계, 압축 흔적처럼 눈으로는 보이지 않는 국소적인 위조 흔적을 찾습니다.
+              텍스처, 합성 경계, 압축 흔적처럼 눈으로는 보이지 않는 미세한 위조 흔적을 찾습니다.
             </p>
           </div>
 
           <div className="dg-sh__step" ref={setStep(2)}>
-            <span className="dg-sh__eyebrow">EXPLAINABLE AI</span>
-            <h2 className="dg-sh__heading">어디가, 왜 가짜인지<br />보여드립니다</h2>
+            <span className="dg-sh__eyebrow">DeepFake XAI</span>
+            <h2 className="dg-sh__heading">딥페이크,<br /><em>눈으로 확인</em>하세요</h2>
             <p className="dg-sh__lead">
-              두 갈래의 판단 근거를 히트맵으로 시각화해, 결과를 직접 눈으로 확인할 수 있습니다.
+              어디가, 왜 가짜인지 보여드립니다. 두 갈래의 판단 근거를 히트맵으로 시각화해, 결과를 직접 눈으로 확인할 수 있습니다.
             </p>
           </div>
 
           <div className="dg-sh__step dg-sh__verdict" ref={setStep(3)}>
-            <span className="dg-sh__eyebrow is-danger">VERDICT · MS-EffGCViT</span>
             <div className="dg-sh__score">
               <b>FAKE</b>
               <span ref={pctRef}>0.0%</span>
             </div>
-            <p className="dg-sh__lead">이제 직접 확인해 보세요. 이미지와 영상 모두 분석할 수 있습니다.</p>
+            <p className="dg-sh__lead">이미지와 영상 속 위조 흔적을 탐지하고, 어디가 왜 가짜인지 시각적 근거까지 제공합니다.</p>
             <div className="dg-hero__cta">
               <Button variant="primary" href="/analysis" onClick={onStart}>지금 분석해보기</Button>
-              <Button variant="ghost" href="/video-analysis" onClick={onVideo}>영상 분석 →</Button>
             </div>
           </div>
         </div>

@@ -64,9 +64,6 @@
   letter-spacing: 0.12em;
   color: var(--color-accent);
 }
-.dg-sh__eyebrow.is-danger {
-  color: var(--color-danger);
-}
 
 .dg-landing .dg-sh__title {
   font-size: 64px;

@@ -425,7 +425,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
       <Navbar variant="dark" solid sessionUser={sessionUser} onLogout={onLogout} links={NAV_LINKS} />
 
       {/* 스크롤 연동 히어로 (AI 생성 사진 + 줌인 영상 프레임) */}
-      <ScrollHero onStart={linkTo(handleBasicAnalysis)} onVideo={linkTo(handleVideoAnalysis)} />
+      <ScrollHero onStart={linkTo(handleBasicAnalysis)} />
 
       <section id="features" className="dg-section dg-section--alt">
         <div className="dg-wrap dg-center">
