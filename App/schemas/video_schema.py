@@ -26,9 +26,6 @@ class VideoDetailData(VideoData):
     - services: video_svc.get_user_history, video_svc.get_video_result
     """
     score: float = Field(..., description="비디오 전체 평균 딥페이크 확률 (0.0~1.0). 실패 시 -1.0")
-    face_conf: float = Field(..., description="평균 얼굴 탐지 신뢰도. 실패 시 -1.0")
-    face_ratio: float = Field(..., description="평균 얼굴 면적 비율. 실패 시 -1.0")
-    face_brightness: float = Field(..., description="평균 얼굴 영역 밝기. 실패 시 -1.0")
     artifact_idx: int | None = Field(None, description="DeepClip(v2) 프레임 평균 기준 top-1 artifact 인덱스 (PAIR_ORDER, 5 * region + type / region: 0 face, 1 eyes, 2 nose, 3 mouth / type: 0 blur, 1 color, 2 texture, 3 structure, 4 blend). v1 또는 실패 시 None")
     artifact_prob: float | None = Field(None, description="프레임 평균 기준 top-1 artifact 확률 (0.0~1.0). v1 또는 실패 시 None")
     result_msg: str = Field(..., description="분석 결과 상세 메시지")
@@ -43,9 +40,6 @@ class VideoFrameData(BaseModel):
     frame_index: int = Field(..., description="비디오 내 프레임 인덱스 (0부터 시작)")
     frame_time: float = Field(..., description="해당 프레임의 영상 내 재생 시점 (초 단위)")
     score: float = Field(..., description="해당 프레임의 딥페이크 확률 점수 (0.0~1.0)")
-    face_conf: float = Field(..., description="해당 프레임 얼굴 탐지 신뢰도")
-    face_ratio: float = Field(..., description="해당 프레임 얼굴 면적 비율")
-    face_brightness: float = Field(..., description="해당 프레임 얼굴 영역 밝기")
     artifact_idx: int | None = Field(None, description="DeepClip(v2) 해당 프레임 top-1 artifact 인덱스 (PAIR_ORDER, 5 * region + type / region: 0 face, 1 eyes, 2 nose, 3 mouth / type: 0 blur, 1 color, 2 texture, 3 structure, 4 blend). v1 또는 실패 시 None")
     artifact_prob: float | None = Field(None, description="해당 프레임 top-1 artifact 확률 (0.0~1.0). v1이면 None")
 
