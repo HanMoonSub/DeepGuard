@@ -303,7 +303,6 @@ const ScrollHero = ({ onStart }) => {
 
         <div className="dg-sh__copy">
           <div className="dg-sh__step" ref={setStep(0)}>
-            <span className="dg-sh__eyebrow">DEEPFAKE DETECTION</span>
             <h1 className="dg-sh__title">
               이 얼굴,<br /><em>진짜일까요?</em>
             </h1>
@@ -320,10 +319,9 @@ const ScrollHero = ({ onStart }) => {
           </div>
 
           <div className="dg-sh__step" ref={setStep(2)}>
-            <span className="dg-sh__eyebrow">DeepFake XAI</span>
             <h2 className="dg-sh__heading">딥페이크,<br /><em>눈으로 확인</em>하세요</h2>
             <p className="dg-sh__lead">
-              어디가, 왜 가짜인지 보여드립니다. 두 갈래의 판단 근거를 히트맵으로 시각화해, 결과를 직접 눈으로 확인할 수 있습니다.
+              어디가, 왜 가짜인지 보여드립니다. 히트맵으로 시각화해 위조 흔적을 한눈에 볼 수 있습니다.
             </p>
           </div>
 
