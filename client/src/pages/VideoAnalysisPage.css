@@ -1,7 +1,7 @@
-/* 동영상 분석 페이지 전용 보정 — 공통 레이아웃은 analysispage.css(.dg-analysis) 재사용,
-   영상에만 필요한 스타일만 .dg-video 하위로 한정 */
+/* Video analysis page adjustments only — the shared layout reuses analysispage.css (.dg-analysis);
+   only video-specific styles are scoped under .dg-video */
 
-/* 썸네일: img 대신 video */
+/* Thumbnail: video instead of img */
 .dg-video .dg-analysis__thumb video,
 .dg-video .dg-analysis__sample video {
   display: block;
@@ -14,7 +14,7 @@
   background: var(--color-ink);
 }
 
-/* 업로드 미리보기 */
+/* Upload preview */
 .dg-video__preview {
   max-width: 100%;
   max-height: 460px;
@@ -45,12 +45,12 @@
   animation: dg-analysis-blink 1s step-end infinite;
 }
 
-/* ───────── 분석 진행 패널 ───────── */
+/* ───────── Analysis progress panel ───────── */
 .dg-video .dg-analysis__scan-title {
   margin-bottom: 28px;
 }
 
-/* 단계 표시: 접수 → 프레임 분석 → 판정 */
+/* Step indicator: received → frame analysis → verdict */
 .dg-video__steps {
   display: flex;
   justify-content: center;
@@ -67,7 +67,7 @@
   align-items: center;
   gap: 8px;
 }
-/* 단계 사이 연결선 */
+/* Connector line between steps */
 .dg-video__step + .dg-video__step::before {
   content: '';
   position: absolute;

@@ -1,4 +1,4 @@
-/* 스크롤 연동 히어로: 섹션 높이만큼 스크롤하는 동안 stage가 화면에 고정됨 */
+/* Scroll-driven hero: the stage stays pinned on screen while scrolling through the section height */
 .dg-sh {
   position: relative;
   height: 520vh;
@@ -13,7 +13,7 @@
   height: 100svh;
   overflow: hidden;
 }
-/* 은은한 격자 */
+/* Subtle grid */
 .dg-sh__stage::before {
   content: '';
   position: absolute;
@@ -102,7 +102,7 @@
   margin-top: 30px;
 }
 
-/* 오른쪽 진행 표시 */
+/* Progress indicator on the right */
 .dg-sh__rail {
   position: absolute;
   right: 28px;
@@ -172,7 +172,7 @@
   .dg-sh {
     height: 460vh;
   }
-  /* 모바일: 얼굴은 위, 텍스트는 아래 */
+  /* Mobile: face on top, text below */
   .dg-sh__step {
     top: auto;
     bottom: 9vh;

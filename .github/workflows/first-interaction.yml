@@ -1,6 +1,6 @@
 name: First interaction
 
-# 처음 이슈/PR을 남기는 기여자에게 자동으로 환영 댓글을 남긴다.
+# Automatically post a welcome comment for contributors opening their first issue/PR.
 
 on:
   issues:

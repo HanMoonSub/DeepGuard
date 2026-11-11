@@ -10,7 +10,7 @@ import './analysispage.css';
 import WebcamCapture, { MediaSourceBar } from '../components/WebcamCapture';
 import AnalysisWarning from '../components/AnalysisWarning';
 
-// 예시 이미지 (public/samples/images/ 하위에 실제 파일 배치 필요)
+// Sample images (the actual files must be placed under public/samples/images/)
 const SAMPLE_IMAGES = [
   { name: 'asian_fake_1.JPG',   src: '/samples/images/asian_fake_1.JPG',     domain: 'asian',   label: '동양인 Fake' },
   { name: 'asian_fake_2.JPG',   src: '/samples/images/asian_fake_2.JPG',     domain: 'asian',   label: '동양인 Fake' },
@@ -18,7 +18,7 @@ const SAMPLE_IMAGES = [
   { name: 'western_fake_2.JPG', src: '/samples/images/western_fake_2.JPG', domain: 'western', label: '서양인 Fake' },
 ];
 
-// FAKE/REAL/UNKNOWN → 배지 modifier
+// FAKE/REAL/UNKNOWN → badge modifier
 const labelTone = (label) => (label === 'FAKE' ? 'fake' : label === 'REAL' ? 'real' : 'unknown');
 
 const SidebarIcon = ({ open }) => (
@@ -28,8 +28,8 @@ const SidebarIcon = ({ open }) => (
   </svg>
 );
 
-// 개발 서버 전용 미리보기 — 백엔드 없이 이펙트 확인용
-// ?preview=analyzing (분석 중) | fake | real (결과 + 퍼지는 링). 빌드(production)에서는 무시됨
+// Dev-server-only preview — for checking effects without a backend
+// ?preview=analyzing (analyzing) | fake | real (result + spreading ring). Ignored in production builds
 const DEV_PREVIEW = process.env.NODE_ENV === 'development'
   ? new URLSearchParams(window.location.search).get('preview')
   : null;
@@ -58,7 +58,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // 방금 분석이 끝난 image_id — 완료 이펙트(결과 팝 + 새 기록 하이라이트)용
+  // image_id whose analysis just finished — for the completion effect (result pop + new history highlight)
   const [freshId, setFreshId] = useState(PREVIEW_RESULT ? 'preview' : null);
 
   const pollingTimer = useRef(null);
@@ -154,7 +154,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     formData.append('imagefile', file);
     formData.append('model_type', modelType);
     formData.append('domain_type', domainType === 'western' ? '서양인' : '동양인');
-    formData.append('version_type', 'v1'); // 판정은 v1(MS-EffGCViT)만 사용
+    formData.append('version_type', 'v1'); // verdicts use only v1 (MS-EffGCViT)
 
     setIsAnalyzing(true);
     setStatusMessage('서버 접수 중...');
@@ -179,10 +179,10 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setResult(null);
     setStatusMessage('');
     setIsCameraOpen(false);
-    setSelectedSample(null); // 샘플 외 경로로 들어오면 선택 해제
+    setSelectedSample(null); // clear the selection when coming in from a path other than a sample
   };
 
-  // 드래그 앤 드롭 업로드 — 웹캠 촬영/분석 중에는 받지 않음
+  // Drag-and-drop upload — not accepted during webcam capture/analysis
   const canDrop = !isCameraOpen && !isAnalyzing;
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -206,7 +206,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     handleFileSelect(dropped);
   };
 
-  // 예시 이미지를 File로 변환 후 기존 업로드 흐름에 주입 + 도메인 자동 세팅
+  // Convert the sample image to a File, feed it into the existing upload flow, and set the domain automatically
   const handleSelectSample = async (sample) => {
     try {
       const res = await fetch(sample.src);
@@ -214,13 +214,13 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       const file = new File([blob], sample.name, { type: blob.type });
       setDomainType(sample.domain);
       handleFileSelect(file);
-      setSelectedSample(sample.name); // handleFileSelect 리셋 이후 선택 표시
+      setSelectedSample(sample.name); // show the selection after handleFileSelect resets it
     } catch (e) {
       alert("예시 파일을 불러오지 못했어요.");
     }
   };
 
-  // 기록 한 건 삭제 — 호버 시 노출되는 휴지통 버튼
+  // Delete one history entry — trash button shown on hover
   const handleDeleteOne = async (e, id) => {
     e.stopPropagation();
     if (!window.confirm("이 기록을 삭제하시겠습니까?")) return;
@@ -242,7 +242,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     if (isAnalyzing) {
       return (
         <div className="dg-analysis__scanning">
-          {/* 탐지 펄스: 중앙 코어에서 원이 계속 퍼져나감 */}
+          {/* Detection pulse: circles keep spreading out from the center core */}
           <div className="dg-analysis__pulse" aria-hidden="true">
             <span /><span /><span />
             <div className="dg-analysis__pulse-core">
@@ -389,7 +389,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
             </div>
           </div>
 
-          {/* 예시 이미지 — 로컬 샘플 없이 바로 테스트 */}
+          {/* Sample images — test right away without local samples */}
           <div className="dg-analysis__samples">
             <span className="dg-analysis__samples-label">예시로 체험하기</span>
             <div className="dg-analysis__samples-list">
@@ -404,11 +404,11 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                     title={s.label}
                   >
                     <img src={s.src} alt={s.label} />
-                    {/* 우상단 FAKE/REAL 뱃지 */}
+                    {/* FAKE/REAL badge at the top right */}
                     <span className={`dg-analysis__sample-tag dg-analysis__sample-tag--${isFake ? 'fake' : 'real'}`}>
                       {isFake ? 'FAKE' : 'REAL'}
                     </span>
-                    {/* 하단 그라데이션 + 도메인 */}
+                    {/* Bottom gradient + domain */}
                     <div className="dg-analysis__sample-caption">{s.label.split(' ')[0]}</div>
                   </div>
                 );
@@ -428,7 +428,7 @@ const AnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 <WebcamCapture mode="photo" onCapture={handleFileSelect} onClose={() => setIsCameraOpen(false)} />
               ) : previewUrl ? <img className="dg-analysis__preview" src={previewUrl} alt="preview" /> : (
                 <div className="dg-analysis__drop-body">
-                  {/* 이클립스 오빗 — 로그인 화면 이클립스 링의 축소판 */}
+                  {/* Eclipse orbit — a smaller version of the login screen's eclipse ring */}
                   <div className="dg-analysis__orbit">
                     <span className="dg-analysis__orbit-halo" aria-hidden="true" />
                     <span className="dg-analysis__orbit-ring" aria-hidden="true" />

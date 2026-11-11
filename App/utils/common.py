@@ -2,20 +2,20 @@ from fastapi import FastAPI
 from db.database import engine
 from contextlib import asynccontextmanager
 
-# Uvicorn이 앱 시작/종료 시 asynccontextmanager를 호출함
+# Uvicorn calls the asynccontextmanager when the app starts/stops
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     
     # ── Startup ──────────────────────────────────────────
-    # Event Loop 위에서 실행, DB 연결 풀 초기화
+    # Runs on the event loop; initializes the DB connection pool
     print("Starting up...")
     
-    # yield 이후 app이 실제 요청을 처리하기 시작함
+    # After the yield, the app starts handling requests
     yield
     
     # ── Shutdown ─────────────────────────────────────────
-    # 새 요청은 차단되고, 진행 중인 요청 완료 후 여기로 진입
+    # New requests are blocked, and we get here once in-flight requests finish
     print("Shutting down...")
     
-    # SQLAlchemy 비동기 엔진의 커넥션 풀 전체 반환 및 종료
+    # Release and close the whole connection pool of the SQLAlchemy async engine
     await engine.dispose()

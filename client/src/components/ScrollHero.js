@@ -3,17 +3,17 @@ import Button from './Button';
 import './ScrollHero.css';
 
 /*
- * 스크롤 연동 히어로. 스크롤 위치(p: 0~1)에 따라 장면이 바뀐다.
- *   K1 인트로 사진 → 줌인 영상(clip) → K2 눈 접사 사진 → 영상 역재생 → K3 랜드마크 사진 → K4 히트맵 사진
- * K1·K3·K4는 같은 구도라 겹쳐서 바꾸고, 줌인 구간만 영상 프레임을 쓴다.
- * 영상은 시작 구도가 사진과 달라서, 첫 프레임의 얼굴 프레임이 K1의 얼굴 프레임에 겹치도록 위치·크기를 맞춘 뒤
- * 재생하면서 전체 화면으로 펼친다. 파일은 public/hero/ (원본과 생성 방법은 client/design/higgsfield-hero.md)
+ * Scroll-driven hero. The scene changes with the scroll position (p: 0~1).
+ *   K1 intro photo → zoom-in video (clip) → K2 eye close-up photo → video in reverse → K3 landmark photo → K4 heatmap photo
+ * K1, K3 and K4 share the same framing so they crossfade; only the zoom-in segment uses video frames.
+ * The video starts from a different framing than the photos, so its first frame is positioned and scaled so its face frame
+ * lines up with K1's face frame, then expands to full screen as it plays. Files are in public/hero/ (sources and how they were made: client/design/higgsfield-hero.md)
  */
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-// [a,b] 동안 나타나고 [c,d] 동안 사라지는 0~1 값
+// 0~1 value that fades in over [a,b] and fades out over [c,d]
 const band = (p, a, b, c, d) => {
   if (p < a || p > d) return 0;
   if (p < b) return (p - a) / (b - a);
@@ -23,19 +23,19 @@ const band = (p, a, b, c, d) => {
 
 const BASE = `${process.env.PUBLIC_URL}/hero/`;
 
-// 사진(K1~K4) 크기와 기준점 (원본 픽셀 좌표)
+// Photo (K1~K4) size and anchor points (original pixel coordinates)
 const STILL_W = 1672;
 const STILL_H = 941;
-const FACE = { x: 1283, y: 392, w: 366 }; // K1·K3·K4 얼굴 프레임 중심과 폭
-const K2_EYE = { x: 844, y: 360 }; // K2 눈동자 중심
+const FACE = { x: 1283, y: 392, w: 366 }; // center and width of the face frame in K1, K3 and K4
+const K2_EYE = { x: 844, y: 360 }; // K2 pupil center
 
-// 줌인 영상 프레임 (워터마크를 피해 자른 크기와 기준점)
+// Zoom-in video frames (size and anchor points after cropping out the watermark)
 const CLIP_N = 95;
-const CLIP_PX = 2; // 프레임 파일은 아래 좌표계의 2배 해상도 (1728×992 영상에서 자름)
+const CLIP_PX = 2; // frame files are 2x the resolution of the coordinates below (cropped from a 1728×992 video)
 const CLIP_W = 661;
 const CLIP_H = 372;
-const CLIP_FACE = { x: 293, y: 139, w: 167 }; // 첫 프레임 얼굴 프레임
-const CLIP_EYE = { x: 343, y: 195 }; // 마지막 프레임 눈동자
+const CLIP_FACE = { x: 293, y: 139, w: 167 }; // face frame in the first frame
+const CLIP_EYE = { x: 343, y: 195 }; // pupil in the last frame
 
 const STEPS = [
   { key: 'intro', range: [-1, 0, 0.1, 0.14] },
@@ -73,7 +73,7 @@ const ScrollHero = ({ onStart }) => {
       loadImage(`${BASE}clip/f_${String(i + 1).padStart(3, '0')}.webp`),
     );
 
-    // 영상 프레임 가장자리를 부드럽게 지우는 마스크 (액자처럼 보이지 않게)
+    // Mask that softly fades out the video frame edges (so it doesn't look framed)
     const MW = CLIP_W * CLIP_PX;
     const MH = CLIP_H * CLIP_PX;
     const mask = document.createElement('canvas');
@@ -102,7 +102,7 @@ const ScrollHero = ({ onStart }) => {
     off.height = MH;
     const octx = off.getContext('2d');
 
-    // 저해상도 영상 구간의 뭉개짐을 덜 보이게 하는 필름 그레인
+    // Film grain that hides the smearing in the low-resolution video segment
     const grain = document.createElement('canvas');
     grain.width = 160;
     grain.height = 160;
@@ -133,7 +133,7 @@ const ScrollHero = ({ onStart }) => {
     resize();
     window.addEventListener('resize', resize);
 
-    // 화면을 꽉 채우되 기준점(fx, fy)이 가능한 한 가운데 오도록 배치
+    // Fill the screen while keeping the anchor point (fx, fy) as close to the center as possible
     const cover = (iw, ih, fx, fy) => {
       const s = Math.max(w / iw, h / ih);
       return {
@@ -161,22 +161,22 @@ const ScrollHero = ({ onStart }) => {
 
     const draw = (p) => {
       const still = cover(STILL_W, STILL_H, FACE.x, FACE.y);
-      // 영상 시작 위치: 첫 프레임 얼굴 프레임을 사진 속 얼굴 프레임에 겹침
+      // Video start position: overlay the first frame's face frame on the face frame in the photo
       const k0 = (FACE.w * still.s) / CLIP_FACE.w;
       const r0 = {
         s: k0,
         x: still.x + FACE.x * still.s - CLIP_FACE.x * k0,
         y: still.y + FACE.y * still.s - CLIP_FACE.y * k0,
       };
-      // 영상 끝 위치: 눈동자 기준으로 화면 꽉 채움
+      // Video end position: fill the screen around the pupil
       const r1 = cover(CLIP_W, CLIP_H, CLIP_EYE.x, CLIP_EYE.y);
 
-      // 줌인(0.12~0.36) → 정지(~0.54) → 역재생(~0.66)
+      // Zoom in (0.12~0.36) → hold (~0.54) → reverse (~0.66)
       let u = 0;
       if (p < 0.36) u = (p - 0.12) / 0.24;
       else if (p < 0.54) u = 1;
       else u = 1 - (p - 0.54) / 0.12;
-      // 영상의 줌 움직임이 앞쪽 절반에 몰려 있어서, 앞부분 프레임에 스크롤을 더 배분
+      // The video's zoom motion is concentrated in the first half, so give more scroll to the early frames
       u = clamp(u) ** 2;
 
       drawAt(k[0], still, STILL_W, STILL_H, p < 0.12 ? 1 : 1 - clamp((p - 0.12) / 0.03));
@@ -192,13 +192,13 @@ const ScrollHero = ({ onStart }) => {
           octx.drawImage(mask, 0, 0);
           ctx.globalAlpha = clamp((p - 0.12) / 0.015);
           ctx.drawImage(off, r.x, r.y, CLIP_W * r.s, CLIP_H * r.s);
-          // 영상이 화면을 많이 차지할수록 그레인을 조금 더 (사진 구간에는 없음)
+          // A bit more grain the more of the screen the video covers (none during the photo segments)
           const gA = 0.07 * clamp((p - 0.13) / 0.05) * (1 - clamp((p - 0.64) / 0.06));
           if (gA > 0 && grainPattern) {
             ctx.globalAlpha = gA;
             ctx.globalCompositeOperation = 'overlay';
             ctx.fillStyle = grainPattern;
-            // 매 프레임 위치를 흔들어 화면에 붙은 얼룩처럼 보이지 않게
+            // Shake the position every frame so it doesn't look like a smudge stuck to the screen
             const ox = reduce ? 0 : Math.floor(Math.random() * 160);
             const oy = reduce ? 0 : Math.floor(Math.random() * 160);
             ctx.translate(-ox, -oy);
@@ -210,7 +210,7 @@ const ScrollHero = ({ onStart }) => {
         }
       }
 
-      // K2: 영상 마지막 프레임의 눈동자 위치에 최대한 가깝게 놓고(크게 확대하지 않는 선에서) 천천히 다가감
+      // K2: place it as close as possible to the pupil position of the last video frame (without zooming in too much) and approach slowly
       const k2A = band(p, 0.36, 0.4, 0.5, 0.54);
       if (k2A > 0) {
         const ex = r1.x + CLIP_EYE.x * r1.s;
@@ -225,10 +225,10 @@ const ScrollHero = ({ onStart }) => {
       }
 
       drawAt(k[2], still, STILL_W, STILL_H, clamp((p - 0.65) / 0.05));
-      // K3는 문구 없이 잠깐 스치고, 히트맵(K4)으로 길게 겹쳐 넘어감
+      // K3 passes briefly without text and crossfades at length into the heatmap (K4)
       drawAt(k[3], still, STILL_W, STILL_H, ease(clamp((p - 0.68) / 0.1)));
 
-      // 문구 가독성용 어둡게 깔기 (데스크톱 왼쪽 / 모바일 아래)
+      // Darkening for text readability (left on desktop / bottom on mobile)
       const g = w >= 900 ? ctx.createLinearGradient(0, 0, w * 0.6, 0) : ctx.createLinearGradient(0, h, 0, h * 0.35);
       g.addColorStop(0, 'rgba(5, 9, 18, 0.9)');
       g.addColorStop(1, 'rgba(5, 9, 18, 0)');

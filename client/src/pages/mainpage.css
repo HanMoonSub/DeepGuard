@@ -1,4 +1,4 @@
-/* 메인(랜딩) 페이지 전용 스타일 — 다른 페이지에 새지 않도록 .dg-landing 하위로 한정 */
+/* Styles for the main (landing) page only — scoped under .dg-landing so they don't leak into other pages */
 .dg-landing {
   font-family: var(--font-sans);
   color: var(--color-ink);
@@ -10,7 +10,7 @@
 .dg-landing *::after {
   box-sizing: border-box;
 }
-/* :where()로 specificity 0 → 컴포넌트/섹션 스타일이 항상 우선 */
+/* :where() gives specificity 0 → component/section styles always win */
 :where(.dg-landing) :where(h1, h2, h3, p, ul) {
   margin: 0;
   padding: 0;
@@ -32,7 +32,7 @@
     radial-gradient(900px 500px at 78% 40%, #1a3f9c55, transparent),
     linear-gradient(180deg, var(--color-bg-dark), var(--color-bg-dark-2));
 }
-/* 은은한 격자 (정적, 가장자리로 갈수록 사라짐) */
+/* Subtle grid (static, fading out toward the edges) */
 .dg-hero::before {
   content: '';
   position: absolute;
@@ -54,7 +54,7 @@
   gap: 48px;
   align-items: center;
 }
-/* 히어로 비주얼: 이미지 분석 4장 + 영상 분석 콜라주 (dg-hv__* 로 격리, 애니메이션 없음) */
+/* Hero visual: 4 image analysis cards + video analysis collage (isolated as dg-hv__*, no animation) */
 .dg-landing .dg-hv {
   position: relative;
   isolation: isolate;
@@ -101,7 +101,7 @@
   background: #ef4a4a;
 }
 
-/* 이미지 분석: 4장 부채꼴로 살짝 겹침 */
+/* Image analysis: 4 cards fanned out with a slight overlap */
 .dg-landing .dg-hv__tiles {
   display: flex;
   align-items: flex-end;
@@ -150,7 +150,7 @@
   background: var(--color-primary);
 }
 
-/* 영상 분석: 재생 화면 + 위조 비율 카드가 오른쪽에 겹침 */
+/* Video analysis: player screen + fake ratio card overlapping on the right */
 .dg-landing .dg-hv__video-row {
   position: relative;
   margin-top: 14px;
@@ -332,7 +332,7 @@
   flex-wrap: wrap;
   gap: 12px;
 }
-/* 지금 분석해보기 버튼: 흰 박스 + primary 글씨 */
+/* Analyze now button: white box + primary text */
 .dg-landing .dg-hero__cta .dg-btn--primary {
   background: #fff;
   color: var(--color-primary);
@@ -342,14 +342,14 @@
   color: var(--color-primary);
 }
 
-/* 왼쪽 텍스트 뒤 이클립스 링: 은은한 테두리 + 천천히 도는 빛 */
+/* Eclipse ring behind the left text: subtle border + slowly rotating light */
 .dg-hero__copy {
   position: relative;
   isolation: isolate;
 }
-/* 공통 Eclipse 컴포넌트의 메인 히어로 위치 */
+/* Position of the shared Eclipse component in the main hero */
 .dg-hero__copy .dg-eclipse {
-  /* 텍스트 중앙보다 왼쪽 위로 치우치게 */
+  /* Offset up and to the left of the text center */
   left: 38%;
   top: 40%;
 }
@@ -405,7 +405,7 @@
   font-size: var(--fs-sm);
   font-weight: 600;
 }
-/* features: 부제 없이 h2 바로 아래 카드, 카드 하단에 주 버튼(사이트 분석) + 보조 버튼(HF 데모) */
+/* features: cards right below the h2 with no subtitle, primary button (site analysis) + secondary button (HF demo) at the bottom of each card */
 .dg-landing .dg-features {
   margin-top: 40px;
 }
@@ -420,7 +420,7 @@
   margin-top: auto;
   padding-top: 20px;
 }
-/* Card.css의 텍스트 링크 스타일(.dg-card__action a)을 버튼 모양으로 되돌림 */
+/* Turn Card.css's text link style (.dg-card__action a) back into a button */
 .dg-landing .dg-features .dg-card__action .dg-btn {
   padding: 9px 16px;
   border: 1px solid transparent;
@@ -441,7 +441,7 @@
   background: var(--color-bg-alt);
 }
 
-/* 기능 카드: 카드별 파랑 계열 컬러 헤더 + 미니 일러스트 */
+/* Feature cards: blue-family color header per card + mini illustration */
 .dg-landing .dg-features .dg-feat {
   --feat: var(--color-primary);
   padding-top: 0;
@@ -494,7 +494,7 @@
   display: block;
 }
 
-/* 이미지: 프레임 + 판정 배지 */
+/* Image: frame + verdict badge */
 .dg-feat__frame {
   position: absolute;
   left: 30px;
@@ -531,7 +531,7 @@
   color: var(--color-danger);
 }
 
-/* 영상: 프레임 스캔 + 타임라인 */
+/* Video: frame scan + timeline */
 .dg-feat__frames {
   position: absolute;
   left: 30px;
@@ -581,7 +581,7 @@
   background: #fff;
 }
 
-/* XAI: 히트맵 + 점선 박스 */
+/* XAI: heatmap + dashed box */
 .dg-feat__heat {
   position: absolute;
   left: 30px;
@@ -670,7 +670,7 @@
   font-weight: 800;
 }
 
-/* SOTA 비교 표 (포스터 "05 성능 평가" 스타일) */
+/* SOTA comparison table (poster "05 Performance evaluation" style) */
 .dg-landing .dg-sota {
   margin-top: 44px;
 }
@@ -681,7 +681,7 @@
   justify-content: space-between;
   gap: 16px;
 }
-/* 그래프 ⇄ 표 세그먼트 전환 */
+/* Chart ⇄ table segmented toggle */
 .dg-bench__seg {
   display: inline-flex;
   gap: 4px;
@@ -709,7 +709,7 @@
   color: var(--color-primary);
   box-shadow: 0 1px 3px rgba(11, 18, 32, 0.12);
 }
-/* 두 뷰를 같은 칸에 겹쳐 높이는 더 큰 쪽에 맞춤 */
+/* Stack both views in the same cell so the height matches the taller one */
 .dg-bench__views {
   display: grid;
   margin-top: 20px;
@@ -818,7 +818,7 @@
   letter-spacing: 0.4px;
   vertical-align: 2px;
 }
-/* 미니 막대: 숫자 왼쪽 */
+/* Mini bar: left of the number */
 .dg-sota__bar {
   display: inline-block;
   width: 52px;
@@ -849,7 +849,7 @@
   height: auto;
 }
 
-/* 분석 화면 안내 (번호 핀 + 설명 박스) */
+/* Analysis screen guide (numbered pins + description boxes) */
 .dg-guide {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 250px;
@@ -900,7 +900,7 @@
   box-shadow: 0 18px 44px rgba(11, 18, 32, 0.06);
 }
 
-/* 영상 분석 안내 (두 화면 나란히 + 아래 박스): 위 이미지 안내와 이어지도록 위쪽 여백 제거 */
+/* Video analysis guide (two screens side by side + box below): no top margin so it continues from the image guide above */
 .dg-landing .dg-vguide {
   padding-top: 0;
 }
@@ -972,7 +972,7 @@
   font-weight: 800;
   box-shadow: 0 8px 20px rgba(11, 18, 32, 0.08);
 }
-/* 목업: 800 × 460 고정 좌표, JS가 부모 너비에 맞춰 scale */
+/* Mockup: fixed 800 × 460 coordinates, scaled by JS to fit the parent width */
 .dg-vm-fit {
   position: relative;
   aspect-ratio: 800 / 460;
@@ -1061,7 +1061,7 @@
   font-weight: 700;
   color: #fff;
 }
-/* 영상 플레이어 + 가운데 재생 버튼 */
+/* Video player + centered play button */
 .dg-vm .pl {
   position: absolute;
   border-radius: 10px;
@@ -1125,7 +1125,7 @@
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
 }
-/* 분석 중 진행 카드 */
+/* Analyzing progress card */
 .dg-vm .prog {
   position: absolute;
   left: 300px;
@@ -1256,7 +1256,7 @@
   line-height: 1.7;
   color: #b7c2dc;
 }
-/* 우측 패널 */
+/* Right panel */
 .dg-vm .side {
   position: absolute;
   left: 600px;
@@ -1343,7 +1343,7 @@
   font-size: 12px;
   font-weight: 800;
 }
-/* 결과 화면 */
+/* Result screen */
 .dg-vm .cap {
   position: absolute;
   font-size: 9px;
@@ -1553,7 +1553,7 @@
   gap: 20px;
 }
 
-/* 목업: 800 × 460 기준 좌표를 컨테이너 너비(cqw)로 환산해 비율 유지 */
+/* Mockup: converts 800 × 460 base coordinates to the container width (cqw) to keep the aspect ratio */
 .dg-gm {
   position: relative;
   container-type: inline-size;
@@ -1821,7 +1821,7 @@
   box-shadow: 0 0 0 0.5cqw rgba(32, 108, 253, 0.22), 0 0.75cqw 1.75cqw rgba(32, 108, 253, 0.35);
 }
 
-/* explainability: 왼쪽 결과·설정 화면(600 × 540 고정 좌표) + 오른쪽 설명, 번호와 점선 연결 */
+/* explainability: result/settings screen on the left (fixed 600 × 540 coordinates) + description on the right, linked by numbers and dashed lines */
 .dg-xai {
   overflow-x: clip;
 }
@@ -1862,7 +1862,7 @@
   font-size: 11px;
   color: #0b1220;
 }
-/* 뒤로 퍼지는 원 */
+/* Circles spreading out behind */
 .dg-xai__stage .fx {
   position: absolute;
   left: 290px;
@@ -2092,7 +2092,7 @@
   place-items: center;
   box-shadow: 0 0 0 4px rgba(32, 108, 253, 0.22), 0 6px 14px rgba(32, 108, 253, 0.35);
 }
-/* 오른쪽 설명: 넓은 화면에서는 번호 항목을 점선 높이에 맞춰 배치 */
+/* Right description: on wide screens, numbered items are aligned to the dashed line heights */
 .dg-xai__txt {
   position: relative;
   min-height: 540px;
@@ -2161,7 +2161,7 @@
   margin-right: 6px;
   color: #0b1220;
 }
-/* 좁은 화면: 화면 → 설명 순서로 쌓고 점선은 숨김 */
+/* Narrow screens: stack screen → description and hide the dashed lines */
 @media (max-width: 1120px) {
   .dg-xai__grid {
     grid-template-columns: minmax(0, 1fr);
@@ -2196,7 +2196,7 @@
   flex-direction: column;
   align-items: center;
 }
-/* 오른쪽 위 모서리에서 퍼지는 은은한 물결 */
+/* Subtle ripples spreading from the top right corner */
 .dg-member::before {
   content: "";
   position: absolute;
@@ -2259,7 +2259,7 @@
 }
 
 /* cta band */
-/* 연한 파랑 그라데이션 + 양쪽 모서리에 은은한 원 장식 */
+/* Light blue gradient + subtle circle decorations in both corners */
 .dg-band {
   position: relative;
   overflow: hidden;
@@ -2301,7 +2301,7 @@
 }
 
 @media (max-width: 900px) {
-  /* 안내: 목업을 위로, 설명 박스는 번호 순서대로 2열 */
+  /* Guide: mockup on top, description boxes in 2 columns in numbered order */
   .dg-guide {
     grid-template-columns: 1fr 1fr;
     gap: 14px;
@@ -2314,7 +2314,7 @@
     order: 0;
     margin-bottom: 8px;
   }
-  /* 영상 안내: 두 화면을 세로로 쌓고 화살표는 아래 방향 */
+  /* Video guide: stack the two screens vertically with the arrow pointing down */
   .dg-vguide__grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2331,7 +2331,7 @@
   .dg-landing h1 {
     font-size: 40px;
   }
-  /* 1열: 텍스트 아래로 내려가 가운데 정렬 */
+  /* Single column: text moves below and is centered */
   .dg-landing .dg-hv {
     margin-top: 32px;
   }
@@ -2353,7 +2353,7 @@
   .dg-vguide__frame {
     padding: 6px;
   }
-  /* 모바일: 위조 비율 카드를 영상 아래로 내림 */
+  /* Mobile: move the fake ratio card below the video */
   .dg-landing .dg-hv__video-row {
     min-height: 0;
   }
@@ -2373,7 +2373,7 @@
   .dg-bench__card {
     padding: 22px 18px;
   }
-  /* 모바일: 미니 막대 숨기고 숫자만 */
+  /* Mobile: hide the mini bars and show numbers only */
   .dg-sota__bar {
     display: none;
   }

@@ -15,7 +15,7 @@ from explainability import (
 )
 from celery_app import celery_app
 
-# LOW branch: 국소 위조 흔적 포착 / HIGH branch: 전역 위조 흔적 포착
+# LOW branch: captures local forgery artifacts / HIGH branch: captures global forgery artifacts
 EXPLAINER_REGISTRY = {
     "hirescam":   HiResCAMExplainer, # LOW branch
     "gradcamelementwise": GradCAMElementWiseExplainer, # LOW branch
@@ -25,11 +25,11 @@ EXPLAINER_REGISTRY = {
     "xgradcam":     XGradCAMExplainer, # HIGH branch
 }
 
-# both(branch 결합) 설정 — client에서 변경 불가
+# both (combined branches) settings — cannot be changed by the client
 FUSION_MODE = "mean"
 FUSION_LOW_WEIGHT = 0.6
 
-# v2(DeepClip)용 explainer
+# Explainers for v2 (DeepClip)
 CLIP_EXPLAINER_REGISTRY = {
     "hirescam":   ClipHiResCAMExplainer, # LOW branch
     "gradcamelementwise": ClipGradCAMElementWiseExplainer, # LOW branch
@@ -42,15 +42,15 @@ CLIP_EXPLAINER_REGISTRY = {
 _explainer_cache: dict = {}
 
 def _extract_face_from_frame(video_path: str, frame_time: float, explainer: CAMExplainer | BranchFusionExplainer) -> np.ndarray:
-    """비디오의 특정 시간대 프레임에서 얼굴 영역을 추출해 크롭된 배열을 반환한다.
+    """Extract the face region from the frame at a given time in a video and return the cropped array.
 
     Args:
-        video_path (str): 비디오 파일 경로.
-        frame_time (float): 프레임을 추출할 시간 (초 단위).
-        explainer (CAMExplainer): 얼굴 감지 및 크롭에 사용할 CAMExplainer 인스턴스.
+        video_path (str): Video file path.
+        frame_time (float): Time of the frame to extract (in seconds).
+        explainer (CAMExplainer): CAMExplainer instance used for face detection and cropping.
 
     Returns:
-        np.ndarray: 크롭된 얼굴 이미지 배열 (RGB).
+        np.ndarray: Cropped face image array (RGB).
     """
     cap = cv2.VideoCapture(video_path)
     cap.set(cv2.CAP_PROP_POS_MSEC, frame_time * 1000)
@@ -58,34 +58,34 @@ def _extract_face_from_frame(video_path: str, frame_time: float, explainer: CAME
     cap.release()
 
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # BranchFusionExplainer는 얼굴 탐지/크롭을 low explainer에 위임
+    # BranchFusionExplainer delegates face detection/cropping to the low explainer
     detector = getattr(explainer, "low_explainer", explainer)
     bbox = detector._get_face_bbox(frame_rgb)
 
     return detector._crop_face(frame_rgb, bbox[:4])
 
 def _get_or_create_explainer(model_name: str, dataset: str | None, explain_req_dict: dict) -> CAMExplainer | BranchFusionExplainer:
-    """캐시에서 Explainer를 조회하거나, 없으면 새로 생성해 캐싱 후 반환한다.
+    """Get an Explainer from the cache, or create, cache and return a new one if missing.
 
-    캐시 키는 (model_name, dataset, explainer_type, branch_level) 4개 파라미터로 구성된다.
-    추론 시점 파라미터(aug_smooth, overlay_ratio 등)는 키에서 제외해 메모리 사용을 최소화한다.
+    The cache key consists of 4 parameters: (model_name, dataset, explainer_type, branch_level).
+    Inference-time parameters (aug_smooth, overlay_ratio, etc.) are left out of the key to minimize memory use.
 
     Args:
-        model_name (str): 추론에 사용할 모델 이름. deepclip_* 이면 Clip explainer를 사용한다.
-        dataset (str | None): 모델 학습에 사용된 데이터셋 이름. DeepClip은 None.
-        explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
-            - explainer_type (str): EXPLAINER_REGISTRY 키값 (both일 때는 "fusion").
-            - branch_level (str): 모델 브랜치 레벨 ("low" | "high" | "both").
+        model_name (str): Model name used for inference. deepclip_* uses a Clip explainer.
+        dataset (str | None): Dataset the model was trained on. None for DeepClip.
+        explain_req_dict (dict): Visualization request parameters.
+            - explainer_type (str): EXPLAINER_REGISTRY key ("fusion" for both).
+            - branch_level (str): Model branch level ("low" | "high" | "both").
 
     Returns:
-        CAMExplainer | BranchFusionExplainer: 캐시된 또는 새로 생성된 Explainer 인스턴스.
+        CAMExplainer | BranchFusionExplainer: Cached or newly created Explainer instance.
     """
     cache_key = (model_name, dataset, explain_req_dict["explainer_type"], explain_req_dict["branch_level"])
     is_clip = model_name.startswith("deepclip")
 
     if cache_key not in _explainer_cache:
         if explain_req_dict["branch_level"] == "both":
-            # both: low(LayerCAM) + high(EigenGradCAM) CAM을 가중 평균으로 결합 (fuse/low_weight는 서버 고정값)
+            # both: combine low (LayerCAM) + high (EigenGradCAM) CAMs with a weighted mean (fuse/low_weight are fixed on the server)
             if is_clip:
                 _explainer_cache[cache_key] = ClipBranchFusionExplainer(
                     model_name = model_name,
@@ -113,20 +113,20 @@ def _get_or_create_explainer(model_name: str, dataset: str | None, explain_req_d
     return _explainer_cache[cache_key]
         
 def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, explain_req_dict: dict) -> np.ndarray:
-    """이미지 경로를 받아 display_type에 따라 시각화 이미지를 생성한다.
+    """Take an image path and generate a visualization image according to display_type.
 
     Args:
-        explainer (CAMExplainer): 시각화에 사용할 CAMExplainer 인스턴스.
-        image_path (str): 입력 이미지 파일 경로.
-        category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
-        explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
+        explainer (CAMExplainer): CAMExplainer instance used for visualization.
+        image_path (str): Input image file path.
+        category (int): Target class index (fake: 1, real: 0).
+        explain_req_dict (dict): Visualization request parameters.
             - display_type (str): "heatmap" | "bbox" | "heatmap_bbox"
-            - overlay_ratio (float): 히트맵 오버레이 시 원본 이미지 가중치.
-            - aug_smooth (bool): Test-time augmentation 가동 여부.
-            - eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부.
+            - overlay_ratio (float): Weight of the original image when overlaying the heatmap.
+            - aug_smooth (bool): Whether to apply test-time augmentation.
+            - eigen_smooth (bool): Whether to apply PCA-based noise removal.
 
     Returns:
-        np.ndarray: 시각화가 적용된 얼굴 이미지 (RGB, np.uint8).
+        np.ndarray: Face image with the visualization applied (RGB, np.uint8).
     """
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_on_image(image_path, image_weight=explain_req_dict["overlay_ratio"],
@@ -139,16 +139,16 @@ def _run_visualization(explainer: CAMExplainer, image_path: str, category: int, 
                                                        category=category, aug_smooth=explain_req_dict["aug_smooth"], eigen_smooth=explain_req_dict["eigen_smooth"])
 
 def _run_visualization_from_array(explainer: CAMExplainer, face: np.ndarray, category: int, explain_req_dict: dict) -> np.ndarray:
-    """크롭된 얼굴 배열을 받아 display_type에 따라 시각화 이미지를 생성한다.
+    """Take a cropped face array and generate a visualization image according to display_type.
 
     Args:
-        explainer (CAMExplainer): 시각화에 사용할 CAMExplainer 인스턴스.
-        face (np.ndarray): 전처리(크롭)가 완료된 얼굴 이미지 배열 (RGB).
-        category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
-        explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리. (_run_visualization과 동일)
+        explainer (CAMExplainer): CAMExplainer instance used for visualization.
+        face (np.ndarray): Preprocessed (cropped) face image array (RGB).
+        category (int): Target class index (fake: 1, real: 0).
+        explain_req_dict (dict): Visualization request parameters (same as _run_visualization).
 
     Returns:
-        np.ndarray: 시각화가 적용된 얼굴 이미지 (RGB, np.uint8).
+        np.ndarray: Face image with the visualization applied (RGB, np.uint8).
     """
     if explain_req_dict["display_type"] == "heatmap":
         return explainer.display_heatmap_from_array(face, image_weight=explain_req_dict["overlay_ratio"],
@@ -168,28 +168,28 @@ def process_explain_image_task(user_email: str,
                                image_id: int,
                                category: int,
                                explain_req_dict: dict) -> dict:
-    """딥페이크 이미지 위조 흔적 시각화를 처리하는 Celery 비동기 태스크.
+    """Celery async task that visualizes forgery artifacts in a deepfake image.
 
-    CAMExplainer로 시각화 이미지를 생성하고 서버에 저장한다.
-    Celery 워커(동기) 내에서 asyncio 이벤트 루프를 직접 구동해 비동기 로직을 실행한다.
+    Generates the visualization with CAMExplainer and saves it on the server.
+    Runs the async logic by driving an asyncio event loop directly inside the (synchronous) Celery worker.
 
     Args:
-        user_email (str): 요청 사용자 이메일 (저장 경로 구분용).
-        version_type (str): 모델 버전 타입 (MODEL_CONFIG 키값).
-        domain_type (str): 탐지 도메인 타입 (MODEL_CONFIG 키값).
-        image_loc (str): 분석 대상 이미지의 서버 저장 경로 (DB 기준, '/'로 시작).
-        image_id (int): 이미지 레코드 PK.
-        category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
-        explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
+        user_email (str): Requesting user's email (used to separate storage paths).
+        version_type (str): Model version type (MODEL_CONFIG key).
+        domain_type (str): Detection domain type (MODEL_CONFIG key).
+        image_loc (str): Stored server path of the target image (DB format, starts with '/').
+        image_id (int): Image record PK.
+        category (int): Target class index (fake: 1, real: 0).
+        explain_req_dict (dict): Visualization request parameters.
 
     Returns:
         dict:
             - status (str): "SUCCESS" | "FAILED"
-            - message (str): 처리 결과 메세지.
-            - cam_loc (str | None): 저장된 시각화 이미지 경로. 실패 시 None.
+            - message (str): Result message.
+            - cam_loc (str | None): Path of the saved visualization image, or None on failure.
 
     Note:
-        생성된 시각화 파일은 태스크 완료 60초 후 자동 삭제된다.
+        The generated visualization file is deleted automatically 60 seconds after the task finishes.
     """
     async def run_explain():
         cam_loc = None
@@ -199,7 +199,7 @@ def process_explain_image_task(user_email: str,
             explainer = _get_or_create_explainer(model_name, dataset, explain_req_dict)
             image_path = "." + image_loc
 
-            # 시각화 이미지 생성 시작
+            # Start generating the visualization image
             try:
                 image = _run_visualization(explainer, image_path, category, explain_req_dict)
             except Exception:
@@ -208,7 +208,7 @@ def process_explain_image_task(user_email: str,
                     detail="딥페이크 이미지 위조 흔적을 생성하는 중 오류가 발생하였습니다"
                 )
 
-            # 생성된 시각화 이미지 파일 저장 
+            # Save the generated visualization image file
             try:
                 cam_loc = await image_svc.upload_image_cam(user_email, image_id, image)
             except Exception:
@@ -230,11 +230,11 @@ def process_explain_image_task(user_email: str,
             return {"status": "FAILED", "message": str(e)}
         
         finally:
-            # 임시 저장된 시각화 이미지 파일 삭제 
+            # Delete the temporarily stored visualization image file
             if cam_loc:
                 image_svc.cleanup_image_cam.apply_async(args=[cam_loc], countdown=60) 
 
-    # 동기식 Celery 워커 내 비동기 이벤트 루프 구동
+    # Drive an async event loop inside the synchronous Celery worker
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -251,29 +251,29 @@ def process_explain_frame_task(user_email: str,
                                category: int,
                                frame_time: float, 
                                explain_req_dict: dict) -> dict:
-    """딥페이크 비디오 특정 프레임의 위조 흔적 시각화를 처리하는 Celery 비동기 태스크.
+    """Celery async task that visualizes forgery artifacts in a specific frame of a deepfake video.
 
-    비디오에서 프레임을 추출하고 얼굴을 크롭한 뒤 CAMExplainer로 시각화 이미지를 생성해 저장한다.
-    Celery 워커(동기) 내에서 asyncio 이벤트 루프를 직접 구동해 비동기 로직을 실행한다.
+    Extracts the frame from the video, crops the face, then generates and saves the visualization with CAMExplainer.
+    Runs the async logic by driving an asyncio event loop directly inside the (synchronous) Celery worker.
 
     Args:
-        user_email (str): 요청 사용자 이메일 (저장 경로 구분용).
-        version_type (str): 모델 버전 타입 (MODEL_CONFIG 키값).
-        domain_type (str): 탐지 도메인 타입 (MODEL_CONFIG 키값).
-        video_loc (str): 분석 대상 비디오의 서버 저장 경로 (DB 기준, '/'로 시작).
-        video_id (int): 비디오 레코드 PK.
-        category (int): 타겟 클래스 인덱스 (위조: 1, 정상: 0).
-        frame_time (float): 시각화할 프레임의 타임스탬프 (초 단위).
-        explain_req_dict (dict): 시각화 요청 파라미터 딕셔너리.
+        user_email (str): Requesting user's email (used to separate storage paths).
+        version_type (str): Model version type (MODEL_CONFIG key).
+        domain_type (str): Detection domain type (MODEL_CONFIG key).
+        video_loc (str): Stored server path of the target video (DB format, starts with '/').
+        video_id (int): Video record PK.
+        category (int): Target class index (fake: 1, real: 0).
+        frame_time (float): Timestamp of the frame to visualize (in seconds).
+        explain_req_dict (dict): Visualization request parameters.
 
     Returns:
         dict:
             - status (str): "SUCCESS" | "FAILED"
-            - message (str): 처리 결과 메세지.
-            - cam_loc (str | None): 저장된 시각화 이미지 경로. 실패 시 None.
+            - message (str): Result message.
+            - cam_loc (str | None): Path of the saved visualization image, or None on failure.
 
     Note:
-        생성된 시각화 파일은 태스크 완료 60초 후 자동 삭제된다.
+        The generated visualization file is deleted automatically 60 seconds after the task finishes.
     """
     async def run_explain():
         cam_loc = None
@@ -285,7 +285,7 @@ def process_explain_frame_task(user_email: str,
 
             face = _extract_face_from_frame(video_path, frame_time, explainer)
             
-            # 비디오 프레임 시각화 생성 시작
+            # Start generating the video frame visualization
             try:
                 image = _run_visualization_from_array(explainer, face, category, explain_req_dict)
             except Exception:
@@ -294,7 +294,7 @@ def process_explain_frame_task(user_email: str,
                     detail="딥페이크 비디오 프레임 위조 흔적을 생성하는 중 오류가 발생하였습니다"
                 )
 
-            # 비디오 프레임 시각화 파일 저장 
+            # Save the video frame visualization file
             try:
                 cam_loc = await image_svc.upload_frame_cam(user_email, video_id, frame_time, image)
             except Exception:
@@ -316,11 +316,11 @@ def process_explain_frame_task(user_email: str,
             return {"status": "FAILED", "message": str(e)}
         
         finally:
-            # 임시 저장된 비디오 프레임 시각화 파일 삭제 
+            # Delete the temporarily stored video frame visualization file
             if cam_loc:
                 image_svc.cleanup_image_cam.apply_async(args=[cam_loc], countdown=60) 
 
-    # 동기식 Celery 워커 내 비동기 이벤트 루프 구동
+    # Drive an async event loop inside the synchronous Celery worker
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:

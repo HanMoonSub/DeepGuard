@@ -20,10 +20,10 @@ class BaseExplainer:
             # DeepClip models (ClipExplainerMixin)
             "deepclip_b0", "deepclip_b5",
         ],
-        dataset: Optional[Literal["celeb_df_v2", "ff++", "kodf"]] = None, # DeepClip 모델은 dataset 불필요
+        dataset: Optional[Literal["celeb_df_v2", "ff++", "kodf"]] = None, # DeepClip models don't need a dataset
         margin_ratio: float = 0.2,
         conf_thres: float = 0.5,
-        branch_level: Literal["low", "high"] = "high", # 두 branch 결합은 BranchFusionExplainer 사용
+        branch_level: Literal["low", "high"] = "high", # use BranchFusionExplainer to combine both branches
         model: Optional[torch.nn.Module] = None,
     ):
 
@@ -52,14 +52,14 @@ class BaseExplainer:
         self.target_layers = self._resolve_target_layers()
 
     def _load_model(self, model_name: str, dataset: Optional[str]) -> torch.nn.Module:
-        """timm에 등록된 사전학습 모델을 불러온다."""
+        """Load a pretrained model registered with timm."""
         return timm.create_model(model_name, pretrained=True, dataset=dataset)
 
     def _get_transformer_type(self) -> Literal["gcvit", "vit", "cnn"]:
-        """모델 이름으로 branch의 transformer 종류를 판별한다.
+        """Determine the branch transformer type from the model name.
 
         Returns:
-            str: "gcvit", "vit", "cnn" (eff_b0/eff_b5: transformer 없는 EfficientNet baseline).
+            str: "gcvit", "vit", "cnn" (eff_b0/eff_b5: EfficientNet baseline without a transformer).
         """
         if "gcvit" in self.model_name:
             return "gcvit"
@@ -68,24 +68,24 @@ class BaseExplainer:
         return "cnn"
 
     def _branch_root(self) -> torch.nn.Module:
-        """feat_extractor와 l_/h_ branch를 가진 모듈을 반환한다."""
+        """Return the module that holds feat_extractor and the l_/h_ branches."""
         return self.model
 
     def _get_reshape_fn(self) -> Callable[[torch.Tensor], torch.Tensor]:
-        """모델 종류에 맞는 Feature map reshape 함수를 반환한다.
+        """Return the feature map reshape function for the model type.
 
         Returns:
-            Callable: 3D/4D 텐서를 GradCAM 연산에 적합한 형태로 변환하는 함수.
+            Callable: function that converts 3D/4D tensors into a shape suitable for GradCAM.
         """
         if self.transformer_type == "cnn":
-            return None  # backbone feature map은 이미 (B,C,H,W)
+            return None  # backbone feature maps are already (B,C,H,W)
         return reshape_transform_vit if self.transformer_type == "vit" else reshape_transform_gcvit
 
     def _validate_branch_level(self) -> None:
-        """Ablation 모델이 실제로 가진 branch와 branch_level이 일치하는지 검증한다.
+        """Check that branch_level matches the branches the ablation model actually has.
 
         Raises:
-            ValueError: low_/high_ 단일 branch 모델에 존재하지 않는 branch를 요청한 경우 발생.
+            ValueError: raised when a branch that doesn't exist in a low_/high_ single-branch model is requested.
         """
         if self.branch_level not in ("low", "high"):
             raise ValueError(f"branch_level은 'low' 또는 'high'만 가능합니다 (입력: {self.branch_level!r}). 두 branch 결합은 BranchFusionExplainer를 사용하세요.")
@@ -97,32 +97,32 @@ class BaseExplainer:
             raise ValueError(f"{self.model_name}은 high-level branch만 가지므로 branch_level='high'만 가능합니다.")
 
     def _get_backbone_layer(self, feature_idx: int) -> torch.nn.Module:
-        """EfficientNet backbone에서 feature_idx 단계의 출력 모듈을 찾는다."""
+        """Find the output module of stage feature_idx in the EfficientNet backbone."""
         backbone = self._branch_root().feat_extractor.backbone
         name = backbone.feature_info[feature_idx]["module"]  # e.g. "blocks.6"
         modules = dict(backbone.named_modules())
-        # timm FeatureListNet은 이름의 '.'를 '_'로 바꾸는 경우가 있어 둘 다 시도
+        # timm FeatureListNet sometimes replaces '.' in names with '_', so try both
         for key in (name, name.replace(".", "_")):
             if key in modules:
                 return modules[key]
         raise ValueError(f"backbone에서 '{name}' 모듈을 찾을 수 없습니다.")
 
     def _resolve_target_layers(self) -> list[torch.nn.Module]:
-        """시각화(XAI)의 대상이 될 Target Layer들을 선택한다.
+        """Select the target layers for visualization (XAI).
 
-        각 branch의 마지막 block 정규화 레이어로 고정한다.
-            - gcvit: 마지막 stage 마지막 GCViTBlock의 norm2
-            - vit: 마지막 ViTBlock의 norm1
-            - cnn: backbone의 마지막 feature map
+        Fixed to the normalization layer of the last block in each branch.
+            - gcvit: norm2 of the last GCViTBlock in the last stage
+            - vit: norm1 of the last ViTBlock
+            - cnn: the last backbone feature map
 
         Returns:
-            list[torch.nn.Module]: 분석 대상 레이어 리스트.
+            list[torch.nn.Module]: list of target layers.
         """
         root = self._branch_root()
         layers = []
 
         if self.transformer_type == "cnn":
-            # eff_b0/eff_b5: transformer가 없으므로 backbone의 마지막 feature map을 직접 사용
+            # eff_b0/eff_b5: no transformer, so use the last backbone feature map directly
             layers.append(self._get_backbone_layer(root.h_meta["feature_idx"]))
 
         elif self.transformer_type == "gcvit":
@@ -140,26 +140,26 @@ class BaseExplainer:
         return layers
 
     def _get_face_bbox(self, img: np.ndarray) -> List[float]:
-        """얼굴 탐지기(YOLO)를 통해 이미지에서 얼굴 바운딩 박스를 좌표를 추출한다.
+        """Extract face bounding box coordinates from the image with the face detector (YOLO).
 
         Args:
-            img (np.ndarray): HWC 형태의 RGB 이미지 데이터.
+            img (np.ndarray): RGB image data in HWC layout.
 
         Returns:
-            list[float]: [xmin, ymin, xmax, ymax, confidence] 형태의 좌표 리스트.
+            list[float]: coordinate list in [xmin, ymin, xmax, ymax, confidence] form.
         """
         result = self.face_detector.detect_batch([img], [1.0])
         return result[0]
     
     def _crop_face(self, img: np.ndarray, bbox: List[float]) -> np.ndarray:
-        """마진 비율을 고려하여 바운딩 박스 기준으로 얼굴 영역을 크롭한다.
+        """Crop the face region around the bounding box, taking the margin ratio into account.
 
         Args:
-            img (np.ndarray): 전체 원본 이미지.
-            bbox (list[float]): 탐지된 [xmin, ymin, xmax, ymax] 얼굴 좌표.
+            img (np.ndarray): full original image.
+            bbox (list[float]): detected [xmin, ymin, xmax, ymax] face coordinates.
 
         Returns:
-            np.ndarray: 크롭된 얼굴 이미지 영역.
+            np.ndarray: cropped face image region.
         """
         xmin, ymin, xmax, ymax = bbox
         h, w = img.shape[:2]
@@ -171,13 +171,13 @@ class BaseExplainer:
         ]
         
     def _preprocess_img(self, img_path: str) -> np.ndarray:
-        """이미지 경로를 읽어 얼굴을 탐지하고 크롭하는 전과정을 수행한다.
+        """Read the image path and run the full face detection and cropping process.
 
         Args:
-            img_path (str): 입력 이미지 파일 경로.
+            img_path (str): input image file path.
 
         Returns:
-            np.ndarray: 전처리가 완료된 크롭된 얼굴 이미지 (RGB).
+            np.ndarray: preprocessed, cropped face image (RGB).
         """
         img = cv2.imread(img_path)        
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -187,26 +187,26 @@ class BaseExplainer:
         return cropped
                   
     def _get_transform(self, img_path: str) -> tuple[np.ndarray, torch.Tensor]:
-        """이미지 경로를 받아 크롭 이미지와 모델 입력용 텐서를 동시에 생성한다.
+        """Take an image path and produce both the cropped image and the model input tensor.
 
         Args:
-            img_path (str): 입력 이미지 파일 경로.
+            img_path (str): input image file path.
 
         Returns:
-            tuple[np.ndarray, torch.Tensor]: (크롭된 얼굴 이미지, (1, 3, H, W) 형태의 배치 텐서).
+            tuple[np.ndarray, torch.Tensor]: (cropped face image, batch tensor of shape (1, 3, H, W)).
         """
         face = self._preprocess_img(img_path)
         tensor = self.transforms(image=face)['image'].unsqueeze(0) # (1,3,H,W)
         return face, tensor
     
     def _get_transform_from_array(self, face: np.ndarray) -> tuple[np.ndarray, torch.Tensor]:
-        """이미 크롭된 얼굴 배열을 받아 모델 입력용 텐서로 변환한다.
+        """Convert an already-cropped face array into a model input tensor.
 
         Args:
-            face (np.ndarray): 이미 잘려진 얼굴 이미지 배열 (RGB).
+            face (np.ndarray): already-cropped face image array (RGB).
 
         Returns:
-            tuple[np.ndarray, torch.Tensor]: (원본 얼굴 이미지, (1, 3, H, W) 형태의 배치 텐서).
+            tuple[np.ndarray, torch.Tensor]: (original face image, batch tensor of shape (1, 3, H, W)).
         """
         tensor = self.transforms(image=face)['image'].unsqueeze(0) # (1,3,H,W)
         return face, tensor

@@ -7,11 +7,11 @@ except ImportError:
 
 
 def check_deepclip_model_name(model_name: str) -> None:
-    """deepclip 패키지 설치 여부와 DeepClip 모델 이름을 검증한다.
+    """Check that the deepclip package is installed and the DeepClip model name is valid.
 
     Raises:
-        ImportError: deepclip 패키지가 설치되어 있지 않은 경우 발생.
-        ValueError: 존재하지 않는 DeepClip 모델 이름인 경우 발생.
+        ImportError: raised when the deepclip package is not installed.
+        ValueError: raised when the DeepClip model name doesn't exist.
     """
     if deepclip is None:
         raise ImportError(

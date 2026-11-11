@@ -3,15 +3,15 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 # ─────────────────────────────────────────────
 # [project]
-# PyPI에 올라가는 패키지 메타데이터
-# pip install deepguard 했을 때 보이는 정보들
+# Package metadata uploaded to PyPI
+# Information shown after pip install deepguard
 # ─────────────────────────────────────────────
 [project]
-name = "deepguard"           # pip install deepguard 할 때 이 이름
+name = "deepguard"           # the name used for pip install deepguard
 version = "1.1.3"            
 description = "Multi-Scale Efficient Global Context Vision Transformer for Robust Deepfake Detection"
-readme = "README.md"         # PyPI 페이지에 표시될 설명 (마크다운)
-requires-python = ">=3.10"   # torch/torchvision/torchmetrics의 Requires-Python 하한이 3.10이라 이 값을 그대로 따름
+readme = "README.md"         # description shown on the PyPI page (markdown)
+requires-python = ">=3.10"   # torch/torchvision/torchmetrics require Python >= 3.10, so this follows that lower bound
 license = { text = "MIT" }
 authors = [
     { name = "seoyunje", email = "seoyunje2001@gmail.com" },
@@ -43,7 +43,7 @@ dependencies = [
 ]
 # ─────────────────────────────────────────────
 # [project.optional-dependencies]
-# 선택 설치: pip install deepguard[deepclip]
+# Optional install: pip install deepguard[deepclip]
 # ─────────────────────────────────────────────
 [project.optional-dependencies]
 deepclip = ["deepclip>=1.0.0"]   # ClipImagePredictor, ClipVideoPredictor (deepclip_b0, deepclip_b5)
@@ -57,9 +57,9 @@ Homepage = "https://github.com/HanMoonSub/DeepGuard"
 "Demo - DeepFake XAI" = "https://huggingface.co/spaces/KoreaPeter/DeepFake-Detection-XAI"
 [tool.setuptools.packages.find]
 include = [
-    "deepguard*",       # 모델, 레이어, 데이터셋 등 핵심 패키지
+    "deepguard*",       # core packages: models, layers, datasets, etc.
     "inference*",       # ImagePredictor, VideoPredictor
-    "explainability*",  # CAM 기반 XAI
-    "preprocess*"       # 얼굴 검출, 프레임 추출 등
+    "explainability*",  # CAM-based XAI
+    "preprocess*"       # face detection, frame extraction, etc.
 ]
 exclude = ["App*", "client*"]

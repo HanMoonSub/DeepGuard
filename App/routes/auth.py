@@ -9,7 +9,7 @@ from schemas.auth_schema import RegisterRequest, LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# 프론트엔드 새로고침 시 세션 유지 여부를 확인하고 유저 정보를 반환합니다
+# Check whether the session survives a frontend refresh and return the user info
 @router.get("/check", status_code=status.HTTP_200_OK, response_class=JSONResponse, summary= "로그인 상태 확인 API")
 async def check_session(session_user = Depends(session_svc.get_session_user_opt)):
     return {"user": session_user}
@@ -20,7 +20,7 @@ async def register_user(request: Request,
                         user_info: RegisterRequest,
                         conn: Connection = Depends(context_get_conn)):
     
-    # 1. 이메일 중복 확인
+    # 1. Check for a duplicate email
     user = await auth_svc.get_user_by_email(conn=conn, email=user_info.email)
     if user is not None:
         raise HTTPException(
@@ -28,10 +28,10 @@ async def register_user(request: Request,
             detail="이미 사용 중인 이메일입니다."
         )
     
-    # 2. 비밀번호 암호화 (해싱)
+    # 2. Hash the password
     hashed_password = auth_svc.get_hashed_password(user_info.password)
     
-    # 3. 신규 유저 DB 저장
+    # 3. Save the new user to the DB
     await auth_svc.register_user(
         conn=conn, 
         name=user_info.name, 
@@ -46,9 +46,9 @@ async def login_user(request: Request,
                      login_info: LoginRequest,
                      conn: Connection = Depends(context_get_conn)):
     
-    # 1. 유저 인증 (DB 조회 및 비밀번호 대조)
+    # 1. Authenticate the user (DB lookup and password check)
     user = await auth_svc.authenticate_user(conn=conn, email=login_info.email)
-    # 2. 인증 실패 처리
+    # 2. Handle authentication failure
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -67,7 +67,7 @@ async def login_user(request: Request,
     request.state.session["session_user"] = {"id": user.id, "name": user.name, "email":user.email}
 
 
-    # 3. 로그인 성공 응답
+    # 3. Successful login response
     return {
         "message": "로그인에 성공했습니다.",
         "status": "success"

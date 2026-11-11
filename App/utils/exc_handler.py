@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
-# HTTPException 오류 발생 시 커스텀 exception handler 로직
+# Custom exception handler logic for HTTPException errors
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
         content = {
@@ -15,19 +15,19 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
         status_code = exc.status_code
     )
     
-# RequestValidationError 오류 발생 시 커스텀 exception handler 로직
+# Custom exception handler logic for RequestValidationError errors
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    # 에러 메시지 가공: "필드명: 에러내용" 형태로 요약
-    # 예: "email: value is not a valid email address"
+    # Format the error messages: summarize as "field: error"
+    # e.g. "email: value is not a valid email address"
     error_details = [f"{err['loc'][-1]}: {err['msg']}" for err in exc.errors()]
-    summary_detail = " | ".join(error_details) # 여러 에러를 한 줄로 합침
+    summary_detail = " | ".join(error_details) # join multiple errors into one line
 
     return JSONResponse(
         content = {
-            "error_type" : "valid", # 오타 수정: vaild -> valid
+            "error_type" : "valid", # typo fix: vaild -> valid
             "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
             "title_message": "입력값이 올바르지 않습니다",
-            "detail": summary_detail # 요약된 문자열 전달
+            "detail": summary_detail # pass the summarized string
             },
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     )

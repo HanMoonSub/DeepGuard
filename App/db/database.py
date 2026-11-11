@@ -25,10 +25,10 @@ engine: AsyncEngine = create_async_engine(
     pool_recycle = 3600 # 1hour 
 )
 
-# Celery worker 전용 engine 추가
+# Engine dedicated to Celery workers
 celery_engine: AsyncEngine = create_async_engine(
     url=DATABASE_CONN,
-    poolclass=NullPool  # 풀 없이 매 연결마다 새로 생성
+    poolclass=NullPool  # no pool; open a new connection every time
 )
 
 async def context_get_conn():
@@ -46,7 +46,7 @@ async def context_get_conn():
             
 @asynccontextmanager
 async def celery_db_conn():
-    conn = await celery_engine.connect()  # celery_engine으로 교체
+    conn = await celery_engine.connect()  # switched to celery_engine
     try:
         yield conn
     finally:

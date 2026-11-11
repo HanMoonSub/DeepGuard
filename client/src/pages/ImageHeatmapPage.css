@@ -1,4 +1,4 @@
-/* 이미지 위조 흔적 — 왼쪽 히트맵 · 오른쪽 시각화 설정 (C′ 썸네일 카드) */
+/* Image forgery artifacts — heatmap on the left · visualization settings on the right (C′ thumbnail cards) */
 .dg-ihm {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
@@ -8,7 +8,7 @@
   min-height: 520px;
 }
 
-/* ── 왼쪽: 히트맵 ── */
+/* ── Left: heatmap ── */
 .dg-ihm__stage {
   display: flex;
   min-height: 0;
@@ -61,7 +61,7 @@
   font-size: 12px;
   color: var(--color-muted);
 }
-/* 왼쪽 아래 작은 범례 */
+/* Small legend at the bottom left */
 .dg-ihm__legend {
   position: absolute;
   left: 12px;
@@ -86,8 +86,8 @@
   border-radius: 99px;
   background: linear-gradient(90deg, #1d3fd6, #19b5e8, #39d98a, #f5d327, #f2662b, #d81e2c);
 }
-/* 오른쪽 위 저장 아이콘 */
-/* 프레임 화면: 히트맵 좌우 가운데 구간 이동 화살표 */
+/* Save icon at the top right */
+/* Frame screen: segment navigation arrows centered left and right of the heatmap */
 .dg-ihm__stage--nav {
   position: relative;
   padding-left: 76px;
@@ -174,7 +174,7 @@
   font-weight: 600;
   color: var(--color-muted);
 }
-/* 구간 선택: 칩 전체를 덮는 투명 select (프레임 위조 흔적 페이지) */
+/* Segment picker: transparent select covering the whole chip (frame forgery page) */
 .dg-ihm__frame-chip.is-select {
   align-items: center;
   cursor: pointer;
@@ -236,7 +236,7 @@
   stroke-linejoin: round;
 }
 
-/* ── 오른쪽 ── */
+/* ── Right ── */
 .dg-ihm__side {
   min-height: 0;
   display: flex;
@@ -325,7 +325,7 @@
   color: var(--color-muted);
 }
 
-/* 브랜치 세그먼트 */
+/* Branch segmented control */
 .dg-ihm__segment {
   display: flex;
   gap: 4px;
@@ -370,7 +370,7 @@
   opacity: 1;
 }
 
-/* 표시 방식 썸네일 카드 */
+/* Display mode thumbnail cards */
 .dg-ihm__options {
   display: flex;
   flex-direction: column;
@@ -468,7 +468,7 @@
   background: var(--color-primary);
 }
 
-/* 슬라이더 */
+/* Sliders */
 .dg-ihm__range {
   display: flex;
   flex-direction: column;
@@ -548,7 +548,7 @@
   color: var(--color-muted);
 }
 
-/* 적용 */
+/* Apply */
 .dg-ihm__apply-wrap {
   display: flex;
   flex-direction: column;
@@ -582,7 +582,7 @@
   box-shadow: none;
 }
 
-/* 분석 요약 */
+/* Analysis summary */
 .dg-ihm__summary {
   margin: 0;
   display: grid;

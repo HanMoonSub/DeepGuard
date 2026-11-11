@@ -12,7 +12,7 @@
   border-color: var(--color-primary-border);
 }
 
-/* 작업 패널용: hover 시 떠오르는 효과 없음 */
+/* For work panels: no lift effect on hover */
 .dg-card--static:hover {
   transform: none;
   box-shadow: none;

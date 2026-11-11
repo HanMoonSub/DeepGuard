@@ -1,26 +1,26 @@
 from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
-# ── Branch별 허용 기법 ────────────────────────────────────
+# ── Allowed methods per branch ────────────────────────────────────
 #
-# [LOW branch] 고해상도 feature map → 국소 위조 흔적 포착에 특화
-#   - hirescam   : activation * gradient element-wise 곱, 업샘플링 없이 원본 해상도 유지
-#                  → 픽셀 단위 경계가 가장 선명 (aug_smooth: O, eigen_smooth: X)
-#   - gradcamelementwise : 각 위치별 gradient 부호 고려 후 ReLU → 노이즈 억제, 국소 영역 정밀 (aug_smooth: O, eigen_smooth: O)
-#   - layercam   : positive gradient로 activation 공간 가중합산
-#                  → 얕은 레이어에서도 안정적, 텍스처/경계 검출에 강함 (aug_smooth: O, eigen_smooth: O)
+# [LOW branch] High-resolution feature map → specialized for capturing local forgery artifacts
+#   - hirescam   : element-wise activation * gradient, keeps the original resolution without upsampling
+#                  → sharpest pixel-level boundaries (aug_smooth: O, eigen_smooth: X)
+#   - gradcamelementwise : ReLU after accounting for the gradient sign at each position → suppresses noise, precise on local regions (aug_smooth: O, eigen_smooth: O)
+#   - layercam   : spatially weighted sum of activations by positive gradients
+#                  → stable even on shallow layers, strong at texture/boundary detection (aug_smooth: O, eigen_smooth: O)
 #
-# [HIGH branch] 저해상도 semantic feature map → 전체 구조 파악에 특화
-#   - eigengradcam : activation * gradient 의 첫 번째 주성분
-#                    → 클래스 판별력 유지하면서 GradCAM보다 부드럽고 EigenCAM보다 정확 (aug_smooth: O, eigen_smooth: X)
-#   - gradcamplusplus   : 2차 gradient 활용 → 다중 위조 영역 동시 포착, 작은 영역에 강함 (aug_smooth: O, eigen_smooth: X)
-#   - xgradcam     : gradient를 normalized activation으로 스케일링
-#                    → attribution 합이 logit 변화량과 수학적으로 일치, 충실도 높음 (aug_smooth: O, eigen_smooth: O)
+# [HIGH branch] Low-resolution semantic feature map → specialized for understanding global structure
+#   - eigengradcam : first principal component of activation * gradient
+#                    → keeps class discriminability, smoother than GradCAM and more accurate than EigenCAM (aug_smooth: O, eigen_smooth: X)
+#   - gradcamplusplus   : uses second-order gradients → captures multiple forged regions at once, strong on small regions (aug_smooth: O, eigen_smooth: X)
+#   - xgradcam     : scales gradients by normalized activations
+#                    → attributions sum exactly to the logit change, high faithfulness (aug_smooth: O, eigen_smooth: O)
 #
-# [BOTH] v1/v2 공통 → low(LayerCAM) + high(EigenGradCAM) CAM을 가중 평균(fuse="mean", low_weight=0.6, 서버 고정)으로 결합
+# [BOTH] Shared by v1/v2 → combines low (LayerCAM) + high (EigenGradCAM) CAMs with a weighted mean (fuse="mean", low_weight=0.6, fixed on the server)
 #
-# 위조 흔적 임계값(threshold)은 client에서 받지 않고 explainability의 branch별 고정값을 쓴다
-#   - high: 0.8, low: 0.95, both: low/high CAM을 각각 0.95/0.8로 이진화한 뒤 합집합
+# The forgery threshold is not taken from the client; the fixed per-branch values in explainability are used
+#   - high: 0.8, low: 0.95, both: union of the low/high CAMs binarized at 0.95/0.8 respectively
 #   - fusion       : v1 BranchFusionExplainer / v2 ClipBranchFusionExplainer (aug_smooth: O, eigen_smooth: X)
 
 _LOW_ALLOWED  = {"hirescam", "gradcamelementwise", "layercam"}
@@ -31,7 +31,7 @@ _EIGEN_ALLOWED = {"gradcamelementwise", "layercam", "xgradcam"}
 
 class ExplainImageRequest(BaseModel):
     """
-    [이미지 시각화 요청] 딥페이크 이미지 위조 흔적 CAM 시각화 파라미터
+    [Image visualization request] CAM visualization parameters for deepfake image forgery artifacts
 
     - routes: explain (POST /explain/image/{image_id})
     - services: explain_svc.process_explain_image_task
@@ -80,9 +80,9 @@ class ExplainImageRequest(BaseModel):
     
 class ExplainFrameRequest(ExplainImageRequest):
     """
-    [프레임 시각화 요청] 딥페이크 비디오 프레임 위조 흔적 CAM 시각화 파라미터
+    [Frame visualization request] CAM visualization parameters for deepfake video frame forgery artifacts
 
-    ExplainImageRequest와 동일한 파라미터를 사용하며, 비디오 특정 프레임 단위 시각화에 적용된다.
+    Uses the same parameters as ExplainImageRequest, applied to visualizing a specific video frame.
 
     - routes: explain (POST /explain/video/{video_id}/frame/{frame_index})
     - services: explain_svc.process_explain_frame_task

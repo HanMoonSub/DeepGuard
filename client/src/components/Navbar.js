@@ -6,11 +6,11 @@ import Button from './Button';
 import logoMark from '../assets/logo-shield.svg';
 import './Navbar.css';
 
-// variant: dark(히어로 위 투명 → 스크롤 시 어두운 배경) | light(흰 배경)
-// links: 같은 페이지 앵커 메뉴 [{ href: '#bench', label: 'Benchmark' }]
-// logoutRedirect: 로그아웃 후 이동 경로
-// solid: dark 변형에서 스크롤 전에도 어두운 배경 유지 (흰 히어로 위에서 사용)
-// theme / onThemeChange: 넘기면 로그인 왼쪽에 해/달 테마 전환 버튼 표시 (useTheme 훅과 함께 사용)
+// variant: dark (transparent over the hero → dark background on scroll) | light (white background)
+// links: same-page anchor menu [{ href: '#bench', label: 'Benchmark' }]
+// logoutRedirect: path to go to after logout
+// solid: keep the dark background even before scrolling in the dark variant (for use over a white hero)
+// theme / onThemeChange: when passed, shows a sun/moon theme toggle left of login (use with the useTheme hook)
 const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRedirect = '/main', solid = false, theme, onThemeChange }) => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
@@ -22,7 +22,7 @@ const Navbar = ({ variant = 'dark', sessionUser, onLogout, links = [], logoutRed
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // 새로고침 없이 라우터로 이동 (href는 접근성/새 탭 열기용)
+  // Navigate with the router without a reload (href is for accessibility/opening in a new tab)
   const go = (path) => (e) => {
     e.preventDefault();
     navigate(path);

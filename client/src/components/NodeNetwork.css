@@ -1,4 +1,4 @@
-/* 회원가입 히어로 장식: 격자 + 노드 네트워크 (부모는 position:relative + isolation) */
+/* Sign-up hero decoration: grid + node network (parent needs position:relative + isolation) */
 .dg-network {
   position: absolute;
   inset: 0;

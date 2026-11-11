@@ -36,7 +36,7 @@ const LoginPage = ({ setSessionUser }) => {
     }
   };
 
-  // 새로고침 없이 라우터로 이동 (href는 접근성/새 탭 열기용)
+  // Navigate with the router without a reload (href is for accessibility/opening in a new tab)
   const go = (path) => (e) => {
     e.preventDefault();
     navigate(path);
@@ -50,7 +50,7 @@ const LoginPage = ({ setSessionUser }) => {
             <img className="dg-auth__mark" src={logoMark} alt="" aria-hidden="true" />DeepGuard
           </a>
           <div className="dg-auth__copy dg-auth__copy--centered">
-            {/* 메인 히어로와 같은 이클립스 링 (장식용) — 문구 블록 중앙에 맞춤 */}
+            {/* Same eclipse ring as the main hero (decorative) — centered on the copy block */}
             <Eclipse />
             <h1 className="dg-auth__title">딥페이크,<br /><em>눈으로 확인</em>하세요</h1>
             <p className="dg-auth__lead">

@@ -1,4 +1,4 @@
-/* DeepGuard 디자인 토큰 (기준: client/design/index.html) */
+/* DeepGuard design tokens (reference: client/design/index.html) */
 :root {
   /* color */
   --color-primary: #206cfd;
@@ -51,7 +51,7 @@
   --nav-h: 72px;
 }
 
-/* Dark 테마 — useTheme 훅을 쓰는 페이지(이미지/동영상 분석, 위조 흔적)에서만 적용 */
+/* Dark theme — applied only on pages that use the useTheme hook (image/video analysis, forgery artifacts) */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --color-primary-hover: #3d80ff;

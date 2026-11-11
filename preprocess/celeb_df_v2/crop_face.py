@@ -173,7 +173,7 @@ def main():
     
     total_time = time.time() - start_time
     
-    # 요약 정보 출력
+    # Print summary
     print(f"\n{g_}{s_}{'='*50}{rs_}")
     print(f"{g_}{s_}Processing Summary Report{rs_}")
     print(f"{g_}{s_}{'='*50}{rs_}")

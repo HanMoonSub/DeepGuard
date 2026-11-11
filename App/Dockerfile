@@ -22,7 +22,7 @@ COPY preprocess/ ./preprocess/
 COPY App/ ./App/
 COPY pyproject.toml README.md ./
 
-# deepguard/inference/explainability/preprocess를 site-packages로 설치
+# Install deepguard/inference/explainability/preprocess into site-packages
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-deps -e .
 

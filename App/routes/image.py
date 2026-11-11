@@ -6,11 +6,11 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/image", tags=["image"])
 
-# 사용자 전체 업로드 히스토리 조회 
+# Fetch the user's full upload history
 @router.get("/history", status_code=status.HTTP_200_OK, response_class=JSONResponse,summary="이미지 히스토리 전체 조회")
 async def get_user_histories(
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
+    session_user = Depends(session_svc.get_session_user_prt) # login required
 ):
     
     user_id = session_user['id']
@@ -22,7 +22,7 @@ async def get_user_histories(
         "context": user_histories
     }
 
-# 특정 이미지의 상세 내역 조회 (개별 히스토리)
+# Fetch the details of a single image (individual history entry)
 @router.get("/history/{image_id}", status_code=status.HTTP_200_OK, response_class=JSONResponse,summary="이미지 개별 상세 조회")
 async def get_user_history(
     image_id: int,
@@ -40,22 +40,22 @@ async def get_user_history(
         "context": history
     }
 
-# 이미지 히스토리 삭제
+# Delete an image history entry
 @router.delete("/history/{image_id}", status_code=status.HTTP_200_OK,response_class=JSONResponse, summary="이미지 버튼 히스토리 삭제")
 async def delete_image_history(
     image_id: int,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
+    session_user = Depends(session_svc.get_session_user_prt) # login required
 ):
     history = await image_svc.get_user_history(conn, image_id)
 
     if not history:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 이미지 기록을 찾을 수 없습니다.")
 
-    # DB 레코드 삭제 (부위별 위조 흔적 결과 포함)
+    # Delete the DB record (including the per-region artifact result)
     await artifact_svc.delete_artifact(conn, "image", image_id)
     await image_svc.delete_image_db(conn, image_id)
-    # 실제 이미지 삭제
+    # Delete the actual image file
     await image_svc.delete_image(history.image_loc)
     
     return {

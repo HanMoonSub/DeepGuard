@@ -1,10 +1,10 @@
 import warnings
 import logging
 
-# ------- 로그 및 경고 제어 ---------
-warnings.filterwarnings("ignore") # 일반 경고 숨기기
-logging.getLogger("timm").setLevel(logging.ERROR) # timm 내부 로그 숨기기
-logging.getLogger("torch").setLevel(logging.ERROR) # torch 관련 로그 숨기기
+# ------- Log and warning control ---------
+warnings.filterwarnings("ignore") # hide general warnings
+logging.getLogger("timm").setLevel(logging.ERROR) # hide timm internal logs
+logging.getLogger("torch").setLevel(logging.ERROR) # hide torch logs
 
 from .models import ms_eff_vit, ms_eff_gcvit
 from .models.ms_eff_vit import (

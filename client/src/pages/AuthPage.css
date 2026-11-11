@@ -1,4 +1,4 @@
-/* 로그인/회원가입 공용 스타일 — 다른 페이지에 새지 않도록 .dg-auth 하위로 한정 */
+/* Shared login/sign-up styles — scoped under .dg-auth so they don't leak into other pages */
 .dg-auth {
   font-family: var(--font-sans);
   color: var(--color-ink);
@@ -10,20 +10,20 @@
 .dg-auth *::after {
   box-sizing: border-box;
 }
-/* :where()로 specificity 0 → 컴포넌트/섹션 스타일이 항상 우선 */
+/* :where() gives specificity 0 → component/section styles always win */
 :where(.dg-auth) :where(h1, h2, h3, p) {
   margin: 0;
   padding: 0;
 }
 
-/* layout: 히어로 | 폼 */
+/* layout: hero | form */
 .dg-auth__split {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 100vh;
 }
 
-/* ───────── 좌측 히어로 ───────── */
+/* ───────── Left hero ───────── */
 .dg-auth__hero {
   position: relative;
   isolation: isolate;
@@ -36,13 +36,13 @@
     radial-gradient(900px 500px at 78% 40%, #1a3f9c55, transparent),
     linear-gradient(180deg, var(--color-bg-dark), var(--color-bg-dark-2));
 }
-/* 이클립스 링: 문구 블록(.dg-auth__copy) 정중앙에 */
+/* Eclipse ring: centered on the copy block (.dg-auth__copy) */
 .dg-auth__hero .dg-eclipse {
   width: 560px;
 }
 .dg-auth__logo {
   position: relative;
-  z-index: 1; /* 문구 블록 안 이클립스가 로고를 덮지 않도록 */
+  z-index: 1; /* so the eclipse inside the copy block doesn't cover the logo */
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -57,7 +57,7 @@
   display: block;
   height: 28px;
   width: auto;
-  /* 원본 파란 사각형의 box-shadow: 0 0 18px var(--color-primary) 느낌의 은은한 빛 */
+  /* Subtle glow like the original blue square's box-shadow: 0 0 18px var(--color-primary) */
   filter: drop-shadow(0 0 10px rgba(32, 108, 253, 0.65));
 }
 .dg-auth__copy {
@@ -67,7 +67,7 @@
   max-width: 480px;
   padding: 48px 0;
 }
-/* 로그인: 문구 블록을 패널 가운데에 두고 이클립스를 그 중앙에 겹침 */
+/* Login: center the copy block in the panel and overlay the eclipse on its center */
 .dg-auth__copy--centered {
   margin: auto;
   max-width: 440px;
@@ -91,7 +91,7 @@
   word-break: keep-all;
 }
 
-/* ───────── 우측 폼 ───────── */
+/* ───────── Right form ───────── */
 .dg-auth__main {
   display: flex;
   align-items: center;
@@ -195,7 +195,7 @@
   text-decoration: underline;
 }
 
-/* ───────── 반응형 ───────── */
+/* ───────── Responsive ───────── */
 @media (max-width: 900px) {
   .dg-auth__split {
     grid-template-columns: 1fr;

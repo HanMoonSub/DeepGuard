@@ -4,13 +4,13 @@ from pydantic import BaseModel, Field
 
 class ImageData(BaseModel):
     """
-    [공통 메타 / 히스토리 목록] 이미지 분석 기본 식별 정보
+    [Common meta / history list] Basic identifying info for an image analysis
 
-    목록 응답으로 직접 사용되며, 상세/추론 결과 스키마의 베이스가 된다.
+    Used directly as the list response, and serves as the base for the detail/inference result schemas.
 
     - routes: image (GET /image/history)
     - services: image_svc.get_user_histories
-    - 상속처: ImageDetailData, ImageResultData
+    - Subclasses: ImageDetailData, ImageResultData
     """
     image_id: int = Field(..., description="이미지 분석 레코드 고유 ID (image_result.id)")
     image_loc: str = Field(..., description="서버 내 저장된 이미지 파일 경로 (DB 저장 형식, 예: /static/uploads/user@a.com/img_1700000000.png)")
@@ -23,10 +23,10 @@ class ImageData(BaseModel):
 
 class ImageInference(BaseModel):
     """
-    [추론 상세 결과] 딥페이크 분석 수치 결과
+    [Inference detail result] Numeric deepfake analysis result
 
-    - 상속 베이스 클래스 (직접 응답 X)
-    - 상속처: ImageDetailData, ImageResultData
+    - Base class only (not returned directly)
+    - Subclasses: ImageDetailData, ImageResultData
     - services: image_svc.get_user_history, image_svc.get_image_result
     """
     score: float = Field(..., description="딥페이크 확률 점수 (0.0~1.0, 0.5 이상이면 FAKE 판정). 분석 실패 시 -1.0")
@@ -35,9 +35,9 @@ class ImageInference(BaseModel):
 
 class ImageDetailData(ImageData, ImageInference):
     """
-    [히스토리 상세] 회원 개별 이미지 분석 상세 결과
+    [History detail] Detailed result of a member's individual image analysis
 
-    - routes: image (GET /image/history/{image_id}, DELETE /image/history/{image_id} - 내부 조회)
+    - routes: image (GET /image/history/{image_id}, DELETE /image/history/{image_id} - internal lookup)
     - services: image_svc.get_user_history
     """
     status: str
@@ -45,7 +45,7 @@ class ImageDetailData(ImageData, ImageInference):
 
 class ImageResultData(ImageData, ImageInference):
     """
-    [추론 결과 조회] 분석 진행 상태 + 최종 결과 (회원/비회원 공통)
+    [Inference result lookup] Analysis progress status + final result (members and guests)
 
     - routes: inference (GET /inference/image/{image_id})
     - services: image_svc.get_image_result

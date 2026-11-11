@@ -1,4 +1,4 @@
-/* 이클립스 링: 은은한 테두리 + 천천히 도는 빛 (부모에 position·isolation 필요) */
+/* Eclipse ring: subtle border + slowly rotating light (parent needs position and isolation) */
 .dg-eclipse {
   position: absolute;
   z-index: -1;

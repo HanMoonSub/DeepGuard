@@ -1,4 +1,4 @@
-# [공통 및 에디터 설정]
+# [Common and editor settings]
 .DS_Store
 .vscode/
 .idea/
@@ -8,7 +8,7 @@ yarn-debug.log*
 yarn-error.log*
 *.egg-info
 
-# [FastAPI / Python - App 폴더 관련]
+# [FastAPI / Python - App folder]
 **/__pycache__/
 *.py[cod]
 *$py.class
@@ -17,20 +17,20 @@ venv/
 env/
 .env
 
-# [React - client 폴더 관련]
-# 의존성 및 패키지 관리
+# [React - client folder]
+# Dependencies and package management
 client/node_modules/
 client/.pnp
 client/.pnp.js
 
-# [Vercel - client 폴더 관련]
+# [Vercel - client folder]
 client/.vercel
 
-# 테스트 및 빌드 결과물
+# Test and build output
 client/coverage/
 client/build/
 
-# 환경 변수 (보안을 위해 로컬 설정 무시)
+# Environment variables (local settings ignored for security)
 client/.env
 client/.env.local
 client/.env.development.local

@@ -1,10 +1,10 @@
 import os
 from dotenv import load_dotenv
 
-# ------ .env 파일 가져오기 ------
+# ------ Load .env file ------
 load_dotenv()
 
-# -------- Huggingface_Hub 인증 ----------
+# -------- Hugging Face Hub authentication ----------
 if os.getenv("HF_TOKEN"):
     os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
 else:
@@ -20,10 +20,10 @@ from routes import api_router
 from utils import exc_handler, middleware, common
 
 
-# 가상 FastAPI 인스턴스 생성
+# Create the FastAPI instance
 app = FastAPI(lifespan=common.lifespan)
 
-# StaticFile 등록 (이미지, 비디오 파일)
+# Register static files (images, videos)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # CORS Setup for cross-origin requests
@@ -38,17 +38,17 @@ app.add_middleware(CORSMiddleware,
                    max_age = -1
                    )
 
-# 세션 미들웨어 등록 - Signed Cookie 이용
+# Register session middleware - using signed cookies
 # SECRET_KEY = os.getenv("SECRET_KEY", "unique_secret_key")
 # app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=3600)
 
-# 세션 미들웨어 등록 - Redis 이용
+# Register session middleware - using Redis
 app.add_middleware(middleware.RedisSessionMiddleware, max_age=3600)
 
-# 라우터 등록 (View: Router, Controller: Service)
+# Register routers (View: Router, Controller: Service)
 app.include_router(api_router)
 
-# 커스텀 예외 처리: HTTPException
+# Custom exception handler: HTTPException
 app.add_exception_handler(StarletteHTTPException, exc_handler.custom_http_exception_handler)
-# 커스텀 예외 처리: RequestValidationError
+# Custom exception handler: RequestValidationError
 app.add_exception_handler(RequestValidationError, exc_handler.validation_exception_handler)

@@ -57,14 +57,14 @@ class ImagePredictor:
             
         img_h, img_w = img.shape[:2]
         
-        # --- 이후 크롭 로직 (마진 적용 및 안전하게 클리핑) ---
+        # --- Crop logic (apply the margin and clip safely) ---
         w = xmax - xmin
         h = ymax - ymin
     
         pad_w = int(w * self.margin_ratio)
         pad_h = int(h * self.margin_ratio)
     
-        # 마진을 포함하되, 이미지 밖으로 나가는 부분은 그냥 잘라냄 (np.clip과 유사)
+        # Include the margin, but simply cut off any part outside the image (similar to np.clip)
         y1 = max(int(ymin - pad_h), 0)
         y2 = min(int(ymax + pad_h), img_h)
         x1 = max(int(xmin - pad_w), 0)

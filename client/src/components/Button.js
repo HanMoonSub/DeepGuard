@@ -1,7 +1,7 @@
 import React from 'react';
 import './Button.css';
 
-// variant: primary | ghost(어두운 배경용) | outline(밝은 배경용) | inverse(파란 배경용)
+// variant: primary | ghost (for dark backgrounds) | outline (for light backgrounds) | inverse (for blue backgrounds)
 const Button = ({ variant = 'primary', href, onClick, className = '', children, ...rest }) => {
   const cls = `dg-btn dg-btn--${variant} ${className}`.trim();
 

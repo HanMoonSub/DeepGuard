@@ -5,45 +5,45 @@ from sqlalchemy import text, Connection
 from sqlalchemy.exc import SQLAlchemyError
 from schemas.auth_schema import UserData, UserDataPASS
 
-# 비밀번호 암호화 및 검증
+# Password hashing and verification
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_hashed_password(password: str) -> str:
-    """평문 비밀번호를 bcrypt 알고리즘으로 해싱한다.
+    """Hash a plain-text password with bcrypt.
 
     Args:
-        password (str): 사용자가 입력한 평문 비밀번호.
+        password (str): Plain-text password entered by the user.
 
     Returns:
-        str: bcrypt 해싱된 비밀번호 문자열.
+        str: bcrypt-hashed password string.
     """
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """평문 비밀번호와 해시된 비밀번호의 일치 여부를 검증한다.
+    """Check whether a plain-text password matches a hashed password.
 
     Args:
-        plain_password (str): 사용자가 입력한 평문 비밀번호.
-        hashed_password (str): DB에 저장된 bcrypt 해시 비밀번호.
+        plain_password (str): Plain-text password entered by the user.
+        hashed_password (str): bcrypt hash stored in the DB.
 
     Returns:
-        bool: 비밀번호 일치 여부.
+        bool: Whether the passwords match.
     """
     return pwd_context.verify(plain_password, hashed_password)
 
 async def get_user_by_email(conn: Connection, email: str) -> UserData | None:
-    """이메일로 사용자를 조회해 중복 가입 여부를 확인한다.
+    """Look up a user by email to check for a duplicate sign-up.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        email (str): 조회할 이메일 주소.
+        conn (Connection): SQLAlchemy async DB connection.
+        email (str): Email address to look up.
 
     Returns:
-        UserData | None: 이메일이 존재하면 UserData 반환, 없으면 None.
+        UserData | None: UserData if the email exists, otherwise None.
 
     Raises:
-        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
-        HTTPException 500: 예기치 못한 예외 발생 시.
+        HTTPException 503: When a SQLAlchemy error occurs during the DB query.
+        HTTPException 500: When an unexpected exception occurs.
     """
     try:
         query = f"""
@@ -74,16 +74,16 @@ async def get_user_by_email(conn: Connection, email: str) -> UserData | None:
                             detail="알수없는 이유로 서비스 오류가 발생하였습니다.")
 
 async def register_user(conn: Connection, name: str, email:str, hashed_password: str) -> None:
-    """신규 사용자 정보를 DB에 저장한다.
+    """Save a new user to the DB.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        name (str): 사용자 이름.
-        email (str): 사용자 이메일 주소.
-        hashed_password (str): bcrypt 해시 처리된 비밀번호.
+        conn (Connection): SQLAlchemy async DB connection.
+        name (str): User name.
+        email (str): User email address.
+        hashed_password (str): bcrypt-hashed password.
 
     Raises:
-        HTTPException 400: DB INSERT 실패 또는 잘못된 요청 데이터.
+        HTTPException 400: When the DB INSERT fails or the request data is invalid.
     """
     try:
         query = f"""
@@ -103,17 +103,17 @@ async def register_user(conn: Connection, name: str, email:str, hashed_password:
                             detail="요청데이터가 제대로 전달되지 않았습니다")
     
 async def authenticate_user(conn: Connection, email: str) -> UserDataPASS | bool:
-    """로그인 시 이메일로 사용자를 조회해 인증 정보를 반환한다.
+    """Look up a user by email at login and return their authentication info.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        email (str): 로그인 요청 이메일.
+        conn (Connection): SQLAlchemy async DB connection.
+        email (str): Email from the login request.
 
     Returns:
-        UserDataPASS | bool: 사용자가 존재하면 UserDataPASS 반환, 없으면 False.
+        UserDataPASS | bool: UserDataPASS if the user exists, otherwise False.
 
     Raises:
-        HTTPException 400: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 400: When a SQLAlchemy error occurs during the DB query.
     """
     try:
         query = """

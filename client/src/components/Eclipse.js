@@ -1,7 +1,7 @@
 import React from 'react';
 import './Eclipse.css';
 
-// 어두운 배경 위 장식용 이클립스 링. 위치·크기는 부모 쪽 CSS에서 .dg-eclipse로 조정
+// Decorative eclipse ring on dark backgrounds. Position and size are set in the parent's CSS via .dg-eclipse
 const Eclipse = ({ className = '' }) => (
   <div className={`dg-eclipse ${className}`.trim()} aria-hidden="true">
     <span className="dg-eclipse__halo" />

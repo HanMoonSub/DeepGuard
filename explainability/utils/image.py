@@ -67,7 +67,7 @@ def remove_padding_and_resize(cam, orig_shape, target_shape):
 def draw_label(img: np.ndarray, text: str, x: int, y: int, prob_ratio: float = 1.0):
     h, w = img.shape[:2]
     font       = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = max(0.28, min(w,h) / 1000) # 이미지 크기 기반 동적 스케일
+    font_scale = max(0.28, min(w,h) / 1000) # dynamic scale based on image size
     thickness  = 1
     pad        = 4
 

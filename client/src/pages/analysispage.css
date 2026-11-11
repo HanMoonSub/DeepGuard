@@ -1,4 +1,4 @@
-/* 이미지 분석 페이지 전용 스타일 — 다른 페이지에 새지 않도록 .dg-analysis 하위로 한정 */
+/* Styles for the image analysis page only — scoped under .dg-analysis so they don't leak into other pages */
 .dg-analysis {
   font-family: var(--font-sans);
   color: var(--color-ink);
@@ -11,24 +11,24 @@
 .dg-analysis *::after {
   box-sizing: border-box;
 }
-/* :where()로 specificity 0 → 컴포넌트/섹션 스타일이 항상 우선 */
+/* :where() gives specificity 0 → component/section styles always win */
 :where(.dg-analysis) :where(h1, h2, h3, p) {
   margin: 0;
   padding: 0;
 }
 
-/* layout: 사이드바 | 중앙 | 설정 */
+/* layout: sidebar | center | settings */
 .dg-analysis__workspace {
   display: flex;
   padding-top: var(--nav-h);
   min-height: calc(100vh - var(--nav-h));
 }
 
-/* ───────── 좌측 사이드바 ───────── */
+/* ───────── Left sidebar ───────── */
 .dg-analysis__side {
   width: 280px;
   flex-shrink: 0;
-  /* hidden은 스크롤 컨테이너를 만들어 안쪽 sticky가 사이드바 기준으로 72px 밀려 내려감 → clip 사용 */
+  /* hidden creates a scroll container, which pushes the inner sticky down 72px relative to the sidebar → use clip */
   overflow: clip;
   background: var(--color-bg);
   border-right: 1px solid var(--color-line);
@@ -105,7 +105,7 @@
   align-items: center;
   margin-bottom: 10px;
 }
-/* 휴지통 — 기록 카드에 호버하면 판정 배지 자리에 나타남 */
+/* Trash — appears in place of the verdict badge when hovering a history card */
 .dg-analysis__trash {
   position: absolute;
   top: 50%;
@@ -158,7 +158,7 @@
   border-color: var(--color-primary-border);
   background: var(--color-bg-alt);
 }
-/* REAL/FAKE 판정 카드 hover — 옅은 초록/빨강 테두리 */
+/* REAL/FAKE verdict card hover — faint green/red border */
 .dg-analysis__history-item.is-real,
 .dg-analysis__history-item.is-fake {
   transition: border-color 0.3s ease, background-color 0.3s ease;
@@ -194,7 +194,7 @@
   margin-bottom: 2px;
   overflow: hidden;
 }
-/* 도메인/모델 태그 — 도메인은 진한 글씨, 모델은 회색 + 가운뎃점 구분 */
+/* Domain/model tags — domain in dark text, model in gray separated by a middle dot */
 .dg-analysis__tag {
   flex-shrink: 0;
   color: var(--color-ink);
@@ -227,7 +227,7 @@
   font-size: 14px;
   color: var(--color-muted);
 }
-/* 비로그인 — 잠금 안내 카드 */
+/* Not logged in — lock notice card */
 .dg-analysis__locked {
   display: flex;
   flex-direction: column;
@@ -255,7 +255,7 @@
   color: var(--color-muted);
 }
 
-/* FAKE/REAL/UNKNOWN 배지 */
+/* FAKE/REAL/UNKNOWN badges */
 .dg-analysis__badge {
   flex-shrink: 0;
   padding: 2px 8px;
@@ -277,7 +277,7 @@
   color: var(--color-muted);
 }
 
-/* ───────── 중앙 ───────── */
+/* ───────── Center ───────── */
 .dg-analysis__center {
   flex: 1;
   min-width: 0;
@@ -303,7 +303,7 @@
   color: var(--color-muted);
 }
 
-/* 예시 이미지 */
+/* Sample images */
 .dg-analysis__samples {
   display: flex;
   align-items: center;
@@ -374,7 +374,7 @@
   background: linear-gradient(transparent, rgba(11, 18, 32, 0.85));
 }
 
-/* 업로드 / 결과 패널 */
+/* Upload / result panels */
 .dg-analysis__panes {
   flex: 1;
   display: grid;
@@ -395,9 +395,9 @@
   overflow: hidden;
 }
 
-/* 업로드 카드 — 흰 카드 + 안쪽 점선 영역 (리파인드 라이트) */
+/* Upload card — white card + inner dashed area (refined light) */
 .dg-analysis__drop {
-  padding-bottom: 72px; /* 하단 파일 선택/웹캠 바 자리 */
+  padding-bottom: 72px; /* room for the file picker/webcam bar at the bottom */
   border-radius: 20px;
   border-color: var(--color-line);
   box-shadow: 0 1px 2px #0b12200a, 0 12px 32px #206cfd0d;
@@ -438,7 +438,7 @@
 .dg-analysis__drop.has-preview::before {
   display: none;
 }
-/* 미리보기가 있는 상태에서 다른 이미지를 끌어다 놓을 때 */
+/* When dragging another image in while a preview is shown */
 .dg-analysis__drop.has-preview.is-active {
   outline: 2px dashed var(--color-primary);
   outline-offset: -8px;
@@ -450,7 +450,7 @@
   align-items: center;
   text-align: center;
 }
-/* 이클립스 오빗: 헤일로(숨쉬기) + 회전 링 + 흰 코어(업로드 아이콘) */
+/* Eclipse orbit: halo (breathing) + rotating ring + white core (upload icon) */
 .dg-analysis__orbit {
   position: relative;
   width: 150px;
@@ -523,8 +523,8 @@
   border-radius: 10px;
 }
 
-/* 결과 */
-/* 결과 대기 — 링 + 안내 + 스켈레톤 줄 (리파인드 라이트) */
+/* Result */
+/* Waiting for result — ring + guidance + skeleton lines (refined light) */
 .dg-analysis__output {
   border-radius: 20px;
   border-color: var(--color-line);
@@ -603,8 +603,8 @@
 .dg-analysis__verdict--unknown {
   color: var(--color-muted);
 }
-/* 판정 불가(WARNING) 결과 */
-/* 결과 칸 높이를 꽉 채워 제목은 맨 위, 다시 시도 버튼은 맨 아래 */
+/* Cannot judge (WARNING) result */
+/* Fill the result cell height: title at the very top, retry button at the very bottom */
 .dg-analysis__warn {
   flex: 1;
   width: 100%;
@@ -615,13 +615,13 @@
   text-align: center;
   animation: dg-analysis-rise 0.4s ease-out both;
 }
-/* 제목 자리 아이콘 (검정) */
+/* Icon in the title position (black) */
 .dg-analysis__warn-title {
   display: grid;
   place-items: center;
   color: var(--color-ink);
 }
-/* 제목과 버튼 사이 세로 가운데 */
+/* Vertically centered between the title and the button */
 .dg-analysis__warn-tips {
   width: 100%;
   margin: auto 0;
@@ -677,7 +677,7 @@
   }
 }
 
-/* 분석 중 — 리파인드 라이트 톤: 밝은 카드 + 중앙 탐지 펄스 */
+/* Analyzing — refined light tone: bright card + center detection pulse */
 .dg-analysis__output.is-analyzing {
   border-color: var(--color-primary-border);
   background: radial-gradient(420px 300px at 50% 38%, var(--color-primary-soft), transparent 70%), var(--color-bg);
@@ -772,8 +772,8 @@
   50% { opacity: 0; }
 }
 
-/* ───────── 분석 완료 이펙트 ───────── */
-/* 결과: 판정 글자 팝인 + 판정 색 링 하나가 옅게 퍼짐, 라벨/버튼은 페이드업 */
+/* ───────── Analysis completion effects ───────── */
+/* Result: verdict text pops in + one ring in the verdict color spreads faintly, label/button fade up */
 .dg-analysis__result.is-fresh .dg-analysis__verdict {
   position: relative;
   animation: dg-analysis-pop 0.45s cubic-bezier(0.34, 1.3, 0.64, 1) both;
@@ -802,7 +802,7 @@
 .dg-analysis__result.is-fresh .dg-analysis__detail-btn {
   animation-delay: 0.2s;
 }
-/* 새 기록: 위에서 살짝 미끄러져 들어오며 테두리가 옅은 파랑에서 원래 색으로 */
+/* New history entry: slides in slightly from above while the border goes from faint blue to its normal color */
 .dg-analysis__history-item.is-new {
   animation: dg-analysis-new 1.2s ease-out both;
 }
@@ -836,7 +836,7 @@
   }
 }
 
-/* ───────── 우측 설정 ───────── */
+/* ───────── Right settings ───────── */
 .dg-analysis__settings {
   width: 340px;
   flex-shrink: 0;
@@ -939,7 +939,7 @@
 .dg-analysis__model-desc svg {
   color: var(--color-primary);
 }
-/* 모델 설명 옆 보조 문구 — "- 추천" / "- 회원 전용" */
+/* Secondary text next to the model description — "- 추천" / "- 회원 전용" */
 .dg-analysis__model-note {
   margin-left: 2px;
   font-weight: 700;
@@ -952,7 +952,7 @@
   font-size: 16px;
 }
 
-/* ───────── 반응형 ───────── */
+/* ───────── Responsive ───────── */
 @media (max-width: 1100px) {
   .dg-analysis__workspace {
     flex-wrap: wrap;
@@ -1020,7 +1020,7 @@
   }
 }
 
-/* ───────── Dark 테마 보정 (토큰으로 안 바뀌는 색) ───────── */
+/* ───────── Dark theme fixes (colors the tokens don't change) ───────── */
 :root[data-theme="dark"] .dg-analysis__drop::before {
   border-color: #2c3d70;
   background: #0a1124;

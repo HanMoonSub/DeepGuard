@@ -15,9 +15,9 @@ import './ImageHeatmapPage.css';
 
 const POLL_INTERVAL = 2000;
 
-// branch별 XAI 기법 (low: 국소 흔적 / high: 전역 구조 / both: 둘을 결합)
+// XAI methods per branch (low: local artifacts / high: global structure / both: the two combined)
 const EXPLAINER_BY_BRANCH = { low: 'layercam', high: 'eigengradcam', both: 'fusion' };
-// 버전별 표시할 branch와 기본값 (v1: MS-EffGCViT)
+// Branches to show per version and their default (v1: MS-EffGCViT)
 const BRANCHES_BY_VERSION = { v1: ['low', 'high', 'both'] };
 const DEFAULT_BRANCH = { v1: 'both' };
 const extractTaskId = (data) => {
@@ -29,7 +29,7 @@ const toAbsoluteUrl = (path) => {
   if (path.startsWith('http') || path.startsWith('blob')) return path;
   return path;
 };
-// 공통 레이아웃: Navbar(light) + 본문 + Footer
+// Shared layout: Navbar(light) + content + Footer
 const HeatmapLayout = ({ sessionUser, children }) => {
   const [theme, setTheme] = useTheme();
   return (
@@ -44,7 +44,7 @@ const HeatmapLayout = ({ sessionUser, children }) => {
   );
 };
 
-// 구간 시각 → 'N초' (60초 이상은 'M분 N초'). frame_time 우선, 없으면 'mm:ss' 타임스탬프 해석
+// Segment time → 'N초' ('M분 N초' for 60 seconds or more). Prefers frame_time, otherwise parses the 'mm:ss' timestamp
 const secondsOf = (f) => {
   if (!f) return null;
   if (f.frame_time != null && Number.isFinite(Number(f.frame_time))) return Math.round(Number(f.frame_time));
@@ -61,7 +61,7 @@ const HeatmapPage = ({ sessionUser }) => {
   const { state } = useLocation();
   const navigate  = useNavigate();
   const { video_id, frame_index, timestamp, frame_time, fake_score, model_type, version_type } = state || {};
-  const modelType = model_type || 'fast'; // 분석에 사용한 모델 그대로 사용
+  const modelType = model_type || 'fast'; // use the same model that was used for the analysis
   const versionType = BRANCHES_BY_VERSION[version_type] ? version_type : 'v1';
   const branches = BRANCHES_BY_VERSION[versionType];
   const defaultBranch = DEFAULT_BRANCH[versionType];
@@ -77,11 +77,11 @@ const HeatmapPage = ({ sessionUser }) => {
 
   const pollingRef = useRef(null);
   const isMounted  = useRef(true);
-  const requestedFrameRef = useRef(-1); // 마지막으로 요청한 frame_index (StrictMode 중복 요청 방지)
-  const appliedRef = useRef(null);      // 구간 이동 시 그대로 쓸 현재 적용 설정
-  const reqIdRef   = useRef(0);         // 최신 요청만 반영
+  const requestedFrameRef = useRef(-1); // last requested frame_index (prevents duplicate requests under StrictMode)
+  const appliedRef = useRef(null);      // currently applied settings, reused when moving between segments
+  const reqIdRef   = useRef(0);         // only apply the latest request
 
-  // 타임라인에서 넘어온 구간 목록 (없으면 현재 구간 하나)
+  // Segment list passed from the timeline (or just the current segment if missing)
   const frames = Array.isArray(state?.frames) && state.frames.length
     ? state.frames
     : (state ? [{ frame_index, timestamp, frame_time, fake_score }] : []);
@@ -94,7 +94,7 @@ const HeatmapPage = ({ sessionUser }) => {
     return () => { isMounted.current = false; stopPolling(); };
   }, []);
 
-  // 진입 시 기본 설정으로 생성, 이후 구간을 옮기면 지금 적용된 설정 그대로 다시 생성
+  // Generate with the default settings on entry; after moving to another segment, regenerate with the currently applied settings
   useEffect(() => {
     if (!state) return;
     const key = frame_index ?? 0;
@@ -105,7 +105,7 @@ const HeatmapPage = ({ sessionUser }) => {
     else requestHeatmap(appliedRef.current.branch, appliedRef.current);
   }, [frame_index]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 이전/다음 구간으로 이동 — 히스토리를 쌓지 않아 '타임라인으로'는 그대로 한 번에 돌아감
+  // Move to the previous/next segment — doesn't push history, so 'back to timeline' still returns in one step
   const goFrame = (f) => {
     if (!f) return;
     navigate('/heatmap', {
@@ -224,7 +224,7 @@ const HeatmapPage = ({ sessionUser }) => {
     </HeatmapLayout>
   );
 
-  // 시각화 설정 위 요약 (이미지 위조 흔적과 같은 구성)
+  // Summary above the visualization settings (same layout as the image forgery page)
   const stats = [
     { label: '딥페이크 확률', value: `${Number(fake_score ?? 0).toFixed(1)}%`, tone },
     { label: '판정 결과',     value: isFake ? 'FAKE' : 'REAL',                 tone },
@@ -234,7 +234,7 @@ const HeatmapPage = ({ sessionUser }) => {
 
   return (
     <HeatmapLayout sessionUser={sessionUser}>
-      {/* 상단: 뒤로가기 + 제목 */}
+      {/* Header: back button + title */}
       <header className="dg-heatmap__head">
         <button type="button" className="dg-heatmap__back" onClick={() => navigate(-1)}>
           <span aria-hidden="true">←</span> 타임라인으로
@@ -242,10 +242,10 @@ const HeatmapPage = ({ sessionUser }) => {
         <h2 className="dg-heatmap__title">프레임 위조 흔적 분석</h2>
       </header>
 
-      {/* 왼쪽 히트맵 | 오른쪽 시각화 설정 (이미지 위조 흔적과 같은 구성) */}
+      {/* Heatmap on the left | visualization settings on the right (same layout as the image forgery page) */}
       <div className="dg-ihm">
         <section className={`dg-ihm__stage dg-ihm__stage--nav${isProcessing ? ' is-active' : ''}`} aria-label="히트맵 결과">
-          {/* 이전/다음 구간: 히트맵 왼쪽·오른쪽 가운데 화살표, 아래에 'N초' */}
+          {/* Previous/next segment: arrows centered left and right of the heatmap, with 'N초' below */}
           {frames.length > 1 && (
             <>
               <button type="button" className="dg-ihm__nav dg-ihm__nav--prev" onClick={() => goFrame(prevFrame)}
@@ -265,8 +265,8 @@ const HeatmapPage = ({ sessionUser }) => {
             </>
           )}
           <div className="dg-ihm__canvas">
-            {/* 왼쪽 위: 현재 구간 시각 */}
-            {/* 여러 구간이면 칩을 눌러 원하는 초로 바로 이동 (화살표 없이) */}
+            {/* Top left: current segment time */}
+            {/* With several segments, click the chip to jump straight to a second (no arrows) */}
             <span className={`dg-ihm__frame-chip${frames.length > 1 ? ' is-select' : ''}`}>
               {secLabel(curFrame) || `#${frame_index}`}
               {frames.length > 1 && curPos >= 0 && <em>{curPos + 1} / {frames.length}</em>}
@@ -290,7 +290,7 @@ const HeatmapPage = ({ sessionUser }) => {
               />
             )}
 
-            {/* 로딩 */}
+            {/* Loading */}
             {(isProcessing || status === 'idle') && (
               <div className="dg-ihm__state">
                 <div className="dg-heatmap__spinner" />
@@ -298,7 +298,7 @@ const HeatmapPage = ({ sessionUser }) => {
               </div>
             )}
 
-            {/* 에러 */}
+            {/* Error */}
             {status === 'error' && (
               <div className="dg-ihm__state dg-heatmap__options">
                 <div className="dg-heatmap__alert">
@@ -317,7 +317,7 @@ const HeatmapPage = ({ sessionUser }) => {
               </div>
             )}
 
-            {/* 왼쪽 아래 작은 범례 · 오른쪽 위 저장 아이콘 (그림을 가리지 않게) */}
+            {/* Small legend at the bottom left · save icon at the top right (so they don't cover the image) */}
             {isDone && applied.display_type !== 'bbox' && (
               <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
                 <span>낮음</span><i aria-hidden="true" /><span>높음</span>

@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, develop]
     paths:
-      # fastapi / celery (App/Dockerfile이 COPY하는 대상)
+      # fastapi / celery (paths copied by App/Dockerfile)
       - "App/**"
       - "requirements.txt"
       - "deepguard/**"
@@ -12,7 +12,7 @@ on:
       - "explainability/**"
       - "preprocess/**"
       - "pyproject.toml"
-      # react (client/Dockerfile이 COPY하는 대상)
+      # react (paths copied by client/Dockerfile)
       - "client/**"
       # mysql / redis
       - "docker/mysql/**"

@@ -14,14 +14,14 @@ from explainability.utils.image import (
 )
 from explainability.explainer.base_explainer import BaseExplainer
 
-# branch별 위조 흔적 임계값 고정값 (CAM 상위 백분위 기준)
-#   - low (국소 구조): 0.95 → 상위 5%만 위조 의심 영역
-#   - high (전역 구조): 0.8 → 상위 20%를 위조 의심 영역
+# Fixed per-branch forgery artifact thresholds (top CAM percentile)
+#   - low (local structure): 0.95 → only the top 5% is a suspected forgery region
+#   - high (global structure): 0.8 → the top 20% is a suspected forgery region
 DEFAULT_THRESHOLD = {"low": 0.95, "high": 0.8}
 
 
 def _cam_kwargs(kwargs: dict) -> dict:
-    """display_* kwargs에서 CAM 생성에 쓰는 인자만 골라낸다."""
+    """Pick out only the arguments used for CAM generation from display_* kwargs."""
     return {
         "category": kwargs.get("category", 1),
         "aug_smooth": kwargs.get("aug_smooth", False),
@@ -29,29 +29,29 @@ def _cam_kwargs(kwargs: dict) -> dict:
     }
 
 class CAMDisplayMixin:
-    """CAM 맵을 히트맵/바운딩 박스로 시각화하는 공통 기능.
+    """Shared functionality for visualizing CAM maps as heatmaps/bounding boxes.
 
-    사용하는 클래스는 `_build_grayscale_cam(img_path, ...)`과
-    `_build_grayscale_cam_from_array(face, ...)`만 구현하면 된다.
-    (CAMExplainer: 단일 branch, BranchFusionExplainer: low/high branch 결합)
+    Classes using it only need to implement `_build_grayscale_cam(img_path, ...)` and
+    `_build_grayscale_cam_from_array(face, ...)`.
+    (CAMExplainer: single branch, BranchFusionExplainer: low/high branches combined)
     """
 
     def _prepare_cam(self, img_path: str,
                      category: int = 1,
                      aug_smooth: bool = False,
                      eigen_smooth: bool = False) -> tuple[np.ndarray, np.ndarray]:
-        """흑백 CAM을 생성하고, 모델 입력 시 발생한 패딩 제거 및 원래 얼굴 해상도로 복원한다.
+        """Generate a grayscale CAM, remove the padding added for the model input, and restore it to the original face resolution.
 
         Args:
-            img_path (str): 입력 이미지 파일 경로.
-            category (int, optional): 타겟 클래스 인덱스. Defaults to 1.
-            aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
-            eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
+            img_path (str): input image file path.
+            category (int, optional): target class index. Defaults to 1.
+            aug_smooth (bool, optional): whether to run test-time augmentation. Defaults to False.
+            eigen_smooth (bool, optional): whether to run PCA-based denoising. Defaults to False.
 
         Returns:
             tuple[np.ndarray, np.ndarray]: 
-                - cam_recovered: 원본 얼굴 크기로 복원된 CAM 맵 (H_face, W_face).
-                - face: 크롭된 원본 얼굴 이미지 배열 (RGB).
+                - cam_recovered: CAM map restored to the original face size (H_face, W_face).
+                - face: cropped original face image array (RGB).
         """
         grayscale_cam, tensor, face = self._build_grayscale_cam(img_path, category, aug_smooth, eigen_smooth)
         cam_recovered = remove_padding_and_resize(grayscale_cam, face.shape, tensor.shape)
@@ -61,34 +61,34 @@ class CAMDisplayMixin:
                                 category: int = 1,
                                 aug_smooth: bool = False,
                                 eigen_smooth: bool = False) -> tuple[np.ndarray, np.ndarray]:
-        """얼굴 배열로부터 흑백 CAM을 생성하고 원래 얼굴 해상도로 복원한다.
+        """Generate a grayscale CAM from a face array and restore it to the original face resolution.
 
         Args:
-            face (np.ndarray): 전처리(크롭)가 완료된 얼굴 이미지 배열 (RGB).
-            category (int, optional): 타겟 클래스 인덱스. Defaults to 1.
-            aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
-            eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
+            face (np.ndarray): preprocessed (cropped) face image array (RGB).
+            category (int, optional): target class index. Defaults to 1.
+            aug_smooth (bool, optional): whether to run test-time augmentation. Defaults to False.
+            eigen_smooth (bool, optional): whether to run PCA-based denoising. Defaults to False.
 
         Returns:
             tuple[np.ndarray, np.ndarray]: 
-                - cam_recovered: 원본 얼굴 크기로 복원된 CAM 맵 (H_face, W_face).
-                - face: 입력받은 원본 얼굴 이미지 배열.
+                - cam_recovered: CAM map restored to the original face size (H_face, W_face).
+                - face: the original face image array that was passed in.
         """
         grayscale_cam, tensor, face = self._build_grayscale_cam_from_array(face, category, aug_smooth, eigen_smooth)
         cam_recovered = remove_padding_and_resize(grayscale_cam, face.shape, tensor.shape)
         return cam_recovered, face
     
     def _get_binary_mask(self, cam: np.ndarray, threshold: Union[float, Literal["auto"]]) -> np.ndarray:
-        """입력된 CAM 맵을 기반으로 위조 유력 부위를 이진화(Binary Mask)한다.
+        """Binarize the likely forgery regions (binary mask) based on the given CAM map.
 
         Args:
-            cam (np.ndarray): 0~1 사이 값을 가진 복원된 CAM 맵.
+            cam (np.ndarray): restored CAM map with values between 0 and 1.
             threshold (Union[float, 'auto']): 
-                - float (0.0~1.0): 상위 백분위수 기준으로 임계값 설정 (예: 0.7 이면 상위 30% 영역 선택).
-                - 'auto': Otsu 알고리즘을 사용해 최적의 임계값을 자동으로 계산.
+                - float (0.0~1.0): sets the threshold by top percentile (e.g. 0.7 selects the top 30% region).
+                - 'auto': computes the optimal threshold automatically with Otsu's algorithm.
 
         Returns:
-            np.ndarray: 0 또는 255 값을 가지는 이진화 마스크 맵 (np.uint8).
+            np.ndarray: binary mask map with values 0 or 255 (np.uint8).
         """
         if threshold != 'auto':
             t = np.percentile(cam, threshold * 100)
@@ -100,12 +100,12 @@ class CAMDisplayMixin:
         return binary_mask
 
     def _threshold_of(self, kwargs: dict) -> Union[float, Literal["auto"]]:
-        """kwargs에 threshold가 없으면 이 explainer branch의 고정값(DEFAULT_THRESHOLD)을 쓴다."""
+        """If kwargs has no threshold, use this explainer branch's fixed value (DEFAULT_THRESHOLD)."""
         threshold = kwargs.get("threshold")
         return DEFAULT_THRESHOLD[self.branch_level] if threshold is None else threshold
 
     def _prepare_masked_cam(self, img_path: str, **kwargs) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """CAM을 원래 얼굴 해상도로 복원하고, 위조 의심 영역 이진 마스크를 함께 만든다.
+        """Restore the CAM to the original face resolution and build the suspected forgery region binary mask with it.
 
         Returns:
             tuple[np.ndarray, np.ndarray, np.ndarray]: (cam_recovered, binary_mask, face)
@@ -114,25 +114,25 @@ class CAMDisplayMixin:
         return cam_recovered, self._get_binary_mask(cam_recovered, self._threshold_of(kwargs)), face
 
     def _prepare_masked_cam_from_array(self, face: np.ndarray, **kwargs) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """_prepare_masked_cam의 얼굴 배열 입력 버전."""
+        """Face array input version of _prepare_masked_cam."""
         cam_recovered, face = self._prepare_cam_from_array(face, **_cam_kwargs(kwargs))
         return cam_recovered, self._get_binary_mask(cam_recovered, self._threshold_of(kwargs)), face
 
     def display_heatmap_on_image(self, img_path: str, **kwargs) -> np.ndarray:
-        """이미지 경로를 입력받아 원본 얼굴 위에 위조 흔적 히트맵을 중첩한 이미지를 생성한다.
+        """Take an image path and produce an image with the forgery artifact heatmap overlaid on the original face.
 
         Args:
-            img_path (str): 입력 이미지 파일 경로.
+            img_path (str): input image file path.
             **kwargs:
-                category (int): 타겟 클래스 인덱스 (기본값: 1).
-                aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
-                eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
-                colormap (int): OpenCV 컬러맵 상수 (기본값: cv2.COLORMAP_JET).
-                image_weight (float): 원본 이미지 불투명도 가중치 (기본값: 0.8).
+                category (int): target class index (default: 1).
+                aug_smooth (bool): whether to run test-time augmentation (default: False).
+                eigen_smooth (bool): whether to run PCA-based denoising (default: False).
+                threshold (float | str): binarization threshold (default: fixed per-branch value, low 0.95 / high 0.8).
+                colormap (int): OpenCV colormap constant (default: cv2.COLORMAP_JET).
+                image_weight (float): opacity weight of the original image (default: 0.8).
 
         Returns:
-            np.ndarray: 히트맵이 합성된 얼굴 이미지 (RGB, np.uint8).
+            np.ndarray: face image with the heatmap blended in (RGB, np.uint8).
         """
         cam_recovered, binary_mask, face = self._prepare_masked_cam(img_path, **kwargs)
         cam_recovered = np.where(binary_mask > 0, cam_recovered, 0.0)
@@ -146,20 +146,20 @@ class CAMDisplayMixin:
         )
         
     def display_heatmap_from_array(self, face: np.ndarray, **kwargs) -> np.ndarray:
-        """얼굴 배열을 직접 입력받아 원본 얼굴 위에 위조 흔적 히트맵을 중첩한 이미지를 생성한다.
+        """Take a face array directly and produce an image with the forgery artifact heatmap overlaid on the original face.
 
         Args:
-            face (np.ndarray): 전처리(크롭)가 완료된 얼굴 이미지 배열 (RGB).
+            face (np.ndarray): preprocessed (cropped) face image array (RGB).
             **kwargs:
-                category (int): 타겟 클래스 인덱스 (기본값: 1).
-                aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
-                eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
-                colormap (int): OpenCV 컬러맵 상수 (기본값: cv2.COLORMAP_JET).
-                image_weight (float): 원본 이미지 불투명도 가중치 (기본값: 0.8).
+                category (int): target class index (default: 1).
+                aug_smooth (bool): whether to run test-time augmentation (default: False).
+                eigen_smooth (bool): whether to run PCA-based denoising (default: False).
+                threshold (float | str): binarization threshold (default: fixed per-branch value, low 0.95 / high 0.8).
+                colormap (int): OpenCV colormap constant (default: cv2.COLORMAP_JET).
+                image_weight (float): opacity weight of the original image (default: 0.8).
 
         Returns:
-            np.ndarray: 히트맵이 합성된 얼굴 이미지 (RGB, np.uint8).
+            np.ndarray: face image with the heatmap blended in (RGB, np.uint8).
         """
         
         cam_recovered, binary_mask, face = self._prepare_masked_cam_from_array(face, **kwargs)
@@ -174,19 +174,19 @@ class CAMDisplayMixin:
         )  
     
     def display_bbox_on_image(self, img_path: str, **kwargs) -> np.ndarray:
-        """이미지 경로를 입력받아 위조 의심 부위를 찾아 사각형 바운딩 박스와 확률을 그린다.
+        """Take an image path, find suspected forgery regions, and draw rectangular bounding boxes with probabilities.
 
         Args:
-            img_path (str): 입력 이미지 파일 경로.
+            img_path (str): input image file path.
             **kwargs:
-                category (int): 타겟 클래스 인덱스 (기본값: 1).
-                aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
-                eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
-                thickness (int): 사각형 선 굵기 (기본값: 2).
+                category (int): target class index (default: 1).
+                aug_smooth (bool): whether to run test-time augmentation (default: False).
+                eigen_smooth (bool): whether to run PCA-based denoising (default: False).
+                threshold (float | str): binarization threshold (default: fixed per-branch value, low 0.95 / high 0.8).
+                thickness (int): rectangle line thickness (default: 2).
 
         Returns:
-            np.ndarray: 바운딩 박스와 어노테이션이 추가된 원본 얼굴 이미지 (RGB).
+            np.ndarray: original face image with bounding boxes and annotations added (RGB).
         """
         cam_recovered, binary_mask, face = self._prepare_masked_cam(img_path, **kwargs)
         annotated_img = face.copy()
@@ -195,19 +195,19 @@ class CAMDisplayMixin:
         return annotated_img
 
     def display_bbox_from_array(self, face: np.ndarray, **kwargs) -> np.ndarray:
-        """얼굴 배열을 직접 입력받아 위조 의심 부위를 찾아 사각형 바운딩 박스와 확률을 그린다.
+        """Take a face array directly, find suspected forgery regions, and draw rectangular bounding boxes with probabilities.
 
         Args:
-            face (np.ndarray): 전처리(크롭)가 완료된 얼굴 이미지 배열 (RGB).
+            face (np.ndarray): preprocessed (cropped) face image array (RGB).
             **kwargs:
-                category (int): 타겟 클래스 인덱스 (기본값: 1).
-                aug_smooth (bool): Test-time augmentation 가동 여부 (기본값: False).
-                eigen_smooth (bool): PCA 기반 노이즈 제거 가동 여부 (기본값: False).
-                threshold (float | str): 이진화 임계값 (기본값: branch별 고정값, low 0.95 / high 0.8).
-                thickness (int): 사각형 선 굵기 (기본값: 2).
+                category (int): target class index (default: 1).
+                aug_smooth (bool): whether to run test-time augmentation (default: False).
+                eigen_smooth (bool): whether to run PCA-based denoising (default: False).
+                threshold (float | str): binarization threshold (default: fixed per-branch value, low 0.95 / high 0.8).
+                thickness (int): rectangle line thickness (default: 2).
 
         Returns:
-            np.ndarray: 바운딩 박스와 어노테이션이 추가된 원본 얼굴 이미지 (RGB).
+            np.ndarray: original face image with bounding boxes and annotations added (RGB).
         """
         cam_recovered, binary_mask, face = self._prepare_masked_cam_from_array(face, **kwargs)
         annotated_img = face.copy()
@@ -253,10 +253,10 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
     
     @abstractmethod
     def _build_cam(self) -> any:
-        """하위 클래스에서 각 알고리즘(GradCAM, HiResCAM 등)에 맞는 CAM 객체를 생성한다.
+        """Create the CAM object for each algorithm (GradCAM, HiResCAM, etc.) in subclasses.
 
         Returns:
-            Any: pytorch-grad-cam 패키지의 CAM 기반 인스턴스.
+            Any: CAM-based instance from the pytorch-grad-cam package.
         """
         pass
 
@@ -264,19 +264,19 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
                              category: int = 1,
                              aug_smooth: bool = False,
                              eigen_smooth: bool = False) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
-        """이미지 경로를 받아 전처리를 수행하고 raw 흑백(Grayscale) CAM을 생성한다.
+        """Take an image path, preprocess it, and generate a raw grayscale CAM.
 
         Args:
-            img_path (str): 입력 이미지 파일 경로.
-            category (int, optional): 타겟 클래스 인덱스 (위조: 1, 정상: 0). Defaults to 1.
-            aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
-            eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
+            img_path (str): input image file path.
+            category (int, optional): target class index (fake: 1, real: 0). Defaults to 1.
+            aug_smooth (bool, optional): whether to run test-time augmentation. Defaults to False.
+            eigen_smooth (bool, optional): whether to run PCA-based denoising. Defaults to False.
 
         Returns:
             tuple[np.ndarray, torch.Tensor, np.ndarray]: 
-                - grayscale_cam: (H, W) 형태의 0~1 사이로 정규화된 CAM 맵.
-                - tensor: (1, 3, H_model, W_model) 형태의 모델 입력용 GPU 텐서.
-                - face: 크롭된 원본 얼굴 이미지 배열 (RGB).
+                - grayscale_cam: CAM map of shape (H, W) normalized to 0~1.
+                - tensor: GPU model input tensor of shape (1, 3, H_model, W_model).
+                - face: cropped original face image array (RGB).
         """
         
         face, tensor = self._get_transform(img_path)
@@ -296,19 +296,19 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
                                         category: int = 1,
                                         aug_smooth: bool = False,
                                         eigen_smooth: bool = False) -> tuple[np.ndarray, torch.Tensor, np.ndarray]:
-        """이미 크롭된 얼굴 이미지 배열로부터 raw 흑백(Grayscale) CAM을 생성한다.
+        """Generate a raw grayscale CAM from an already-cropped face image array.
 
         Args:
-            face (np.ndarray): 전처리(크롭)가 완료된 얼굴 이미지 배열 (RGB).
-            category (int, optional): 타겟 클래스 인덱스. Defaults to 1.
-            aug_smooth (bool, optional): Test-time augmentation 가동 여부. Defaults to False.
-            eigen_smooth (bool, optional): PCA 기반 노이즈 제거 가동 여부. Defaults to False.
+            face (np.ndarray): preprocessed (cropped) face image array (RGB).
+            category (int, optional): target class index. Defaults to 1.
+            aug_smooth (bool, optional): whether to run test-time augmentation. Defaults to False.
+            eigen_smooth (bool, optional): whether to run PCA-based denoising. Defaults to False.
 
         Returns:
             tuple[np.ndarray, torch.Tensor, np.ndarray]: 
-                - grayscale_cam: (H, W) 형태의 0~1 사이로 정규화된 CAM 맵.
-                - tensor: (1, 3, H_model, W_model) 형태의 모델 입력용 GPU 텐서.
-                - face: 입력받은 원본 얼굴 이미지 배열.
+                - grayscale_cam: CAM map of shape (H, W) normalized to 0~1.
+                - tensor: GPU model input tensor of shape (1, 3, H_model, W_model).
+                - face: the original face image array that was passed in.
         """
         face, tensor = self._get_transform_from_array(face)
         tensor = tensor.to(self.device)
@@ -324,7 +324,7 @@ class CAMExplainer(BaseExplainer, CAMDisplayMixin, ABC):
 
 
 # ---------------------------------------------------------------------------
-# Low-level branch: 정밀한 local activation (texture, blending, compression traces)
+# Low-level branch: precise local activation (texture, blending, compression traces)
 # ---------------------------------------------------------------------------
 
 class HiResCAMExplainer(CAMExplainer):
@@ -353,7 +353,7 @@ class LayerCAMExplainer(CAMExplainer):
 
 
 # ---------------------------------------------------------------------------
-# High-level branch: 깔끔한 class-discriminative global map (lighting, geometry, shadows)
+# High-level branch: clean class-discriminative global map (lighting, geometry, shadows)
 # ---------------------------------------------------------------------------
 
 class EigenGradCAMExplainer(CAMExplainer):

@@ -4,16 +4,16 @@ import './VideoSegmentTrack.css';
 const SPEEDS = [0.5, 1, 1.5, 2];
 const FAKE_THRESHOLD = 50;
 
-// 초 → mm:ss
+// seconds → mm:ss
 const clock = (sec) => {
   const s = Math.max(Math.floor(sec || 0), 0);
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 };
 
-// 눈금 간격: 큰 눈금이 6개 이하가 되는 가장 작은 간격
+// Tick spacing: the smallest step that gives 6 or fewer major ticks
 const majorStep = (sec) => [1, 2, 5, 10, 15, 30, 60, 120, 300, 600].find(s => sec / s <= 6) || 1200;
 
-// 프레임 i가 영상의 [i/N, (i+1)/N] 구간을 대표한다고 보고 같은 판정끼리 묶는다
+// Treat frame i as representing the [i/N, (i+1)/N] part of the video and group consecutive frames with the same verdict
 const buildRuns = (frames, duration) => {
   const n = frames.length;
   const runs = [];
@@ -39,8 +39,8 @@ const ICONS = {
 };
 
 /**
- * 영상 아래 재생 컨트롤 + Deepfake / Real 구간 트랙.
- * 트랙(눈금 포함)을 클릭하거나 드래그하면 해당 초로 이동한다.
+ * Playback controls below the video + Deepfake / Real segment track.
+ * Clicking or dragging the track (including the ticks) seeks to that second.
  */
 const VideoSegmentTrack = ({ videoRef, duration, frames }) => {
   const areaRef = useRef(null);
@@ -50,7 +50,7 @@ const VideoSegmentTrack = ({ videoRef, duration, frames }) => {
   const [speed, setSpeed] = useState(1);
   const [dragging, setDragging] = useState(false);
 
-  // 영상 상태 동기화 (재생 중에는 rAF로 부드럽게)
+  // Sync with the video state (smoothly via rAF while playing)
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return undefined;
@@ -92,7 +92,7 @@ const VideoSegmentTrack = ({ videoRef, duration, frames }) => {
 
   const onPointerDown = (e) => {
     if (!duration) return;
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* 캡처 실패해도 클릭 이동은 동작 */ }
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* seeking by click still works even if capture fails */ }
     setDragging(true);
     seekFromPointer(e.clientX);
   };
@@ -112,7 +112,7 @@ const VideoSegmentTrack = ({ videoRef, duration, frames }) => {
   };
 
   const runs = duration && frames.length ? buildRuns(frames, duration) : [];
-  // 이전/다음 버튼: 판정이 바뀌는 구간 경계로 이동
+  // Previous/next buttons: jump to the segment boundaries where the verdict changes
   const bounds = runs.map(r => r.start);
   const goPrev = () => seek([...bounds].reverse().find(b => b < time - 0.25) ?? 0);
   const goNext = () => { const b = bounds.find(x => x > time + 0.05); if (b != null) seek(b); };

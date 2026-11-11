@@ -19,7 +19,7 @@
   --amb-grain: 0.06;
 }
 
-/* 오로라 — 큰 메시 그라데이션이 아주 천천히 흐름 (dark 전용) */
+/* Aurora — a large mesh gradient drifting very slowly (dark only) */
 .dg-ambient__aurora {
   display: none;
   position: absolute;
@@ -41,7 +41,7 @@
   100% { transform: translate3d(2%, -3%, 0) rotate(-4deg) scale(1); }
 }
 
-/* 뭉게구름 — 흐릿한 원 여러 개를 겹쳐 한 덩어리로, 아주 천천히 흐름 (light 전용) */
+/* Clouds — several blurred circles stacked into one mass, drifting very slowly (light only) */
 .dg-ambient__cloud {
   position: absolute;
   filter: blur(16px);
@@ -97,7 +97,7 @@
   to { transform: translate3d(3vw, 0.8vh, 0); }
 }
 
-/* 위에서 내려오는 스포트라이트 */
+/* Spotlight coming down from the top */
 .dg-ambient__spot {
   position: absolute;
   top: -30vh;
@@ -108,7 +108,7 @@
   background: radial-gradient(50% 50% at 50% 50%, var(--amb-spot), transparent 70%);
 }
 
-/* 내비 아래 얇은 빛줄기 — 좌우로 천천히 흐름 */
+/* Thin light streak below the nav — drifts slowly left and right */
 .dg-ambient__beam {
   position: absolute;
   top: var(--nav-h, 64px);
@@ -126,7 +126,7 @@
   100% { background-position: 140% 0; }
 }
 
-/* 미세 그레인 — 그라데이션 띠(밴딩)를 없애고 종이 같은 질감 */
+/* Fine grain — removes gradient banding and adds a paper-like texture */
 .dg-ambient__grain {
   position: absolute;
   inset: 0;
