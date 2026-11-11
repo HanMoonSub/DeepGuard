@@ -141,7 +141,7 @@ class VideoPredictor:
                 bbox = face_result[:4]
                 cropped_frame = self._crop_face(frames[i], bbox)
 
-                # 랜드마크 추출
+                # Landmark extraction
                 keypoint = self.landmark_detector.detect_batch([cropped_frame])[0]
                 if len(keypoint) == 0:
                     continue
@@ -207,7 +207,7 @@ class VideoPredictor:
     
     def _build_result(self, preds: np.ndarray, frame_times: List[int], fps: float, total_frames: int,
                       num_sampled: int, num_extracted: int, num_detected: int, agg_mode: str) -> dict:
-        """프레임별 예측값을 집계해 predict_video 결과 dict를 만든다."""
+        """Aggregate per-frame predictions into the predict_video result dict."""
         frame_results = [
             {
                 "frame_index": i,

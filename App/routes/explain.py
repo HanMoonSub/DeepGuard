@@ -17,9 +17,9 @@ async def explain_image(
     image_id: int,
     explain_req: ExplainImageRequest,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_prt), # 로그인 필수 
+    session_user = Depends(session_svc.get_session_user_prt), # login required
 ):  
-    # 딥페이크 이미지 추론 결과 가져오기 
+    # Fetch the deepfake image inference result
     result = await image_svc.get_image_result(conn, image_id)
       
     if result.status != "SUCCESS":
@@ -42,7 +42,7 @@ async def explain_image(
             detail="Pro 모델은 aug_smooth 기능을 지원하지 않습니다",
         )
         
-    # Celery Task 호출(Redis Broker 활용)
+    # Dispatch the Celery task (via the Redis broker)
     task = explain_svc.process_explain_image_task.delay(
                                 user_email = session_user["email"],
                                 version_type = result.version_type,
@@ -61,10 +61,10 @@ async def explain_image(
             response_class=JSONResponse, summary="딥페이크 이미지 위조 흔적 시각화 결과 가져오기")
 async def get_explain_image_result(
         task_id: str,
-        session_user = Depends(session_svc.get_session_user_prt), # 로그인 필수
+        session_user = Depends(session_svc.get_session_user_prt), # login required
         ):
     
-    # Redis Broker에서 Task ID에 해당하는 비동기 작업 상태 가져오기
+    # Fetch the async task status for this task ID from the Redis broker
     task = AsyncResult(task_id, app=celery_app)
     
     if task.state in ("PENDING", "STARTED", "RETRY"):
@@ -78,7 +78,7 @@ async def get_explain_image_result(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="딥페이크 이미지 위조 흔적 시각화 중 알 수 없는 오류가 발생하였습니다")
     
-    # Celery Task 결과 가져오기
+    # Fetch the Celery task result
     result = task.result
     
     if result["status"] == "FAILED":
@@ -99,19 +99,19 @@ async def explain_frame(
     frame_index: int, 
     explain_req: ExplainFrameRequest,
     conn: Connection = Depends(context_get_conn),
-    session_user = Depends(session_svc.get_session_user_prt), # 로그인 필수
+    session_user = Depends(session_svc.get_session_user_prt), # login required
 ):
-    # 딥페이크 비디오 추론 결과 가져오기 
+    # Fetch the deepfake video inference result
     result = await video_svc.get_video_result(conn, video_id)
     
-    # 딥페이크 비디오 추론 성공 여부 확인하기
+    # Check whether the deepfake video inference succeeded
     if result.status != "SUCCESS":
         raise HTTPException(
             status_code = status.HTTP_400_BAD_REQUEST,
             detail = "비디오 프레임 위조 흔적 분석은 추론이 성공한 비디오에서만 가능합니다"
         )
 
-    # 비디오 파일 저장 경로 가져오기
+    # Get the stored video file path
     video_path = "." + result.video_loc
     if not os.path.exists(video_path):
         raise HTTPException(
@@ -119,17 +119,17 @@ async def explain_frame(
             detail =  f"요청하신 비디오 파일을 찾을 수 없습니다. 삭제하였는지 다시 확인해주세요."
         )
     
-    # 딥페이크 비디오 프레임 위조 흔적 분석 (pro model는 aug_smooth 사용 불가, 연산이 너무 많아짐)
+    # Deepfake video frame forgery analysis (the pro model cannot use aug_smooth; it would be too expensive)
     if result.model_type == "pro" and explain_req.aug_smooth:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Pro 모델은 aug_smooth 기능을 지원하지 않습니다",
         )
     
-    # 비디오 내 해당 frame이 몇초에 위치한 frame인지 확인
+    # Find the timestamp (in seconds) of this frame within the video
     frame_time = await video_svc.get_video_frame_by_index(conn, video_id, frame_index)
         
-    # Celery Task 호출(Redis Broker 활용)
+    # Dispatch the Celery task (via the Redis broker)
     task = explain_svc.process_explain_frame_task.delay(
                                 user_email = session_user["email"],
                                 version_type = result.version_type,
@@ -148,29 +148,29 @@ async def explain_frame(
             response_class=JSONResponse, summary="딥페이크 비디오 프레임 위조 흔적 시각화 결과 가져오기")
 async def get_explain_frame_result(
         task_id: str,
-        session_user = Depends(session_svc.get_session_user_prt), # 로그인 필수
+        session_user = Depends(session_svc.get_session_user_prt), # login required
         ):
     
-    # Redis Broker에서 Task ID에 해당하는 비동기 작업 상태 가져오기
+    # Fetch the async task status for this task ID from the Redis broker
     task = AsyncResult(task_id, app=celery_app)
     
-    # 비동기 작업 진행 상태 Check
+    # Check the async task progress
     if task.state in ("PENDING", "STARTED", "RETRY"):
         return JSONResponse(
             status_code = status.HTTP_202_ACCEPTED,
             content = {"message": "딥페이크 비디오 프레임 위조 흔적 시각화 분석 중 ..."}
         )
 
-    # 비동기 작업 실패
+    # Async task failed
     if task.state == "FAILURE":
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="딥페이크 비디오 프레임 위조 흔적 시각화 중 알 수 없는 오류가 발생하였습니다")
     
-    # Celery Task 결과 가져오기
+    # Fetch the Celery task result
     result = task.result
     
-    # 딥페이크 비디오 프레임 위조 흔적 시각화 생성 또는 파일 저장 도중 오류 발생
+    # An error occurred while generating or saving the frame forgery visualization
     if result["status"] == "FAILED":
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 

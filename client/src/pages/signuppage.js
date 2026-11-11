@@ -60,7 +60,7 @@ const SignupPage = () => {
     }
   };
 
-  // 새로고침 없이 라우터로 이동 (href는 접근성/새 탭 열기용)
+  // Navigate with the router without a reload (href is for accessibility/opening in a new tab)
   const go = (path) => (e) => {
     e.preventDefault();
     navigate(path);
@@ -70,7 +70,7 @@ const SignupPage = () => {
     <div className="dg-auth">
       <div className="dg-auth__split">
         <aside className="dg-auth__hero">
-          {/* 격자 + 노드 네트워크 (장식용) */}
+          {/* Grid + node network (decorative) */}
           <NodeNetwork />
           <a className="dg-auth__logo" href="/main" onClick={go('/main')}>
             <img className="dg-auth__mark" src={logoMark} alt="" aria-hidden="true" />DeepGuard

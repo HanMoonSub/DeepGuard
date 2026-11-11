@@ -1,4 +1,4 @@
-/* 영상 아래 재생 컨트롤 + Deepfake / Real 구간 트랙 */
+/* Playback controls below the video + Deepfake / Real segment track */
 .dg-vtrack {
   --vt-real: #5b95ff;
   --vt-label-w: 96px;
@@ -10,7 +10,7 @@
   user-select: none;
 }
 
-/* 컨트롤 */
+/* Controls */
 .dg-vtrack__controls {
   display: flex;
   align-items: center;
@@ -70,7 +70,7 @@
   font-weight: 800;
 }
 
-/* 트랙 */
+/* Track */
 .dg-vtrack__body {
   display: flex;
   border-top: 1px solid var(--color-line);
@@ -157,7 +157,7 @@
 .dg-vtrack__row--fake .dg-vtrack__seg { background: var(--color-danger); }
 .dg-vtrack__row--real .dg-vtrack__seg { background: var(--vt-real); }
 
-/* 재생 위치 */
+/* Playhead */
 .dg-vtrack__head {
   position: absolute;
   top: 4px;

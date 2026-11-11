@@ -6,22 +6,22 @@ import Navbar from '../components/Navbar';
 import useTheme from '../hooks/useTheme';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
-// 레이아웃(사이드바 | 중앙 | 설정)은 이미지 분석 페이지와 동일 → .dg-analysis 스타일 재사용
+// The layout (sidebar | center | settings) is the same as the image analysis page → reuses the .dg-analysis styles
 import './analysispage.css';
 import WebcamCapture, { MediaSourceBar } from '../components/WebcamCapture';
 import AnalysisWarning from '../components/AnalysisWarning';
 import './VideoAnalysisPage.css';
 
-// 예시 비디오 (public/samples/videos/ 하위에 실제 파일 배치 필요 / 파일명 다르면 이 배열만 수정)
+// Sample videos (the actual files must be placed under public/samples/videos/; if the file names differ, only edit this array)
 const SAMPLE_VIDEOS = [
   { name: 'western_fake.mp4', src: '/samples/videos/western_fake.mp4', domain: 'western', label: '서양인 Fake' },
   { name: 'western_real.mp4', src: '/samples/videos/western_real.mp4', domain: 'western', label: '서양인 Real' },
 ];
 
-// FAKE/REAL/UNKNOWN → 배지 modifier
+// FAKE/REAL/UNKNOWN → badge modifier
 const labelTone = (label) => (label === 'FAKE' ? 'fake' : label === 'REAL' ? 'real' : 'unknown');
 
-// 초 → mm:ss
+// seconds → mm:ss
 const formatElapsed = (sec) => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
 
 const SidebarIcon = ({ open }) => (
@@ -31,8 +31,8 @@ const SidebarIcon = ({ open }) => (
   </svg>
 );
 
-// 개발 서버 전용 미리보기 — 백엔드 없이 이펙트 확인용
-// ?preview=analyzing (분석 중) | fake | real (결과 + 퍼지는 링). 빌드(production)에서는 무시됨
+// Dev-server-only preview — for checking effects without a backend
+// ?preview=analyzing (analyzing) | fake | real (result + spreading ring). Ignored in production builds
 const DEV_PREVIEW = process.env.NODE_ENV === 'development'
   ? new URLSearchParams(window.location.search).get('preview')
   : null;
@@ -60,10 +60,10 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // 진행 표시 전용: 분석 경과 시간(초). 폴링/API와 무관
+  // For the progress display only: elapsed analysis time (seconds). Unrelated to polling/API
   const [elapsed, setElapsed] = useState(0);
 
-  // 방금 분석이 끝난 video_id — 완료 이펙트(결과 팝 + 새 기록 하이라이트)용
+  // video_id whose analysis just finished — for the completion effect (result pop + new history highlight)
   const [freshId, setFreshId] = useState(PREVIEW_RESULT ? 'preview' : null);
 
   const pollingTimer = useRef(null);
@@ -110,7 +110,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     };
   }, [sessionUser, setSessionUser, fetchHistory]);
 
-  // 분석 중일 때만 경과 시간 카운트 (표시용)
+  // Count elapsed time only while analyzing (for display)
   useEffect(() => {
     if (!isAnalyzing) return;
     setElapsed(0);
@@ -167,7 +167,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     formData.append('videofile', file);
     formData.append('model_type', modelType);
     formData.append('domain_type', domainType === 'western' ? '서양인' : '동양인');
-    formData.append('version_type', 'v1'); // 판정은 v1(MS-EffGCViT)만 사용
+    formData.append('version_type', 'v1'); // verdicts use only v1 (MS-EffGCViT)
 
     setIsAnalyzing(true);
     setStatusMessage('서버 접수 중...');
@@ -192,10 +192,10 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setResult(null);
     setStatusMessage('');
     setIsCameraOpen(false);
-    setSelectedSample(null); // 샘플 외 경로로 들어오면 선택 해제
+    setSelectedSample(null); // clear the selection when coming in from a path other than a sample
   };
 
-  // 예시 비디오를 File로 변환 후 기존 업로드 흐름에 주입 + 도메인 자동 세팅
+  // Convert the sample video to a File, feed it into the existing upload flow, and set the domain automatically
   const handleSelectSample = async (sample) => {
     try {
       const res = await fetch(sample.src);
@@ -203,13 +203,13 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
       const file = new File([blob], sample.name, { type: blob.type });
       setDomainType(sample.domain);
       handleFileSelect(file);
-      setSelectedSample(sample.name); // handleFileSelect 리셋 이후 선택 표시
+      setSelectedSample(sample.name); // show the selection after handleFileSelect resets it
     } catch (e) {
       alert("예시 파일을 불러오지 못했어요.");
     }
   };
 
-  // 기록 한 건 삭제 — 호버 시 노출되는 휴지통 버튼
+  // Delete one history entry — trash button shown on hover
   const handleDeleteOne = async (e, id) => {
     e.stopPropagation();
     if (!window.confirm("이 기록을 삭제하시겠습니까?")) return;
@@ -227,7 +227,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     if (pollingTimer.current) clearInterval(pollingTimer.current);
   };
 
-  // 진행 단계: 기존 state에서만 계산 (접수 → 프레임 분석 → 판정)
+  // Progress steps: computed only from existing state (received → frame analysis → verdict)
   const isReceiving = statusMessage === '서버 접수 중...';
   const steps = [
     { label: '업로드·접수', state: isReceiving ? 'active' : 'done' },
@@ -239,7 +239,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     if (isAnalyzing) {
       return (
         <div className="dg-analysis__scanning">
-          {/* 탐지 펄스: 중앙 코어에서 원이 계속 퍼져나감 */}
+          {/* Detection pulse: circles keep spreading out from the center core */}
           <div className="dg-analysis__pulse" aria-hidden="true">
             <span /><span /><span />
             <div className="dg-analysis__pulse-core">
@@ -399,7 +399,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
             </div>
           </div>
 
-          {/* 예시 비디오 — 로컬 샘플 없이 바로 테스트 */}
+          {/* Sample videos — test right away without local samples */}
           <div className="dg-analysis__samples">
             <span className="dg-analysis__samples-label">예시로 체험하기</span>
             <div className="dg-analysis__samples-list">
@@ -414,11 +414,11 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                     title={s.label}
                   >
                     <video src={`${s.src}#t=0.1`} muted preload="metadata" />
-                    {/* 우상단 FAKE/REAL 뱃지 */}
+                    {/* FAKE/REAL badge at the top right */}
                     <span className={`dg-analysis__sample-tag dg-analysis__sample-tag--${isFake ? 'fake' : 'real'}`}>
                       {isFake ? 'FAKE' : 'REAL'}
                     </span>
-                    {/* 하단 그라데이션 + 도메인 */}
+                    {/* Bottom gradient + domain */}
                     <div className="dg-analysis__sample-caption">{s.label.split(' ')[0]}</div>
                   </div>
                 );
@@ -440,7 +440,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
                 </>
               ) : (
                 <div className="dg-analysis__drop-body">
-                  {/* 이클립스 오빗 — 로그인 화면 이클립스 링의 축소판 */}
+                  {/* Eclipse orbit — a smaller version of the login screen's eclipse ring */}
                   <div className="dg-analysis__orbit">
                     <span className="dg-analysis__orbit-halo" aria-hidden="true" />
                     <span className="dg-analysis__orbit-ring" aria-hidden="true" />

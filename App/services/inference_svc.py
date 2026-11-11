@@ -11,7 +11,7 @@ from inference.image_predictor_prt import ImagePredictor, ClipImagePredictor
 from inference.video_predictor_prt import VideoPredictor, ClipVideoPredictor
 from inference.utils import PredictorError
 
-# 판정은 v1(MS-EffGCViT, dataset별 가중치)만 사용
+# Verdicts use only v1 (MS-EffGCViT, per-dataset weights)
 MODEL_CONFIG = {
     'v1': {
         'fast': {
@@ -25,7 +25,7 @@ MODEL_CONFIG = {
     }
 }
 
-# DeepClip: FAKE 결과의 20개 텍스트(부위 x 유형) 확률 온디맨드 분석용 (dataset 없음, services/artifact_svc.py)
+# DeepClip: on-demand analysis of the 20 text (region x type) probabilities for FAKE results (no dataset, services/artifact_svc.py)
 DEEPCLIP_MODEL = {'fast': 'deepclip_b0', 'pro': 'deepclip_b5'}
 
 _image_cache: dict = {}
@@ -36,20 +36,20 @@ def _get_or_create_predictor(
     dataset: str | None,
     predictor_mode: Literal["image", "video"],
 ) -> ImagePredictor | VideoPredictor:
-    """캐시에서 Predictor를 조회하거나, 없으면 새로 생성해 캐싱 후 반환한다.
+    """Get a Predictor from the cache, or create, cache and return a new one if missing.
 
-    이미지/비디오 캐시를 분리 관리해 모드별 독립적인 인스턴스를 유지한다.
+    Image and video caches are kept separately so each mode has its own instances.
 
     Args:
-        model_name (str): 추론에 사용할 모델 아키텍처 이름.
-        dataset (str | None): 모델 학습에 사용된 데이터셋 이름 (DeepClip은 None).
-        predictor_mode (Literal["image", "video"]): Predictor 종류 선택.
+        model_name (str): Model architecture name used for inference.
+        dataset (str | None): Dataset the model was trained on (None for DeepClip).
+        predictor_mode (Literal["image", "video"]): Which Predictor to use.
 
     Returns:
-        ImagePredictor | VideoPredictor: 캐시된 또는 새로 생성된 Predictor 인스턴스.
+        ImagePredictor | VideoPredictor: Cached or newly created Predictor instance.
     """
     cache_key = (model_name, dataset)
-    is_clip = model_name.startswith("deepclip") # DeepClip은 dataset 인자 없음
+    is_clip = model_name.startswith("deepclip") # DeepClip takes no dataset argument
 
     if predictor_mode == "image":
         if cache_key not in _image_cache:
@@ -77,19 +77,19 @@ def _get_or_create_predictor(
     return _video_cache[cache_key]
 
 def predict_image(image_loc: str, version_type: str, model_type: str, domain_type: str) -> dict:
-    """이미지 경로를 받아 딥페이크 여부를 추론하고 분석 결과를 반환한다.
+    """Take an image path, infer whether it is a deepfake, and return the analysis result.
 
     Args:
-        image_loc (str): 추론 대상 이미지의 서버 저장 경로 (DB 기준, '/'로 시작).
-        version_type (str): 모델 버전 타입 (MODEL_CONFIG 키값).
-        model_type (str): 추론 모드 ("fast" | "pro").
-        domain_type (str): 탐지 도메인 ("서양인" | "동양인").
+        image_loc (str): Stored server path of the target image (DB format, starts with '/').
+        version_type (str): Model version type (MODEL_CONFIG key).
+        model_type (str): Inference mode ("fast" | "pro").
+        domain_type (str): Detection domain ("서양인" | "동양인").
 
     Returns:
         dict:
-            - analysis (dict): prob 포함.
-              얼굴 미감지 또는 오류 발생 시 모든 값 -1.
-            - message (str): 처리 결과 메세지.
+            - analysis (dict): Includes prob.
+              All values are -1 when no face is detected or an error occurs.
+            - message (str): Result message.
             - status (str): "success" | "warning" | "failed"
     """
     
@@ -103,7 +103,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
         
         print(f"딥페이크 확률 값: {analysis['prob']}")
     
-        # 분석 성공 시
+        # On successful analysis
         return {
             "analysis": analysis,
             "message": "이미지 분석에 성공하였습니다",
@@ -117,7 +117,7 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
             "status": "warning",
         }
     
-    # CUDA Out of Memory, CUDA Device Error, Timm 모드 로델 실패 등..
+    # CUDA out of memory, CUDA device error, timm model loading failure, etc.
     except Exception as e:
         print(str(e))
         return {
@@ -129,29 +129,29 @@ def predict_image(image_loc: str, version_type: str, model_type: str, domain_typ
 @celery_app.task(name="process_image_task")
 def process_image_task(image_id: int, image_loc: str, version_type: str, model_type: str, 
                              domain_type: str, user_id: int | None) -> None:
-    """딥페이크 이미지 추론을 처리하는 Celery 비동기 태스크.
+    """Celery async task that runs deepfake image inference.
 
-    추론 결과를 DB에 저장하며, SQLAlchemy 오류 발생 시 실패 상태로 업데이트한다.
-    Celery 워커(동기) 내에서 asyncio 이벤트 루프를 직접 구동해 비동기 로직을 실행한다.
+    Saves the inference result to the DB, and marks the record as failed if a SQLAlchemy error occurs.
+    Runs the async logic by driving an asyncio event loop directly inside the (synchronous) Celery worker.
 
     Args:
-        image_id (int): 이미지 레코드 PK.
-        image_loc (str): 추론 대상 이미지의 서버 저장 경로 (DB 기준, '/'로 시작).
-        version_type (str): 모델 버전 타입 (MODEL_CONFIG 키값).
-        model_type (str): 추론 모드 ("fast" | "pro").
-        domain_type (str): 탐지 도메인 ("서양인" | "동양인").
-        user_id (int | None): 로그인 사용자 ID. 비회원이면 None.
+        image_id (int): Image record PK.
+        image_loc (str): Stored server path of the target image (DB format, starts with '/').
+        version_type (str): Model version type (MODEL_CONFIG key).
+        model_type (str): Inference mode ("fast" | "pro").
+        domain_type (str): Detection domain ("서양인" | "동양인").
+        user_id (int | None): Logged-in user ID, or None for guests.
 
     Note:
-        비회원(user_id=None) 요청은 추론 완료 60초 후 이미지 파일 및 DB 레코드가 자동 삭제된다.
+        For guest requests (user_id=None), the image file and DB record are deleted automatically 60 seconds after inference finishes.
     """
     async def run_inference():    
         try:
-            # 이미지 추론, DeepFake 결과값 반환
+            # Run image inference and return the deepfake result
             result = predict_image(image_loc, version_type, model_type, domain_type)
         
             async with celery_db_conn() as conn:    
-                # 로그인 상관없이 이미지 추론 결과값 DB에 저장하기
+                # Save the image inference result to the DB regardless of login
                 await image_svc.update_image_result(
                     conn, 
                     image_id, 
@@ -189,19 +189,19 @@ def process_image_task(image_id: int, image_loc: str, version_type: str, model_t
     
         
 def predict_video(video_loc: str, version_type: str, model_type: str, domain_type: str) -> dict:
-    """비디오 경로를 받아 딥페이크 여부를 추론하고 분석 결과를 반환한다.
+    """Take a video path, infer whether it is a deepfake, and return the analysis result.
 
     Args:
-        video_loc (str): 추론 대상 비디오의 서버 저장 경로 (DB 기준, '/'로 시작).
-        version_type (str): 모델 버전 타입 (MODEL_CONFIG 키값).
-        model_type (str): 추론 모드 ("fast" | "pro").
-        domain_type (str): 탐지 도메인 ("서양인" | "동양인").
+        video_loc (str): Stored server path of the target video (DB format, starts with '/').
+        version_type (str): Model version type (MODEL_CONFIG key).
+        model_type (str): Inference mode ("fast" | "pro").
+        domain_type (str): Detection domain ("서양인" | "동양인").
 
     Returns:
         dict:
-            - analysis (dict): prob, frame_results, fps, total_frames, num_sampled, num_extracted, num_detected 포함.
-              오류 발생 시 주요 수치 값 -1.
-            - message (str): 처리 결과 메세지.
+            - analysis (dict): Includes prob, frame_results, fps, total_frames, num_sampled, num_extracted, num_detected.
+              Key numeric values are -1 when an error occurs.
+            - message (str): Result message.
             - status (str): "success" | "warning" | "failed"
     """
     model_name, dataset = MODEL_CONFIG[version_type][model_type][domain_type]
@@ -214,7 +214,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
         
         print(f"딥페이크 확률 값: {analysis['prob']}")
     
-        # 분석 성공 시
+        # On successful analysis
         return {
             "analysis": analysis,
             "message": "비디오 분석에 성공하였습니다",
@@ -229,7 +229,7 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
             "status": "warning",
         }
     
-    # CUDA Out of Memory, CUDA Device Error, Timm 모드 로델 실패 등..
+    # CUDA out of memory, CUDA device error, timm model loading failure, etc.
     except Exception as e:
         print(str(e))
         return {
@@ -242,30 +242,30 @@ def predict_video(video_loc: str, version_type: str, model_type: str, domain_typ
 @celery_app.task(name="process_video_task")
 def process_video_task(video_id: int, video_loc: str, version_type: str, model_type: str, 
                              domain_type: str, user_id: int | None) -> None:
-    """딥페이크 비디오 추론을 처리하는 Celery 비동기 태스크.
+    """Celery async task that runs deepfake video inference.
 
-    추론 결과를 DB에 저장하며, 성공 시 메타 데이터와 프레임별 결과를 추가로 저장한다.
-    메타/프레임 저장 실패는 독립적으로 처리되어 메인 추론 결과에 영향을 주지 않는다.
-    Celery 워커(동기) 내에서 asyncio 이벤트 루프를 직접 구동해 비동기 로직을 실행한다.
+    Saves the inference result to the DB and, on success, also saves the meta data and per-frame results.
+    Failures saving the meta/frame data are handled independently and do not affect the main inference result.
+    Runs the async logic by driving an asyncio event loop directly inside the (synchronous) Celery worker.
 
     Args:
-        video_id (int): 비디오 레코드 PK.
-        video_loc (str): 추론 대상 비디오의 서버 저장 경로 (DB 기준, '/'로 시작).
-        version_type (str): 모델 버전 타입 (MODEL_CONFIG 키값).
-        model_type (str): 추론 모드 ("fast" | "pro").
-        domain_type (str): 탐지 도메인 ("서양인" | "동양인").
-        user_id (int | None): 로그인 사용자 ID. 비회원이면 None.
+        video_id (int): Video record PK.
+        video_loc (str): Stored server path of the target video (DB format, starts with '/').
+        version_type (str): Model version type (MODEL_CONFIG key).
+        model_type (str): Inference mode ("fast" | "pro").
+        domain_type (str): Detection domain ("서양인" | "동양인").
+        user_id (int | None): Logged-in user ID, or None for guests.
 
     Note:
-        비회원(user_id=None) 요청은 추론 완료 60초 후 비디오 파일 및 DB 레코드가 자동 삭제된다.
+        For guest requests (user_id=None), the video file and DB record are deleted automatically 60 seconds after inference finishes.
     """
     async def run_inference():
         try:
-            # 비디오 추론, DeepFake 결과값 반환
+            # Run video inference and return the deepfake result
             result = predict_video(video_loc, version_type, model_type, domain_type)
         
             async with celery_db_conn() as conn:    
-                # 로그인 상관없이 추론 결과값 DB에 저장하기
+                # Save the inference result to the DB regardless of login
                 await video_svc.update_video_result(
                     conn, 
                     video_id, 

@@ -15,12 +15,12 @@ router = APIRouter(prefix="/inference", tags=["inference"])
 @router.post("/image", status_code=status.HTTP_202_ACCEPTED,
              response_class=JSONResponse, summary="딥페이크 비동기 이미지 추론 접수") 
 async def predict_image(
-                        imagefile: UploadFile = File(...), # 사용자가 업로드한 이미지 객체
+                        imagefile: UploadFile = File(...), # image object uploaded by the user
                         version_type: Literal["v1"] = Form("v1", description="모델 엔진 버전 (v1: MS-EffGCViT만 사용)"),
                         model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
                         domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
-                        conn: Connection = Depends(context_get_conn), # 이미지 File 저장
-                        session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
+                        conn: Connection = Depends(context_get_conn), # saves the image file
+                        session_user = Depends(session_svc.get_session_user_opt) # None if there is no signed cookie
                         ):
         
 
@@ -31,13 +31,13 @@ async def predict_image(
         user_id = session_user['id']
         user_email = session_user['email']    
     
-    # 이미지 업로드 이후, 이미지 저장 경로 반환
+    # After uploading the image, return its stored path
     image_loc = await image_svc.upload_image(user_email, imagefile) 
         
-    # 빈 이미지 DB 생성 후, image_id 받기
+    # Create an empty image DB record and get its image_id
     image_id = await image_svc.register_image_result(conn, user_id, image_loc, version_type, model_type, domain_type)
     
-    # Celery Task 호출(Redis 브로커로 작업 전달)
+    # Dispatch the Celery task (sent through the Redis broker)
     inference_svc.process_image_task.delay(image_id, image_loc, version_type, model_type, domain_type, user_id)
     
     return {
@@ -69,12 +69,12 @@ async def get_image_result(
 @router.post("/video", status_code=status.HTTP_202_ACCEPTED, 
              response_class=JSONResponse, summary="딥페이크 비동기 비디오 추론 접수")
 async def predict_video(
-                        videofile: UploadFile = File(...), # 사용자가 업로드한 비디오 객체
+                        videofile: UploadFile = File(...), # video object uploaded by the user
                         version_type: Literal["v1"] = Form("v1", description="모델 엔진 버전 (v1: MS-EffGCViT만 사용)"),
                         model_type: Literal["fast","pro"] = Form("fast", description="추론 모드 (fast: 속도 우선, pro: 정확도 우선)"), 
                         domain_type: Literal["서양인","동양인"] = Form("서양인", description="학습 데이터셋 도메인"),
-                        conn: Connection = Depends(context_get_conn), # 비디오 File 저장
-                        session_user = Depends(session_svc.get_session_user_opt) # Signed Cookie 없을 시 None 반환
+                        conn: Connection = Depends(context_get_conn), # saves the video file
+                        session_user = Depends(session_svc.get_session_user_opt) # None if there is no signed cookie
                         ):
     
 
@@ -85,13 +85,13 @@ async def predict_video(
         user_id = session_user['id']
         user_email = session_user['email'] 
         
-    # 비디오 업로드 이후, 비디오 저장 경로 반환
+    # After uploading the video, return its stored path
     video_loc = await video_svc.upload_video(user_email, videofile) 
     
-    # 빈 비디오 DB 생성 후, video_id 받기
+    # Create an empty video DB record and get its video_id
     video_id = await video_svc.register_video_result(conn, user_id, video_loc, version_type, model_type, domain_type)
     
-    # Celery Task 호출(Redis 브로커로 작업 전달)
+    # Dispatch the Celery task (sent through the Redis broker)
     inference_svc.process_video_task.delay(video_id, video_loc, version_type, model_type, domain_type, user_id)
             
     return {
@@ -129,7 +129,7 @@ async def get_video_result(
 async def get_video_detail(
                            video_id: int,
                            conn: Connection = Depends(context_get_conn),
-                           session_user = Depends(session_svc.get_session_user_prt) # 로그인 필수
+                           session_user = Depends(session_svc.get_session_user_prt) # login required
                            ):
     video_data = await video_svc.get_video_result(conn, video_id)
     if video_data.status != "SUCCESS":

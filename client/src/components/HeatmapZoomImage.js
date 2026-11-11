@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './HeatmapZoomImage.css';
 
-// 서버(explainability/utils/image.py show_bbox_on_image)는 박스를 RGB (r, g, 30) 1px 선으로 그린다.
-// r, g 중 하나는 항상 255. 응답에 좌표가 없으므로 PNG 픽셀에서 이 색의 사각형 테두리를 찾는다.
-// 박스가 겹치거나, 이미지 끝에서 잘리거나, 다른 박스의 라벨에 일부 가려져도 찾을 수 있도록
-// 같은 색의 가로·세로 선분이 만나는 모서리를 기준으로 사각형을 복원한다.
-const GAP = 2;  // 다른 선이 지나가며 끊긴 정도의 틈은 이어서 본다
+// The server (explainability/utils/image.py show_bbox_on_image) draws boxes as 1px lines in RGB (r, g, 30).
+// One of r and g is always 255. The response has no coordinates, so we find rectangle borders of this color in the PNG pixels.
+// To find boxes even when they overlap, are clipped at the image edge, or are partly hidden by another box's label,
+// rectangles are rebuilt from the corners where horizontal and vertical segments of the same color meet.
+const GAP = 2;  // treat gaps as small as another line crossing through as continuous
 
-// 픽셀마다 박스 색 키(r * 256 + g + 1), 박스 색이 아니면 0
+// Box color key per pixel (r * 256 + g + 1), or 0 if the pixel is not a box color
 const colorKeys = (d, w, h) => {
   const keys = new Int32Array(w * h);
   for (let p = 0; p < w * h; p += 1) {
@@ -17,10 +17,10 @@ const colorKeys = (d, w, h) => {
   return keys;
 };
 
-// 한 줄(가로 또는 세로)에서 같은 색 선분 [a, b] 목록. at(i)는 그 줄 i번째 픽셀의 색 키
+// List of same-color segments [a, b] in one line (horizontal or vertical). at(i) is the color key of the i-th pixel in that line
 const runsOf = (len, at) => {
   const runs = [];
-  const open = new Map(); // 색 키 → 진행 중인 선분
+  const open = new Map(); // color key → segment in progress
   for (let i = 0; i < len; i += 1) {
     const k = at(i);
     if (k) {
@@ -37,7 +37,7 @@ const findBoxes = (d, w, h) => {
   const keys = colorKeys(d, w, h);
   const hs = [];
   for (let y = 0; y < h; y += 1) runsOf(w, x => keys[y * w + x]).forEach(r => hs.push({ ...r, y }));
-  // 세로 선분의 시작/끝 점 색인: '색:x:y' → 선분
+  // Index of vertical segment start/end points: 'color:x:y' → segment
   const vStart = new Map();
   const vEnd = new Map();
   for (let x = 0; x < w; x += 1) {
@@ -56,28 +56,28 @@ const findBoxes = (d, w, h) => {
     return null;
   };
 
-  // 네 모서리 중 하나라도 남아 있으면 후보 사각형을 만든다
+  // Build a candidate rectangle if at least one of the four corners remains
   const cands = [];
   hs.forEach(({ k, a, b, y }) => {
     [a, b].forEach(x => {
-      const down = near(vStart, k, x, y); // 위쪽 모서리
+      const down = near(vStart, k, x, y); // top corner
       if (down) cands.push({ k, x0: a, x1: b, y0: y, y1: down.b });
-      const up = near(vEnd, k, x, y);     // 아래쪽 모서리
+      const up = near(vEnd, k, x, y);     // bottom corner
       if (up) cands.push({ k, x0: a, x1: b, y0: up.a, y1: y });
     });
   });
 
-  // 같은 박스에서 나온 후보(가려져 짧아진 것 포함)를 합친다
+  // Merge candidates from the same box (including ones shortened by being hidden)
   const same = (p, q) => {
     if (p.k !== q.k) return false;
     const close = (u, v) => Math.abs(u - v) <= 1;
-    if (close(p.y0, q.y0) && close(p.y1, q.y1)) return true; // 위·아래 변이 같다
-    if (close(p.x0, q.x0) && close(p.x1, q.x1)) return true; // 왼·오른 변이 같다
+    if (close(p.y0, q.y0) && close(p.y1, q.y1)) return true; // same top and bottom edges
+    if (close(p.x0, q.x0) && close(p.x1, q.x1)) return true; // same left and right edges
     const ix = Math.min(p.x1, q.x1) - Math.max(p.x0, q.x0) + 1;
     const iy = Math.min(p.y1, q.y1) - Math.max(p.y0, q.y0) + 1;
     if (ix <= 0 || iy <= 0) return false;
     const area = r => (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1);
-    return (ix * iy) / Math.min(area(p), area(q)) >= 0.7;   // 한쪽이 다른 쪽에 거의 들어간다
+    return (ix * iy) / Math.min(area(p), area(q)) >= 0.7;   // one almost fits inside the other
   };
   const boxes = [];
   cands.forEach(c => {
@@ -86,13 +86,13 @@ const findBoxes = (d, w, h) => {
       if (same(boxes[i], cur)) {
         const o = boxes.splice(i, 1)[0];
         cur = { k: cur.k, x0: Math.min(o.x0, cur.x0), x1: Math.max(o.x1, cur.x1), y0: Math.min(o.y0, cur.y0), y1: Math.max(o.y1, cur.y1) };
-        i = boxes.length; // 커진 사각형으로 다시 비교
+        i = boxes.length; // compare again with the enlarged rectangle
       }
     }
     boxes.push(cur);
   });
 
-  // 위→아래, 왼→오른 순서
+  // Top to bottom, left to right
   return boxes
     .map(({ k, x0, x1, y0, y1 }) => ({
       x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1,
@@ -112,7 +112,7 @@ const detectBoxes = (img) => {
   return findBoxes(ctx.getImageData(0, 0, w, h).data, w, h);
 };
 
-// 박스 주변 여백을 포함한 확대 영역 (이미지 밖으로 나가지 않게)
+// Zoom area including padding around the box (kept inside the image)
 const cropOf = (box, nw, nh) => {
   const pad = Math.max(Math.max(box.w, box.h) * 0.35, 12);
   const x = Math.max(box.x - pad, 0);
@@ -121,25 +121,25 @@ const cropOf = (box, nw, nh) => {
 };
 
 /**
- * 위조 흔적 결과 이미지. bbox가 그려진 결과면 박스를 찾아 그 위치에 강조 애니메이션을 보여주고,
- * zoomable이면 박스를 클릭해 그 부분을 확대해서 볼 수 있다.
- * @param {boolean} hasBoxes - bbox / heatmap_bbox 표시일 때 true
- * @param {boolean} zoomable - 박스 클릭 확대 사용 여부 (국소 구조일 때만: 위조 흔적이 작아서)
+ * Forgery result image. If the result has bboxes drawn, finds the boxes and shows a highlight animation at their position;
+ * if zoomable, a box can be clicked to view that part zoomed in.
+ * @param {boolean} hasBoxes - true for the bbox / heatmap_bbox display
+ * @param {boolean} zoomable - whether click-to-zoom on boxes is enabled (local structure only, since its artifacts are small)
  */
 const HeatmapZoomImage = ({ src, alt, hasBoxes, zoomable, onError }) => {
   const wrapRef = useRef(null);
-  // 로드 결과는 어떤 src의 것인지 함께 저장한다.
-  // (캐시된 이미지는 onLoad가 src 변경 effect보다 먼저 올 수 있어, effect로 초기화하면 검출 결과가 지워짐)
+  // Store which src the load result belongs to.
+  // (For cached images onLoad can fire before the src-change effect, so resetting in an effect would wipe the detection result)
   const [loaded, setLoaded] = useState({ src: null, natural: null, boxes: [] });
-  const [frame, setFrame] = useState(null);       // 컨테이너 크기 { w, h }
-  const [active, setActive] = useState(null);     // 확대 중인 박스 index
+  const [frame, setFrame] = useState(null);       // container size { w, h }
+  const [active, setActive] = useState(null);     // index of the box being zoomed
 
   const isCurrent = loaded.src === src;
   const natural = isCurrent ? loaded.natural : null;          // { w, h }
   const boxes = isCurrent && hasBoxes ? loaded.boxes : [];
   const canZoom = zoomable && boxes.length > 0;
 
-  // 이미지나 표시 방식이 바뀌면 확대 창을 닫는다
+  // Close the zoom view when the image or display mode changes
   useEffect(() => { setActive(null); }, [src, hasBoxes, zoomable]);
 
   const handleLoad = (e) => {
@@ -148,7 +148,7 @@ const HeatmapZoomImage = ({ src, alt, hasBoxes, zoomable, onError }) => {
     try {
       found = detectBoxes(img);
     } catch {
-      found = []; // 다른 출처 이미지 등으로 픽셀을 읽을 수 없으면 애니메이션·확대만 끈다
+      found = []; // if pixels cannot be read (e.g. cross-origin image), only disable the animation and zoom
     }
     setLoaded({ src: img.getAttribute('src'), natural: { w: img.naturalWidth, h: img.naturalHeight }, boxes: found });
   };
@@ -157,7 +157,7 @@ const HeatmapZoomImage = ({ src, alt, hasBoxes, zoomable, onError }) => {
     const el = wrapRef.current;
     if (!el) return undefined;
     const measure = () => setFrame({ w: el.clientWidth, h: el.clientHeight });
-    measure(); // ResizeObserver 첫 콜백은 화면이 그려질 때까지 늦어질 수 있어 바로 한 번 잰다
+    measure(); // the first ResizeObserver callback can be delayed until paint, so measure once right away
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
@@ -177,13 +177,13 @@ const HeatmapZoomImage = ({ src, alt, hasBoxes, zoomable, onError }) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [active, boxes.length, close, step]);
 
-  // object-fit: contain 으로 그려진 실제 이미지 영역
+  // Actual image area drawn with object-fit: contain
   const fit = natural && frame ? (() => {
     const s = Math.min(frame.w / natural.w, frame.h / natural.h);
     return { s, left: (frame.w - natural.w * s) / 2, top: (frame.h - natural.h * s) / 2 };
   })() : null;
 
-  // 확대 패널: 영역을 패널(컨테이너의 86% x 72%)에 맞춰 배경 이미지로 잘라 보여준다
+  // Zoom panel: fit the area to the panel (86% x 72% of the container) and show it cropped as a background image
   let zoom = null;
   if (canZoom && active !== null && natural && frame && boxes[active]) {
     const c = cropOf(boxes[active], natural.w, natural.h);

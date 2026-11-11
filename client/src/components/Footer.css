@@ -7,7 +7,7 @@
   line-height: 1.6;
 }
 
-/* 내비와 같은 전체 폭 + 좌우 gutter */
+/* Same full width as the nav + left/right gutter */
 .dg-footer__inner {
   padding: 0 var(--gutter);
 }
@@ -32,7 +32,7 @@
   display: block;
   height: 26px;
   width: auto;
-  /* 원본 파란 사각형의 box-shadow: 0 0 18px var(--color-primary) 느낌의 은은한 빛 */
+  /* Subtle glow like the original blue square's box-shadow: 0 0 18px var(--color-primary) */
   filter: drop-shadow(0 0 10px rgba(32, 108, 253, 0.65));
 }
 .dg-footer__brand p {

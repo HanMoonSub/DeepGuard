@@ -1,8 +1,8 @@
 import React from 'react';
 import Button from './Button';
 
-// 이미지/프레임 위조 흔적 화면이 함께 쓰는 '시각화 설정' 패널 (스타일: pages/ImageHeatmapPage.css의 dg-ihm__*)
-// 값은 draft에만 반영하고 '적용하기'를 눌러야 다시 그린다
+// 'Visualization settings' panel shared by the image and frame forgery screens (styles: dg-ihm__* in pages/ImageHeatmapPage.css)
+// Values only go into the draft; the image is redrawn when 'Apply' is pressed
 
 const BRANCH_HINT = { low: '국소 흔적', high: '전역 구조', both: '국소 + 전역' };
 const BRANCH_NAME = { low: '국소적', high: '전역적', both: '통합' };
@@ -12,10 +12,10 @@ const DISPLAY_OPTIONS = [
   { value: 'bbox',         label: 'BBox',           desc: '위조 의심 영역을 박스로' },
   { value: 'heatmap_bbox', label: 'Heatmap + BBox', desc: '색과 박스를 함께' },
 ];
-// 위조 흔적 임계값은 서버(explainability)에서 branch별 고정값을 쓴다 (전역 0.8 / 국소 0.95)
+// The forgery threshold uses fixed per-branch values on the server (explainability) (global 0.8 / local 0.95)
 export const DEFAULT_DISPLAY = { display_type: 'heatmap_bbox', overlay_ratio: 0.8 };
 
-// 0.05 단위 슬라이더 부동소수 오차 정리
+// Clean up floating-point error from the 0.05-step slider
 const round2 = (v) => Math.round(Number(v) * 100) / 100;
 const rangeFill = (v, min, max) => ({ '--fill': `${((v - min) / (max - min)) * 100}%` });
 
@@ -67,7 +67,7 @@ const HeatmapVisualSettings = ({ branches, branch, setBranch, draft, setDraft, d
 
       <div className="dg-ihm__divider" />
 
-      {/* 위조 흔적 범위 → branch_level */}
+      {/* Forgery artifact scope → branch_level */}
       <div className="dg-ihm__field">
         <span className="dg-ihm__label" id="ihm-branch-label">위조 흔적 범위</span>
         <div className="dg-ihm__segment" role="radiogroup" aria-labelledby="ihm-branch-label">
@@ -81,7 +81,7 @@ const HeatmapVisualSettings = ({ branches, branch, setBranch, draft, setDraft, d
         </div>
       </div>
 
-      {/* 위조 흔적 표시 → display_type */}
+      {/* Forgery artifact display → display_type */}
       <div className="dg-ihm__field">
         <span className="dg-ihm__label" id="ihm-display-label">위조 흔적 표시</span>
         <div className="dg-ihm__options" role="radiogroup" aria-labelledby="ihm-display-label">

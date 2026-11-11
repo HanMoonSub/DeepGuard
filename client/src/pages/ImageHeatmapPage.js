@@ -15,9 +15,9 @@ import './ImageHeatmapPage.css';
 
 const POLL_INTERVAL = 2000;
 
-// branch별 XAI 기법 (low: 국소 흔적 / high: 전역 구조 / both: 둘을 결합)
+// XAI methods per branch (low: local artifacts / high: global structure / both: the two combined)
 const EXPLAINER_BY_BRANCH = { low: 'layercam', high: 'eigengradcam', both: 'fusion' };
-// 버전별 표시할 branch와 기본값 (v1: MS-EffGCViT)
+// Branches to show per version and their default (v1: MS-EffGCViT)
 const BRANCHES_BY_VERSION = { v1: ['low', 'high', 'both'] };
 const DEFAULT_BRANCH = { v1: 'both' };
 const extractTaskId = (data) => {
@@ -29,7 +29,7 @@ const toAbsoluteUrl = (path) => {
   if (path.startsWith('http') || path.startsWith('blob')) return path;
   return path;
 };
-// 공통 레이아웃: Navbar(light) + 본문 + Footer
+// Shared layout: Navbar(light) + content + Footer
 const HeatmapLayout = ({ sessionUser, children }) => {
   const [theme, setTheme] = useTheme();
   return (
@@ -48,7 +48,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
   const { state } = useLocation();
   const navigate  = useNavigate();
   const { image_id, model_type, version_type, prob, label } = state || {};
-  const modelType = model_type || 'fast'; // 분석에 사용한 모델 그대로 사용
+  const modelType = model_type || 'fast'; // use the same model that was used for the analysis
   const versionType = BRANCHES_BY_VERSION[version_type] ? version_type : 'v1';
   const branches = BRANCHES_BY_VERSION[versionType];
   const defaultBranch = DEFAULT_BRANCH[versionType];
@@ -64,15 +64,15 @@ const ImageHeatmapPage = ({ sessionUser }) => {
 
   const pollingRef = useRef(null);
   const isMounted  = useRef(true);
-  const startedRef = useRef(false); // StrictMode 중복 요청 방지
-  const reqIdRef   = useRef(0);     // 최신 요청만 반영
+  const startedRef = useRef(false); // prevents duplicate requests under StrictMode
+  const reqIdRef   = useRef(0);     // only apply the latest request
 
   useEffect(() => {
     isMounted.current = true;
     return () => { isMounted.current = false; stopPolling(); };
   }, []);
 
-  // 진입 즉시 생성 (버전별 기본 branch + 기본 Display 설정)
+  // Generate right away on entry (default branch per version + default display settings)
   useEffect(() => {
     if (!state || startedRef.current) return;
     startedRef.current = true;
@@ -196,7 +196,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
 
   return (
     <HeatmapLayout sessionUser={sessionUser}>
-      {/* 상단: 뒤로가기 + 제목 */}
+      {/* Header: back button + title */}
       <header className="dg-heatmap__head">
         <button type="button" className="dg-heatmap__back" onClick={() => navigate(-1)}>
           <span aria-hidden="true">←</span> 분석 결과로
@@ -204,7 +204,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
         <h2 className="dg-heatmap__title">이미지 위조 흔적 분석</h2>
       </header>
 
-      {/* 왼쪽 히트맵 | 오른쪽 시각화 설정 + 분석 요약 */}
+      {/* Heatmap on the left | visualization settings + analysis summary on the right */}
       <div className="dg-ihm">
         <section className={`dg-ihm__stage${isProcessing ? ' is-active' : ''}`} aria-label="히트맵 결과">
           <div className="dg-ihm__canvas">
@@ -215,7 +215,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
               />
             )}
 
-            {/* 로딩 */}
+            {/* Loading */}
             {(isProcessing || status === 'idle') && (
               <div className="dg-ihm__state">
                 <div className="dg-heatmap__spinner" />
@@ -223,7 +223,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
               </div>
             )}
 
-            {/* 에러 */}
+            {/* Error */}
             {status === 'error' && (
               <div className="dg-ihm__state dg-heatmap__options">
                 <div className="dg-heatmap__alert">
@@ -242,7 +242,7 @@ const ImageHeatmapPage = ({ sessionUser }) => {
               </div>
             )}
 
-            {/* 왼쪽 아래 작은 범례 · 오른쪽 위 저장 아이콘 (그림을 가리지 않게) */}
+            {/* Small legend at the bottom left · save icon at the top right (so they don't cover the image) */}
             {isDone && applied.display_type !== 'bbox' && (
               <div className="dg-ihm__legend" aria-label="히트맵 색 범례: 파랑 낮음, 빨강 높음">
                 <span>낮음</span><i aria-hidden="true" /><span>높음</span>

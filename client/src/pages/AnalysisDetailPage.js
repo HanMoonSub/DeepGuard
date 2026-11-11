@@ -12,7 +12,7 @@ import ArtifactTextPanel from '../components/ArtifactTextPanel';
 import useCountUp from '../utils/useCountUp';
 import './AnalysisDetailPage.css';
 
-// 공통 레이아웃: Navbar(light) + [왼쪽 여백 최근 분석 카드] + 본문 + Footer
+// Shared layout: Navbar(light) + [recent analysis cards in the left margin] + content + Footer
 const DetailLayout = ({ sessionUser, aside, children }) => {
   const [theme, setTheme] = useTheme();
   return (
@@ -30,7 +30,7 @@ const DetailLayout = ({ sessionUser, aside, children }) => {
   );
 };
 
-// 위조 확률 원형 게이지
+// Circular gauge for the fake probability
 const GAUGE_R = 76;
 const GAUGE_C = 2 * Math.PI * GAUGE_R;
 const ProbGauge = ({ prob, tone }) => {
@@ -55,7 +55,7 @@ const ProbGauge = ({ prob, tone }) => {
   );
 };
 
-// 기록 항목의 판정 라벨 (분석 페이지 기록 목록과 같은 규칙)
+// Verdict label for a history item (same rules as the analysis page history list)
 const itemLabelOf = (item) => {
   if (item.label && item.label !== 'UNKNOWN') return item.label.toUpperCase();
   const p = item.prob ?? item.score ?? item.analysis?.prob ?? -1;
@@ -63,7 +63,7 @@ const itemLabelOf = (item) => {
   return p > 0.5 ? 'FAKE' : 'REAL';
 };
 
-// 판정별 안내 문구
+// Guidance text per verdict
 const VERDICT_COPY = {
   fake: {
     badge: '딥페이크로 의심돼요',
@@ -114,7 +114,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
     fetchDetail();
   }, [state]);
 
-  // 왼쪽 '최근 분석' 사이드바 — 로그인 사용자만, 이미지/동영상 기록 중 보고 있는 종류로
+  // Left 'recent analyses' sidebar — logged-in users only, from the image/video history matching what is being viewed
   const isVideoRoute = !!state?.video_id;
   useEffect(() => {
     if (!sessionUser) { setHistory([]); return; }
@@ -162,7 +162,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
 
   const isWarning = data.status?.toUpperCase() === 'WARNING';
 
-  // 라벨 색: FAKE=danger, REAL=success, 판정 불가=muted
+  // Label color: FAKE=danger, REAL=success, cannot judge=muted
   const verdictTone = label === 'FAKE' ? 'fake' : (isInvalid ? 'unknown' : 'real');
 
   const handleImageHeatmap = () => {
@@ -196,7 +196,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
   };
 
 
-  // 본문 왼쪽 빈 공간: 최근 분석 결과 카드 목록 (별도 배경 패널 없이)
+  // Empty space left of the content: list of recent analysis result cards (no separate background panel)
   const recentAside = history.length > 0 && (
     <aside className="dg-detail__aside" aria-label="최근 분석">
       <div className="dg-detail__aside-inner">
@@ -237,7 +237,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
 
   return (
     <DetailLayout sessionUser={sessionUser} aside={recentAside}>
-      {/* 상단: 뒤로가기 + 분석 조건 태그 */}
+      {/* Header: back button + analysis condition tags */}
       <header className="dg-detail__head">
         <button type="button" className="dg-detail__back" onClick={() => navigate(-1)}>
           <span aria-hidden="true">←</span> 뒤로가기
@@ -247,7 +247,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
       <h2 className="dg-detail__title">{isVideo ? '동영상' : '이미지'} 분석 결과</h2>
 
       <div className="dg-detail__grid">
-        {/* 왼쪽: 미디어 */}
+        {/* Left: media */}
         <Card className="dg-card--static dg-detail__media-card">
           <div className="dg-detail__media">
             {isVideo && mediaLoc ? (
@@ -262,7 +262,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
 
         </Card>
 
-        {/* 오른쪽: 판정 카드 or WARNING */}
+        {/* Right: verdict card or WARNING */}
         <div className="dg-detail__side">
           {isWarning ? (
             <Card className="dg-card--static dg-detail__warning">
@@ -272,7 +272,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
             </Card>
           ) : (
             <>
-              {/* 결과 중심 스플릿: 위조 확률 게이지 + 판정 + 근거 보기 */}
+              {/* Result-focused split: fake probability gauge + verdict + view evidence */}
               <section className="dg-detail__panel dg-detail__verdict-card">
                 <ProbGauge prob={prob} tone={verdictTone} />
                 <span className={`dg-detail__badge dg-detail__badge--${verdictTone}`}>{VERDICT_COPY[verdictTone].badge}</span>
@@ -285,7 +285,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
                 )}
               </section>
 
-              {/* FAKE 판정일 때만: DeepClip 부위별 위조 흔적 (20개 텍스트 확률, 버튼 클릭 시 추론) */}
+              {/* FAKE verdicts only: DeepClip per-region forgery artifacts (20 text probabilities, inferred when the button is clicked) */}
               {label === 'FAKE' && (
                 <ArtifactTextPanel
                   media={isVideo ? 'video' : 'image'}

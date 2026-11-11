@@ -7,7 +7,7 @@ import torch
 
 def seed_everything(SEED: int):
     
-    """Reproducibility를 위해 모든 랜덤 시드 고정"""
+    """Fix all random seeds for reproducibility"""
     
     # Python & NumPy & Torch
     np.random.seed(SEED)
@@ -15,9 +15,9 @@ def seed_everything(SEED: int):
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
 
-    # cudnn 설정 (재현성 향상)
+    # cudnn settings (improves reproducibility)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    # Python 해시 시드 고정
+    # Fix the Python hash seed
     os.environ['PYTHONHASHSEED'] = str(SEED)

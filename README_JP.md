@@ -1,36 +1,18 @@
-# Deepfakes Detection (ディープフェイク検出)
+# Deepfake Detection (ディープフェイク検出)
 
 <p align="center">
   <img src="https://img.shields.io/github/license/HanMoonSub/DeepGuard?style=flat-square&color=555555&logo=github&logoColor=white" alt="License">
   <img src="https://img.shields.io/github/stars/HanMoonSub/DeepGuard?style=flat-square&color=FFD700&logo=github&logoColor=white" alt="Stars">
-  <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
-  <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
-  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
   <img src="https://img.shields.io/github/v/release/HanMoonSub/DeepGuard?style=flat-square&color=orange&logo=github&logoColor=white" alt="Release">
-  <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
-</p>
-
-<p align="center">
-  <img src="docs/samples/deepfake_thumbnails.png" alt="DeepGuard Banner" width="800" height="400">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Task-Deepfake_Detection-red?style=flat-square" alt="Task">
-  <img src="https://img.shields.io/badge/Dataset-FaceForensics%2B%2B-blue?style=flat-square" alt="FF++">
-  <img src="https://img.shields.io/badge/Dataset-Celeb--DF(v2)-green?style=flat-square" alt="Celeb-DF">
-  <img src="https://img.shields.io/badge/Dataset-KODF-yellowgreen?style=flat-square" alt="KODF">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Model-MS--Eff--GCViT--B0%20%2F%20B5-orange?style=flat-square" alt="Models">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch">
+  <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready">
-  <img src="https://img.shields.io/docker/pulls/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=fastapi%20pulls" alt="Docker Pulls">
-  <img src="https://img.shields.io/docker/v/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=version" alt="Docker Version">
+  <a href="https://youtu.be/i_IRajBQ9t0">
+    <img src="https://img.youtube.com/vi/i_IRajBQ9t0/maxresdefault.jpg" alt="DeepGuard demo video" width="800">
+  </a>
 </p>
 
 <p align="center">
@@ -43,8 +25,8 @@
 
 ## 📌 目次
 
-- [🗂 プロジェクト構成](#-プロジェクト構成) - ディレクトリ構成の概要 (パッケージ、Webアプリ、ドキュメント)
 - [🐳 Docker Quick Start](#-docker-quick-start) - Docker Compose でフルスタック(MySQL, Redis, FastAPI, Celery, React)を起動
+- [🏛 DeepGuard システムアーキテクチャ](#-deepguard-システムアーキテクチャ) - Webアプリのサービス構成とデモ動画
 - [🤗 今すぐ体験: Hugging Face Spaces](#-今すぐ体験-hugging-face-spaces) - インストール不要、ブラウザだけで試せる画像/動画/XAI ディープフェイク検出デモ
 - [📚 ディープフェイク動画ベンチマークデータセット](#-ディープフェイク動画ベンチマークデータセット) — 学習に使用した Celeb-DF-v2, FF++, KoDF データセットの概要。
 - [⚙️ データ準備](#データ準備) — YOLOv8 を用いた効率的な顔検出およびランドマーク抽出パイプライン。
@@ -53,46 +35,19 @@
 - [🕐 Model Inference Latency](#-model-inference-latency) — Tesla T4 1基における Fast(b0)と Pro(b5)の推論速度の比較。
 - [🚀 学習](#-学習) - Google Colab および W&B を活用した段階的な学習スクリプト。
 - [📈 モデル評価](#-モデル評価) - ベンチマーク結果。
-- [💻 モデルの使い方](#-モデルの使い方) - `pip install deepguard` または Hugging Face Hub から学習済みモデルをロード
-- [🔮 画像と動画の予測](#-画像と動画の予測) - ディープフェイク検出のためのシンプルな推論例。
+- [🔮 画像と動画の予測](#-画像と動画の予測) - Hugging Face Hub または `pip install deepguard` で画像・動画のディープフェイクを検出
 - [🎨 ディープフェイクAI説明可能性(XAI)](#-ディープフェイクai説明可能性xai) - Grad-CAM およびアテンションマップによるモデル判断根拠の可視化。
 - [📓 Tutorials](#-tutorials) - 推論とデュアルブランチXAI可視化のためのハンズオンノートブック
 - [📬 制作者](#-制作者) - 忠北大学校の卒業制作を手がけたチーム紹介
+- [🤝 コントリビューター](#-コントリビューター) - コードに貢献したすべての方々と、貢献方法・脆弱性の報告方法
 - [📝 参考文献](#-参考文献) - 本プロジェクトが参考にしたライブラリ、データセット、先行研究
 - [⚖️ ライセンス](#-ライセンス) - MIT ライセンス
 
 ---
 
-## 🗂 プロジェクト構成
-
-```
-DeepGuard/
-├── deepguard/                  # コアパッケージ (モデル、レイヤー、データパイプライン、オプティマイザ、スケジューラ、ユーティリティ)
-├── preprocess/                 # 顔検出、クロップ、ランドマーク抽出パイプライン
-├── inference/                  # 画像 / 動画の予測
-├── explainability/             # デュアルブランチ CAM ベース XAI
-├── App/                        # FastAPI バックエンド (PyPI パッケージから除外)
-├── client/                     # React フロントエンド
-├── docker/                     # MySQL / Redis Docker イメージと設定
-├── tutorials/                  # Colab ノートブック (予測と XAI 可視化)
-├── docs/                       # README 用アセット (アーキテクチャ、ablation、ベンチマーク、サンプル、XAI 結果)
-├── .github/                    # CI ワークフローとリポジトリ設定
-├── docker-compose.yml          # フルスタック (MySQL, Redis, FastAPI, Celery, React)
-├── train_eff_vit.py            # MS-EffViT 学習エントリポイント
-├── train_eff_gcvit.py          # MS-EffGCViT 学習エントリポイント
-├── pyproject.toml              # パッケージビルド設定
-├── requirements.txt            # 開発環境の依存関係
-├── README.md, README_KR.md, README_JP.md
-└── LICENSE
-```
-
 ## 🐳 Docker Quick Start
 
 Docker Compose でフルスタック(MySQL + Redis + FastAPI + Celery + React)を起動します — ローカルに Python/Node 環境を用意する必要はありません。
-
-| **FastAPI** | **Celery** | **Redis** | **MySQL** | **React** |
-| --- | --- | --- | --- | --- |
-| REST API バックエンド — ルーティング、推論/説明サービス、DBアクセス<br>[`seoyunje/deepguard-fastapi`](https://hub.docker.com/r/seoyunje/deepguard-fastapi) | 非同期の推論・説明可能性(XAI)・クリーンアップ処理を行うバックグラウンドワーカー<br>[`seoyunje/deepguard-celery`](https://hub.docker.com/r/seoyunje/deepguard-celery) | Celery のブローカー/結果バックエンド兼セッションストア<br>[`seoyunje/deepguard-redis`](https://hub.docker.com/r/seoyunje/deepguard-redis) | メインのリレーショナルデータベース(ユーザー、解析結果など)<br>[`seoyunje/deepguard-mysql`](https://hub.docker.com/r/seoyunje/deepguard-mysql) | Webフロントエンド、`80` 番ポートで配信<br>[`seoyunje/deepguard-react`](https://hub.docker.com/r/seoyunje/deepguard-react) |
 
 **前提条件**: Compose v2 を含む [Docker](https://www.docker.com/)
 
@@ -106,9 +61,17 @@ docker compose up -d
 
 イメージは Docker Hub の [`seoyunje/deepguard-*`](https://hub.docker.com/u/seoyunje) (`fastapi`, `celery`, `mysql`, `redis`, `react`) として公開されており、[GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi) にもミラーされています。
 
+## 🏛 DeepGuard システムアーキテクチャ
+
+🎬 **デモ動画**: [https://youtu.be/i_IRajBQ9t0](https://youtu.be/i_IRajBQ9t0)
+
 <p align="center">
   <img src="docs/architectures/docker_compose_architecture.png" alt="DeepGuard Docker Compose アーキテクチャ" width="800">
 </p>
+
+| **FastAPI** | **Celery** | **Redis** | **MySQL** | **React** |
+| --- | --- | --- | --- | --- |
+| REST API バックエンド — ルーティング、推論/説明サービス、DBアクセス<br>[`seoyunje/deepguard-fastapi`](https://hub.docker.com/r/seoyunje/deepguard-fastapi) | 非同期の推論・説明可能性(XAI)・クリーンアップ処理を行うバックグラウンドワーカー<br>[`seoyunje/deepguard-celery`](https://hub.docker.com/r/seoyunje/deepguard-celery) | Celery のブローカー/結果バックエンド兼セッションストア<br>[`seoyunje/deepguard-redis`](https://hub.docker.com/r/seoyunje/deepguard-redis) | メインのリレーショナルデータベース(ユーザー、解析結果など)<br>[`seoyunje/deepguard-mysql`](https://hub.docker.com/r/seoyunje/deepguard-mysql) | Webフロントエンド、`80` 番ポートで配信<br>[`seoyunje/deepguard-react`](https://hub.docker.com/r/seoyunje/deepguard-react) |
 
 ## 🤗 今すぐ体験: Hugging Face Spaces
 
@@ -158,7 +121,7 @@ docker compose up -d
 <p align="center">
   <sub>💛 デモが気に入りましたか? Space に ❤️ いいねをお願いします — とても励みになります!</sub>
   <br/>
-  <sub>デモUIではなく実際のチェックポイントをお探しですか? <a href="#-hugging-face-hub-で使う">🤗 モデルの使い方 → Hugging Face Hub</a> へどうぞ。</sub>
+  <sub>デモUIではなく実際のチェックポイントをお探しですか? <a href="#-option-a-huggingface">🤗 画像と動画の予測 → Option A: HuggingFace</a> へどうぞ。</sub>
 </p>
 
 ## 📚 ディープフェイク動画ベンチマークデータセット
@@ -316,47 +279,9 @@ pip install -r requirements.txt
 | ms_eff_gcvit_b0 | 0.9655 | 0.9792 | 0.1237 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b0_kodf.bin) | [recipe](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
 | ms_eff_gcvit_b5 | 0.9792 | 0.9831 | 0.0692 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
-## 💻 モデルの使い方
+## 🔮 画像と動画の予測
 
-どちらの方法も、顔検出/クロップなどの前処理を行わずモデル単体をロードします。実際の画像/動画ファイルに対するエンドツーエンドの推論は、下記の [🔮 画像と動画の予測](#-画像と動画の予測) を参照してください。
-
-**対応データセット**: `celeb_df_v2`, `ff++`, `kodf`
-
-### 📦 pip で使う (`deepguard` / `timm`)
-
-```bash
-pip install deepguard
-```
-
-**直接インポート (DeepGuard 使用)**
-
-```python
-from deepguard import ms_eff_gcvit_b0, ms_eff_gcvit_b5
-
-model = ms_eff_gcvit_b0(pretrained=True, dataset="celeb_df_v2")
-model = ms_eff_gcvit_b5(pretrained=True, dataset="ff++")
-```
-
-**timm インターフェース使用**
-
-```python
-import timm
-import deepguard
-
-model = timm.create_model("ms_eff_gcvit_b0", pretrained=True, dataset="ff++")
-model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
-```
-
-### 🤗 Hugging Face Hub で使う
-
-すべてのチェックポイントは [Hugging Face Hub の `KoreaPeter`](https://huggingface.co/KoreaPeter) アカウントにも、`transformers` 互換リポジトリ(設定 + カスタムモデリングコード + `safetensors` の重み)としてミラーされています — `deepguard` をインストールせずに、`trust_remote_code=True` を指定した `transformers` の `pipeline` API から直接利用できます。
-
-> 💛 チェックポイントが役に立ったら、モデルカードに ❤️ いいねをお願いします — とても励みになります!
-
-| Model | Celeb-DF-v2 | FaceForensics++ | KoDF |
-| ----- | :---------: | :--------------: | :---: |
-| ⚡ ms_eff_gcvit_b0 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf) |
-| 🔥 ms_eff_gcvit_b5 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-kodf) |
+### Option A: HuggingFace
 
 ```python
 from transformers import pipeline
@@ -380,7 +305,11 @@ result = clf("video.mp4", num_frames=20, agg_mode="conf")
 # [{'label': 'fake', 'score': 0.9634}, {'label': 'real', 'score': 0.0366}]
 ```
 
-## 🔮 画像と動画の予測
+### Option B: Pip
+
+```bash
+pip install deepguard
+```
 
 #### ディープフェイク画像の予測
 
@@ -539,6 +468,7 @@ result = explainer.display_heatmap_bbox_on_image(
 
 ### 📊 可視化結果
 
+<!--
 <p align="center">
   <table>
     <tr>
@@ -548,21 +478,8 @@ result = explainer.display_heatmap_bbox_on_image(
     </tr>
   </table>
 </p>
+-->
 
-
-#### MS-EFF-VIT — Low-Level Branch
-
-| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
-| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
-
-#### MS-Eff-ViT — High-Level Branch
-
-| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
-| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
 
 #### MS-EFF-GCVIT — Low-Level Branch
 
@@ -604,6 +521,14 @@ Jupyterノートブックは、gitリポジトリのtutorialsフォルダ内に�
 | **ソ・ユンジェ(서윤제)** | AI Engineering | AIモデルアーキテクチャ設計、推論API設計、モデルサービング | [✉️](mailto:seoyunje2001@gmail.com) |
 
 </div>
+
+## 🤝 コントリビューター
+
+<a href="https://github.com/HanMoonSub/DeepGuard/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=HanMoonSub/DeepGuard" alt="Contributors" />
+</a>
+
+コントリビューションを歓迎します！プルリクエストを作成する前に [CONTRIBUTING.md](./CONTRIBUTING.md) をお読みください。セキュリティ脆弱性の報告方法は [SECURITY.md](./.github/SECURITY.md) をご覧ください。
 
 ## 📝 参考文献
 

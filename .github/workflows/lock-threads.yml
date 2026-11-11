@@ -1,10 +1,10 @@
 name: Lock Threads
 
-# 오래전에 closed된 이슈/PR을 자동으로 잠가서, 관련 없는 새 댓글(necro-posting)을 방지한다.
+# Automatically lock long-closed issues/PRs to prevent unrelated new comments (necro-posting).
 
 on:
   schedule:
-    - cron: "0 1 * * *"  # 매일 UTC 01:00 (KST 10:00) 실행
+    - cron: "0 1 * * *"  # Runs daily at 01:00 UTC (10:00 KST)
   workflow_dispatch:
 
 permissions:

@@ -1,4 +1,4 @@
-/* 업로드 영역 하단 아이콘 바 (파일 업로드 / 웹캠) */
+/* Icon bar at the bottom of the upload area (file upload / webcam) */
 .dg-webcam-bar {
   position: absolute;
   left: 0;
@@ -45,7 +45,7 @@
   cursor: not-allowed;
 }
 
-/* 웹캠 미리보기 + 컨트롤 */
+/* Webcam preview + controls */
 .dg-webcam {
   position: absolute;
   inset: 0;
@@ -66,7 +66,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transform: scaleX(-1); /* 거울 모드 미리보기 (촬영 결과는 원본 방향) */
+  transform: scaleX(-1); /* mirrored preview (the captured result keeps the original orientation) */
 }
 .dg-webcam__loading {
   position: absolute;
@@ -135,7 +135,7 @@
   cursor: not-allowed;
 }
 
-/* 셔터: 사진은 흰 원, 녹화는 빨간 원 → 녹화 중 빨간 사각형 */
+/* Shutter: white circle for photos, red circle for recording → red square while recording */
 .dg-webcam__shutter {
   position: relative;
   width: 52px;
@@ -191,7 +191,7 @@
   }
 }
 
-/* Dark 테마 */
+/* Dark theme */
 :root[data-theme="dark"] .dg-webcam-bar__btn {
   color: var(--color-muted);
 }

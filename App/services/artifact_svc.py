@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from inference.utils import PredictorError
 
-# 미디어 종류별 보조 테이블 / FK 컬럼 (쿼리 문자열에만 사용, 사용자 입력 아님)
+# Auxiliary table / FK column per media type (used only in query strings, never user input)
 _TABLES = {
     "image": ("image_artifact_result", "image_id"),
     "video": ("video_artifact_result", "video_id"),
@@ -21,18 +21,18 @@ _TABLES = {
 
 
 async def get_artifact(conn: Connection, media: Literal["image", "video"], media_id: int) -> ArtifactResultData | None:
-    """저장된 DeepClip 20개 텍스트 확률을 조회한다.
+    """Fetch the stored DeepClip 20 text probabilities.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        media (Literal["image", "video"]): 미디어 종류.
-        media_id (int): image_result.id 또는 video_result.id.
+        conn (Connection): SQLAlchemy async DB connection.
+        media (Literal["image", "video"]): Media type.
+        media_id (int): image_result.id or video_result.id.
 
     Returns:
-        ArtifactResultData | None: 저장된 결과. 없으면 None.
+        ArtifactResultData | None: The stored result, or None if there is none.
 
     Raises:
-        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 503: When a SQLAlchemy error occurs during the DB query.
     """
     table, fk = _TABLES[media]
     try:
@@ -55,14 +55,14 @@ async def get_artifact(conn: Connection, media: Literal["image", "video"], media
 
 async def save_artifact(conn: Connection, media: Literal["image", "video"], media_id: int,
                         model_name: str, artifact_probs: list[float]) -> None:
-    """DeepClip 20개 텍스트 확률을 저장한다. 이미 있으면 덮어쓴다.
+    """Save the DeepClip 20 text probabilities, overwriting any existing result.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        media (Literal["image", "video"]): 미디어 종류.
-        media_id (int): image_result.id 또는 video_result.id.
-        model_name (str): 사용한 DeepClip 모델 이름 (deepclip_b0 / deepclip_b5).
-        artifact_probs (list[float]): PAIR_ORDER 순서의 20개 확률 (idx = 5*region + type).
+        conn (Connection): SQLAlchemy async DB connection.
+        media (Literal["image", "video"]): Media type.
+        media_id (int): image_result.id or video_result.id.
+        model_name (str): Name of the DeepClip model used (deepclip_b0 / deepclip_b5).
+        artifact_probs (list[float]): 20 probabilities in PAIR_ORDER order (idx = 5*region + type).
     """
     table, fk = _TABLES[media]
     try:
@@ -80,10 +80,10 @@ async def save_artifact(conn: Connection, media: Literal["image", "video"], medi
 
 
 async def delete_artifact(conn: Connection, media: Literal["image", "video"], media_id: int) -> None:
-    """저장된 DeepClip 20개 텍스트 확률을 삭제한다. 없으면 아무것도 하지 않는다.
+    """Delete the stored DeepClip 20 text probabilities. Does nothing if there are none.
 
     Raises:
-        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
+        HTTPException 503: When a SQLAlchemy error occurs during the DB query.
     """
     table, fk = _TABLES[media]
     try:
@@ -96,13 +96,13 @@ async def delete_artifact(conn: Connection, media: Literal["image", "video"], me
 
 
 def _run_artifact_task(media: Literal["image", "video"], media_id: int, media_loc: str, model_type: str) -> dict:
-    """DeepClip으로 20개 텍스트 확률을 추론하고 DB에 저장한다 (Celery 태스크 공통 로직).
+    """Run DeepClip to infer the 20 text probabilities and save them to the DB (shared logic for the Celery tasks).
 
     Returns:
         dict:
             - status (str): "SUCCESS" | "WARNING" | "FAILED"
-            - message (str): 처리 결과 메세지.
-            - artifact_probs (list[float] | None): 20개 확률. 실패 시 None.
+            - message (str): Result message.
+            - artifact_probs (list[float] | None): The 20 probabilities, or None on failure.
     """
     model_name = inference_svc.DEEPCLIP_MODEL[model_type]
     path = "." + media_loc
@@ -139,11 +139,11 @@ def _run_artifact_task(media: Literal["image", "video"], media_id: int, media_lo
 
 @celery_app.task(name="process_artifact_image_task")
 def process_artifact_image_task(image_id: int, image_loc: str, model_type: str) -> dict:
-    """FAKE 이미지의 DeepClip 20개 텍스트 확률을 추론·저장하는 Celery 태스크."""
+    """Celery task that infers and saves the DeepClip 20 text probabilities for a FAKE image."""
     return _run_artifact_task("image", image_id, image_loc, model_type)
 
 
 @celery_app.task(name="process_artifact_video_task")
 def process_artifact_video_task(video_id: int, video_loc: str, model_type: str) -> dict:
-    """FAKE 비디오의 DeepClip 20개 텍스트 확률(영상 전체 프레임 평균)을 추론·저장하는 Celery 태스크."""
+    """Celery task that infers and saves the DeepClip 20 text probabilities for a FAKE video (mean over all frames)."""
     return _run_artifact_task("video", video_id, video_loc, model_type)

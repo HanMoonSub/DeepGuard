@@ -2,31 +2,31 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Button from './Button';
 
-// DeepClip 20개 텍스트 = 부위 4 × 유형 5 (PAIR_ORDER 순서, idx = 5 * 부위 + 유형)
+// DeepClip 20 texts = 4 regions × 5 types (PAIR_ORDER order, idx = 5 * region + type)
 const REGIONS = ['얼굴 전체', '눈', '코', '입'];
 const REGION_PLACES = ['얼굴 전체에서', '눈 부위에서', '코 부위에서', '입 부위에서'];
 const TYPES = ['흐림', '색상', '질감', '구조', '합성 경계'];
-// 문장용 유형 표현 (blur, color, texture, structure, blend 순서)
+// Type phrases for sentences (in blur, color, texture, structure, blend order)
 const TYPE_PHRASES = ['부자연스러운 흐림', '부자연스러운 색상 변화', '이질적인 질감 패턴', '구조적 왜곡', '합성 경계 흔적'];
-const SENTENCE_MIN = 0.5; // 문장에는 50% 이상인 부위만
+const SENTENCE_MIN = 0.5; // only regions at 50% or above go into the sentence
 const POLL_INTERVAL = 2000;
-// 분석 전 희미하게 보여줄 자리표시 값 (실제 결과 아님)
+// Placeholder values shown faintly before analysis (not real results)
 const PLACEHOLDER = [0.2, 0.5, 0.3, 0.1, 0.6, 0.3, 0.1, 0.4, 0.2, 0.3, 0.1, 0.2, 0.5, 0.1, 0.2, 0.4, 0.3, 0.1, 0.2, 0.7];
 
-// 받침 유무에 따라 주격 조사 '이/가'
+// Korean subject particle '이/가' depending on whether the last syllable has a final consonant
 const subjectJosa = (word) => {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   return code >= 0 && code <= 11171 && code % 28 !== 0 ? '이' : '가';
 };
 
-// 부위별로 5개 유형 중 확률이 가장 큰 유형 선택
+// Pick the type with the highest probability among the 5 for each region
 const summarizeRegions = (values) => REGIONS.map((name, r) => {
   const row = values.slice(5 * r, 5 * r + 5);
   const typeIdx = row.indexOf(Math.max(...row));
   return { name, r, typeIdx, prob: row[typeIdx], row };
 });
 
-// 확률 상위 2개 부위(50% 이상만)로 안내 문장 생성
+// Build the guidance sentence from the top 2 regions by probability (only those at 50% or above)
 const buildSentence = (regions, media) => {
   const top = [...regions].sort((a, b) => b.prob - a.prob).slice(0, 2).filter((x) => x.prob >= SENTENCE_MIN);
   if (!top.length) return '50% 이상의 확률로 의심되는 부위별 흔적은 없어요.';
@@ -42,7 +42,7 @@ const errorMessage = (e) => {
   return typeof detail === 'string' ? detail : '부위별 위조 흔적을 불러오지 못했어요.';
 };
 
-// FAKE 판정 결과에서만 렌더 — 버튼을 눌러야 DeepClip 추론 (온디맨드)
+// Rendered only for FAKE verdicts — DeepClip inference runs when the button is pressed (on demand)
 const ArtifactTextPanel = ({ media, mediaId, sessionUser }) => {
   const [probs, setProbs] = useState(null);
   const [status, setStatus] = useState('idle'); // idle | loading | done | error
@@ -53,7 +53,7 @@ const ArtifactTextPanel = ({ media, mediaId, sessionUser }) => {
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
   };
 
-  // 저장된 결과가 있으면 바로 표시 (없으면 404 → 버튼)
+  // Show a stored result right away if there is one (otherwise 404 → button)
   useEffect(() => {
     setProbs(null); setStatus('idle'); setErrorMsg('');
     if (!sessionUser || !mediaId) return undefined;
@@ -69,7 +69,7 @@ const ArtifactTextPanel = ({ media, mediaId, sessionUser }) => {
     pollingRef.current = setInterval(async () => {
       try {
         const res = await axios.get(`/artifact/result/${taskId}`);
-        if (res.status === 202) return; // 분석 중
+        if (res.status === 202) return; // still analyzing
         stopPolling();
         setProbs(res.data.artifact_probs);
         setStatus('done');
@@ -112,9 +112,9 @@ const ArtifactTextPanel = ({ media, mediaId, sessionUser }) => {
 
       {isDone && <p className="dg-detail__artifact-summary">{buildSentence(regions, media)}</p>}
 
-      {/* 비로그인 또는 아직 분석 전: 그래프를 희미하게 미리 보여주고 그 위에 버튼 */}
+      {/* Not logged in or not analyzed yet: show a faint preview of the chart with a button on top */}
       <div className={`dg-detail__artifact-body${isDone ? '' : ' is-locked'}`}>
-        {/* 가로 막대: y축 부위 4개, x축 확률 (부위별 최고 유형) */}
+        {/* Horizontal bars: 4 regions on the y-axis, probability on the x-axis (top type per region) */}
         <ul className="dg-detail__artifact-bars" aria-hidden={!isDone}>
           {regions.map((x) => (
             <li key={x.name} className={`dg-detail__artifact-bar${x.r === maxR ? ' is-max' : ''}`}

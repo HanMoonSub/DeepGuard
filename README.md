@@ -1,36 +1,18 @@
-# Deepfakes Detection
+# Deepfake Detection
 
 <p align="center">
   <img src="https://img.shields.io/github/license/HanMoonSub/DeepGuard?style=flat-square&color=555555&logo=github&logoColor=white" alt="License">
   <img src="https://img.shields.io/github/stars/HanMoonSub/DeepGuard?style=flat-square&color=FFD700&logo=github&logoColor=white" alt="Stars">
-  <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
-  <img src="https://img.shields.io/github/last-commit/HanMoonSub/DeepGuard?style=flat-square&color=lightgrey&logo=github&logoColor=white" alt="Last Commit">
-  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">
   <img src="https://img.shields.io/github/v/release/HanMoonSub/DeepGuard?style=flat-square&color=orange&logo=github&logoColor=white" alt="Release">
-  <img src="https://img.shields.io/github/repo-size/HanMoonSub/DeepGuard?style=flat-square&color=blueviolet" alt="Repo Size">
-</p>
-
-<p align="center">
-  <img src="docs/samples/deepfake_thumbnails.png" alt="DeepGuard Banner" width="800" height="400">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Task-Deepfake_Detection-red?style=flat-square" alt="Task">
-  <img src="https://img.shields.io/badge/Dataset-FaceForensics%2B%2B-blue?style=flat-square" alt="FF++">
-  <img src="https://img.shields.io/badge/Dataset-Celeb--DF(v2)-green?style=flat-square" alt="Celeb-DF">
-  <img src="https://img.shields.io/badge/Dataset-KODF-yellowgreen?style=flat-square" alt="KODF">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Model-MS--Eff--GCViT--B0%20%2F%20B5-orange?style=flat-square" alt="Models">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch">
+  <img src="https://img.shields.io/github/downloads/HanMoonSub/DeepGuard/total?style=flat-square&color=brightgreen&logo=github&logoColor=white" alt="Downloads">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready">
-  <img src="https://img.shields.io/docker/pulls/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=fastapi%20pulls" alt="Docker Pulls">
-  <img src="https://img.shields.io/docker/v/seoyunje/deepguard-fastapi?style=flat-square&logo=docker&logoColor=white&label=version" alt="Docker Version">
+  <a href="https://youtu.be/i_IRajBQ9t0">
+    <img src="https://img.youtube.com/vi/i_IRajBQ9t0/maxresdefault.jpg" alt="DeepGuard demo video" width="800">
+  </a>
 </p>
 
 <p align="center">
@@ -43,8 +25,8 @@
 
 ## 📌 Contents
 
-- [🗂 Project Structure](#-project-structure) - Directory layout of the package, web app, and docs
 - [🐳 Docker Quick Start](#-docker-quick-start) - Run the full stack (MySQL, Redis, FastAPI, Celery, React) with Docker Compose
+- [🏛 DeepGuard System Architecture](#-deepguard-system-architecture) - How the web app services fit together, plus a demo video
 - [🤗 Try It Live: Hugging Face Spaces](#-try-it-live-hugging-face-spaces) - No-install browser demos for image, video, and XAI deepfake detection
 - [📚 DeepFake Video BenchMark Datasets](#-deepfake-video-benchmark-datasets) — Overview of Celeb-DF-v2, FF++, and KoDF datasets used for training.
 - [⚙️ Data Preparation](#data-preparation) — Efficient face detection and landmark extraction pipeline using YOLOv8
@@ -53,44 +35,17 @@
 - [🕐 Model Inference Latency](#-model-inference-latency) - Fast (b0) vs Pro (b5) inference speed on a single Tesla T4
 - [🚀 Training](#-training) - Step-by-step training scrips with Goolge Colab and W&B experiment tracking
 - [📈 Model Evaluation](#-model-evaluation) - Benchmarking results
-- [💻 Model Usage](#-model-usage) - Load pretrained models via `pip install deepguard` or straight from the Hugging Face Hub
-- [🔮 Predict Image & Video](#-predict-image--video) - Simple Inference examples for detecting deepfakes in image and video
+- [🔮 Predict Image & Video](#-predict-image--video) - Detect deepfakes in images and videos via the Hugging Face Hub or `pip install deepguard`
 - [🎨 DeepFake AI Explainability](#-deepfake-ai-explainability) - Visualizing model focus using Grad-CAM and attention maps
 - [📓 Tutorials](#-tutorials) - Hands-on Colab notebooks for inference and dual-branch XAI visualization
 - [📬 Authors](#-authors) - Team behind this senior graduation project at Chungbuk National University
+- [🤝 Contributors](#-contributors) - Everyone who has contributed code, plus how to contribute and report security issues
 - [📝 Reference](#-reference) - Libraries, datasets, and prior work this project builds on
 - [⚖️ License](#-license) - MIT license
-
-## 🗂 Project Structure
-
-```
-DeepGuard/
-├── deepguard/                  # Core package (models, layers, data pipeline, optimizer, scheduler, utils)
-├── preprocess/                 # Face detection, cropping & landmark extraction pipeline
-├── inference/                  # Image / video prediction
-├── explainability/             # Dual-branch CAM-based XAI
-├── App/                        # FastAPI backend (excluded from PyPI package)
-├── client/                     # React frontend
-├── docker/                     # MySQL / Redis Docker images and configs
-├── tutorials/                  # Colab notebooks (prediction & XAI visualization)
-├── docs/                       # README assets (architectures, ablation, benchmarks, samples, XAI results)
-├── .github/                    # CI workflows and repository settings
-├── docker-compose.yml          # Full stack (MySQL, Redis, FastAPI, Celery, React)
-├── train_eff_vit.py            # Training entrypoint for MS-EffViT
-├── train_eff_gcvit.py          # Training entrypoint for MS-EffGCViT
-├── pyproject.toml              # Package build config
-├── requirements.txt            # Dev environment dependencies
-├── README.md, README_KR.md, README_JP.md
-└── LICENSE
-```
 
 ## 🐳 Docker Quick Start
 
 Run the full stack (MySQL + Redis + FastAPI + Celery + React) with Docker Compose — no local Python/Node setup required.
-
-| **FastAPI** | **Celery** | **Redis** | **MySQL** | **React** |
-| --- | --- | --- | --- | --- |
-| REST API backend — routes, inference/explain services, DB access<br>[`seoyunje/deepguard-fastapi`](https://hub.docker.com/r/seoyunje/deepguard-fastapi) | Background worker for async inference, explainability, and cleanup tasks<br>[`seoyunje/deepguard-celery`](https://hub.docker.com/r/seoyunje/deepguard-celery) | Celery broker/result backend and session store<br>[`seoyunje/deepguard-redis`](https://hub.docker.com/r/seoyunje/deepguard-redis) | Primary relational database (users, analyses, etc.)<br>[`seoyunje/deepguard-mysql`](https://hub.docker.com/r/seoyunje/deepguard-mysql) | Web frontend, served on port `80`<br>[`seoyunje/deepguard-react`](https://hub.docker.com/r/seoyunje/deepguard-react) |
 
 **Prerequisites**: [Docker](https://www.docker.com/) with Compose v2
 
@@ -102,9 +57,17 @@ docker compose up -d
 
 Once all containers are up, open **http://localhost:80** in your browser. Images are also mirrored to [GitHub Packages](https://github.com/HanMoonSub/DeepGuard/pkgs/container/deepguard-fastapi).
 
+## 🏛 DeepGuard System Architecture
+
+🎬 **Demo Video**: [https://youtu.be/i_IRajBQ9t0](https://youtu.be/i_IRajBQ9t0)
+
 <p align="center">
   <img src="docs/architectures/docker_compose_architecture.png" alt="DeepGuard Docker Compose architecture" width="800">
 </p>
+
+| **FastAPI** | **Celery** | **Redis** | **MySQL** | **React** |
+| --- | --- | --- | --- | --- |
+| REST API backend — routes, inference/explain services, DB access<br>[`seoyunje/deepguard-fastapi`](https://hub.docker.com/r/seoyunje/deepguard-fastapi) | Background worker for async inference, explainability, and cleanup tasks<br>[`seoyunje/deepguard-celery`](https://hub.docker.com/r/seoyunje/deepguard-celery) | Celery broker/result backend and session store<br>[`seoyunje/deepguard-redis`](https://hub.docker.com/r/seoyunje/deepguard-redis) | Primary relational database (users, analyses, etc.)<br>[`seoyunje/deepguard-mysql`](https://hub.docker.com/r/seoyunje/deepguard-mysql) | Web frontend, served on port `80`<br>[`seoyunje/deepguard-react`](https://hub.docker.com/r/seoyunje/deepguard-react) |
 
 ## 🤗 Try It Live: Hugging Face Spaces
 
@@ -154,7 +117,7 @@ No install, no GPU, no `docker compose up` — just click and try DeepGuard stra
 <p align="center">
   <sub>💛 Enjoying the demos? Please leave a ❤️ like on the Space — it means a lot to us!</sub>
   <br/>
-  <sub>Looking for the underlying checkpoints instead of the demo UI? Jump to <a href="#-via-hugging-face-hub">🤗 Model Usage → Hugging Face Hub</a>.</sub>
+  <sub>Looking for the underlying checkpoints instead of the demo UI? Jump to <a href="#-option-a-huggingface">🤗 Predict Image &amp; Video → Option A: HuggingFace</a>.</sub>
 </p>
 
 ## 📚 DeepFake Video BenchMark Datasets
@@ -319,47 +282,9 @@ We provide training scripts for both `ms_eff_vit` and `ms_eff_gcvit`. We recomme
 | ms_eff_gcvit_b0 | 0.9655 | 0.9792 | 0.1237 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b0_kodf.bin) | [recipe](deepguard/config/ms_eff_gcvit_b0/celeb_df_v2.yaml) |
 | ms_eff_gcvit_b5 | 0.9792 | 0.9831 | 0.0692 | [model](https://github.com/HanMoonSub/DeepGuard/releases/download/v0.2.0/ms_eff_gcvit_b5_kodf.bin) | [recipe](deepguard/config/ms_eff_gcvit_b5/celeb_df_v2.yaml) |
 
-## 💻 Model Usage
+## 🔮 Predict Image & Video
 
-Both options load the raw model only — no face detection/cropping is applied. For end-to-end inference on a real image/video file, see [🔮 Predict Image & Video](#-predict-image--video) below.
-
-**Available Datasets**: `celeb_df_v2`, `ff++`, `kodf`
-
-### 📦 Via pip (`deepguard` / `timm`)
-
-```bash
-pip install deepguard
-```
-
-**Direct Import (via DeepGuard)**
-
-```python
-from deepguard import ms_eff_gcvit_b0, ms_eff_gcvit_b5
-
-model = ms_eff_gcvit_b0(pretrained=True, dataset="celeb_df_v2")
-model = ms_eff_gcvit_b5(pretrained=True, dataset="ff++")
-```
-
-**Using timm Interface**
-
-```python
-import timm
-import deepguard
-
-model = timm.create_model("ms_eff_gcvit_b0", pretrained=True, dataset="ff++")
-model = timm.create_model("ms_eff_gcvit_b5", pretrained=True, dataset="kodf")
-```
-
-### 🤗 Via Hugging Face Hub
-
-Every checkpoint is also mirrored to the [Hugging Face Hub under `KoreaPeter`](https://huggingface.co/KoreaPeter) as its own `transformers`-compatible repo (config + custom modeling code + `safetensors` weights) — usable directly via the `transformers` `pipeline` API with `trust_remote_code=True`, no `deepguard` install required.
-
-> 💛 Find a checkpoint useful? Please leave a ❤️ like on its model card — it means a lot to us!
-
-| Model | Celeb-DF-v2 | FaceForensics++ | KoDF |
-| ----- | :---------: | :--------------: | :---: |
-| ⚡ ms_eff_gcvit_b0 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b0-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf) |
-| 🔥 ms_eff_gcvit_b5 | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-celeb-df-v2&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-celeb-df-v2) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-ff-plus-plus&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-ff-plus-plus) | [![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhuggingface.co%2Fapi%2Fmodels%2FKoreaPeter%2Fms-eff-gcvit-deepfake-b5-kodf&query=%24.downloads&label=downloads&color=FFD21E&logoColor=black)](https://huggingface.co/KoreaPeter/ms-eff-gcvit-deepfake-b5-kodf) |
+### Option A: HuggingFace
 
 ```python
 from transformers import pipeline
@@ -367,7 +292,7 @@ from transformers import pipeline
 # 🖼️ Image classification
 clf = pipeline(
     "image-classification",
-    model="KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf",  # swap for any model card above
+    model="KoreaPeter/ms-eff-gcvit-deepfake-b0-kodf",  # or any other KoreaPeter/ms-eff-gcvit-deepfake-* checkpoint
     trust_remote_code=True,
 )
 result = clf("face.jpg")
@@ -383,7 +308,11 @@ result = clf("video.mp4", num_frames=20, agg_mode="conf")
 # [{'label': 'fake', 'score': 0.9634}, {'label': 'real', 'score': 0.0366}]
 ```
 
-## 🔮 Predict Image & Video
+### Option B: Pip
+
+```bash
+pip install deepguard
+```
 
 #### Predict DeepFake Image
 
@@ -547,6 +476,7 @@ result = explainer.display_heatmap_bbox_on_image(
 
 ### 📊 Visual Results
 
+<!--
 <p align="center">
   <table>
     <tr>
@@ -556,20 +486,7 @@ result = explainer.display_heatmap_bbox_on_image(
     </tr>
   </table>
 </p>
-
-#### MS-EFF-VIT — Low-Level Branch
-
-| Model | Branch-Level | Image | HiresCam | GradCamElementwise | LayerCam |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_low_layercam.JPG" width="100"> |
-| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/Low_level_Branch-blue?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_hirescam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_gradcamelementwise.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_low_layercam.JPG" width="100"> |
-
-#### MS-Eff-ViT — High-Level Branch
-
-| Model | Branch-Level | Image | EigenGradCam | GradCamPlusPlus | XGradCam |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **⚡ ms-eff-vit-b0** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b0_high_xgradcam.JPG" width="100"> |
-| **🔥 ms-eff-vit-b5** | ![](https://img.shields.io/badge/High_level_Branch-red?style=flat-square) | <img src="docs/samples/images/western/western_fake_1.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_eigengradcam.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_gradcamplusplus.JPG" width="100"> | <img src="docs/xai-results/ms_eff_vit_b5_high_xgradcam.JPG" width="100"> |
+-->
 
 #### MS-EFF-GCVIT — Low-Level Branch
 
@@ -612,6 +529,14 @@ The jupyter notebooks themselves can be found under the tutorials folder in the 
 
 </div>
 
+
+## 🤝 Contributors
+
+<a href="https://github.com/HanMoonSub/DeepGuard/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=HanMoonSub/DeepGuard" alt="Contributors" />
+</a>
+
+Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. To report a security vulnerability, see [SECURITY.md](./.github/SECURITY.md).
 
 ## 📝 Reference
 

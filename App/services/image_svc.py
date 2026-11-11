@@ -22,34 +22,34 @@ os.makedirs(EXPLAIN_UPLOAD_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
-    """업로드된 이미지를 서버에 저장하고 DB 저장용 경로를 반환한다. 회원/비회원 공통.
+    """Save an uploaded image on the server and return its path for the DB. Shared by members and guests.
 
     Args:
-        user_email (str | None): 로그인 사용자 이메일. 비회원이면 None.
-        imagefile (UploadFile): FastAPI 업로드 파일 객체.
+        user_email (str | None): Logged-in user's email, or None for guests.
+        imagefile (UploadFile): FastAPI upload file object.
 
     Returns:
-        str: 저장된 이미지의 DB 기준 경로 ('/'로 시작, '\\' 정규화됨).
+        str: DB path of the saved image (starts with '/', '\\' normalized).
 
     Raises:
-        HTTPException 500: 파일 쓰기 또는 예기치 못한 오류 발생 시.
+        HTTPException 500: When writing the file fails or an unexpected error occurs.
     """
     try:
-        # 사용자별 하위 디렉토리 결정
+        # Pick the per-user subdirectory
         sub_dir = user_email if user_email else "anonymous"
         
         user_dir = os.path.join(UPLOAD_DIR, sub_dir)
 
-        # 디렉토리 존재 확인 및 생성
+        # Make sure the directory exists, creating it if needed
         os.makedirs(user_dir, exist_ok=True)
     
-        # 파일명 중복 방지 (파일명_타임스탬프.확장자)
+        # Avoid file name collisions (name_timestamp.ext)
         filename_only, ext = os.path.splitext(imagefile.filename)
         
         upload_filename = f"{filename_only}_{int(time.time())}{ext}"
         upload_image_loc = os.path.join(user_dir, upload_filename)
 
-        # 비동기 이미지 저장 (Chunk 단위 읽기)
+        # Save the image asynchronously (reading in chunks)
         try:
             async with aio.open(upload_image_loc, "wb") as outfile:
                 while content := await imagefile.read(1024 * 1024):
@@ -61,7 +61,7 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
                 detail="이미지 파일을 저장하는 중 오류가 발생했습니다."
             )
 
-        # 6. DB 저장용 경로 반환
+        # 6. Return the path for the DB
         return upload_image_loc[1:].replace("\\", "/")
     
     except HTTPException:
@@ -74,18 +74,18 @@ async def upload_image(user_email: str | None, imagefile: UploadFile) -> str:
             detail="이미지 업로드 과정에서 예상치 못한 오류가 발생했습니다.")
 
 async def upload_image_cam(user_email: str, image_id: int, image: np.ndarray) -> str:
-    """CAM 시각화 이미지를 서버에 저장하고 DB 저장용 경로를 반환한다. 회원 전용.
+    """Save a CAM visualization image on the server and return its path for the DB. Members only.
 
     Args:
-        user_email (str): 요청 사용자 이메일 (저장 경로 구분용).
-        image_id (int): 이미지 레코드 PK (파일명 구성에 사용).
-        image (np.ndarray): 저장할 시각화 이미지 배열 (RGB).
+        user_email (str): Requesting user's email (used to separate storage paths).
+        image_id (int): Image record PK (used in the file name).
+        image (np.ndarray): Visualization image array to save (RGB).
 
     Returns:
-        str: 저장된 CAM 이미지의 DB 기준 경로 ('/'로 시작).
+        str: DB path of the saved CAM image (starts with '/').
 
     Raises:
-        Exception: 파일 쓰기 실패 시 그대로 re-raise.
+        Exception: Re-raised as is when writing the file fails.
     """
     user_dir = os.path.join(EXPLAIN_UPLOAD_DIR, user_email)
     os.makedirs(user_dir, exist_ok=True)
@@ -105,19 +105,19 @@ async def upload_image_cam(user_email: str, image_id: int, image: np.ndarray) ->
     return cam_loc[1:].replace("\\", "/")
 
 async def upload_frame_cam(user_email: str, video_id: int, frame_time: float, image: np.ndarray) -> str:
-    """비디오 프레임 CAM 시각화 이미지를 서버에 저장하고 DB 저장용 경로를 반환한다. 회원 전용.
+    """Save a video frame CAM visualization image on the server and return its path for the DB. Members only.
 
     Args:
-        user_email (str): 요청 사용자 이메일 (저장 경로 구분용).
-        video_id (int): 비디오 레코드 PK (파일명 구성에 사용).
-        frame_time (float): 시각화한 프레임의 타임스탬프 (초 단위, 파일명 구성에 사용).
-        image (np.ndarray): 저장할 시각화 이미지 배열 (RGB).
+        user_email (str): Requesting user's email (used to separate storage paths).
+        video_id (int): Video record PK (used in the file name).
+        frame_time (float): Timestamp of the visualized frame (in seconds, used in the file name).
+        image (np.ndarray): Visualization image array to save (RGB).
 
     Returns:
-        str: 저장된 CAM 이미지의 DB 기준 경로 ('/'로 시작).
+        str: DB path of the saved CAM image (starts with '/').
 
     Raises:
-        Exception: 파일 쓰기 실패 시 그대로 re-raise.
+        Exception: Re-raised as is when writing the file fails.
     """
     user_dir = os.path.join(EXPLAIN_UPLOAD_DIR, user_email)
     os.makedirs(user_dir, exist_ok=True)
@@ -137,15 +137,15 @@ async def upload_frame_cam(user_email: str, video_id: int, frame_time: float, im
     return cam_loc[1:].replace("\\", "/")
 
 async def delete_image(image_loc: str):
-    """서버에서 이미지 물리 파일을 삭제한다.
+    """Delete an image file from the server.
 
-    파일이 존재하지 않으면 경고 로그만 출력하고 정상 종료한다.
+    If the file does not exist, only a warning is logged and the function returns normally.
 
     Args:
-        image_loc (str): 삭제할 이미지의 DB 기준 경로 ('/'로 시작).
+        image_loc (str): DB path of the image to delete (starts with '/').
 
     Raises:
-        HTTPException 500: 파일 삭제 중 예기치 못한 오류 발생 시.
+        HTTPException 500: When an unexpected error occurs while deleting the file.
     """
     try:
         
@@ -163,16 +163,16 @@ async def delete_image(image_loc: str):
         )
 
 async def delete_image_db(conn: Connection, image_id: int):
-    """DB에서 이미지 레코드를 삭제한다.
+    """Delete an image record from the DB.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        image_id (int): 삭제할 이미지 레코드 PK.
+        conn (Connection): SQLAlchemy async DB connection.
+        image_id (int): PK of the image record to delete.
 
     Raises:
-        HTTPException 404: 해당 image_id 레코드가 없을 때.
-        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
-        HTTPException 500: 예기치 못한 오류 발생 시.
+        HTTPException 404: When no record exists for image_id.
+        HTTPException 503: When a SQLAlchemy error occurs during the DB query.
+        HTTPException 500: When an unexpected error occurs.
     """
     try:
         delete_query = text("DELETE FROM image_result WHERE id = :image_id")
@@ -196,13 +196,13 @@ async def delete_image_db(conn: Connection, image_id: int):
 
 @celery_app.task(name="cleanup_anonymous_image")
 def cleanup_anonymous_image(image_id: int, image_loc: str):
-    """비회원 이미지 DB 레코드 및 물리 파일을 삭제하는 Celery 태스크.
+    """Celery task that deletes a guest's image DB record and file.
 
-    DB 삭제와 파일 삭제는 독립적으로 처리되어 한쪽 실패가 다른쪽에 영향을 주지 않는다.
+    The DB deletion and file deletion are handled independently, so one failing does not affect the other.
 
     Args:
-        image_id (int): 삭제할 이미지 레코드 PK.
-        image_loc (str): 삭제할 이미지의 DB 기준 경로.
+        image_id (int): PK of the image record to delete.
+        image_loc (str): DB path of the image to delete.
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -231,12 +231,12 @@ def cleanup_anonymous_image(image_id: int, image_loc: str):
 
 @celery_app.task(name="cleanup_image_cam")
 def cleanup_image_cam(cam_loc: str):
-    """CAM 시각화 파일을 삭제하는 Celery 태스크.
+    """Celery task that deletes a CAM visualization file.
 
-    이미지/비디오 프레임 시각화 파일 모두 이 태스크로 정리한다.
+    Cleans up both image and video frame visualization files.
 
     Args:
-        cam_loc (str): 삭제할 CAM 시각화 파일의 DB 기준 경로.
+        cam_loc (str): DB path of the CAM visualization file to delete.
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -255,21 +255,21 @@ def cleanup_image_cam(cam_loc: str):
     
 async def register_image_result(conn: Connection, user_id: int | None, image_loc: str, 
                                 version_type: str, model_type: str, domain_type: str):
-    """PENDING 상태의 빈 이미지 레코드를 DB에 생성하고 image_id를 반환한다.
+    """Create an empty image record in the PENDING state and return its image_id.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        user_id (int | None): 로그인 사용자 ID. 비회원이면 None.
-        image_loc (str): 업로드된 이미지의 DB 기준 경로.
-        version_type (str): 모델 버전 타입.
-        model_type (str): 추론 모드 ("fast" | "pro").
-        domain_type (str): 탐지 도메인.
+        conn (Connection): SQLAlchemy async DB connection.
+        user_id (int | None): Logged-in user ID, or None for guests.
+        image_loc (str): DB path of the uploaded image.
+        version_type (str): Model version type.
+        model_type (str): Inference mode ("fast" | "pro").
+        domain_type (str): Detection domain.
 
     Returns:
-        int: 생성된 이미지 레코드의 PK (auto_increment).
+        int: PK of the created image record (auto_increment).
 
     Raises:
-        HTTPException 400: DB INSERT 실패 시. 업로드된 물리 파일도 함께 롤백 삭제된다.
+        HTTPException 400: When the DB INSERT fails. The uploaded file is also deleted as a rollback.
     """
     try:
         query = """
@@ -290,7 +290,7 @@ async def register_image_result(conn: Connection, user_id: int | None, image_loc
         })
         await conn.commit()
         
-        # MySQL에서 방금 생성된 auto_increment ID 가져오기
+        # Get the auto_increment ID just created by MySQL
         return result.lastrowid
         
     except SQLAlchemyError as e:
@@ -302,22 +302,22 @@ async def register_image_result(conn: Connection, user_id: int | None, image_loc
         
 async def update_image_result(conn: Connection, image_id: int, analysis: dict,
                               result_msg: str, status: str): 
-    """추론 완료 후 이미지 레코드에 분석 결과를 업데이트한다.
+    """Update the image record with the analysis result after inference finishes.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        image_id (int): 업데이트할 이미지 레코드 PK.
-        analysis (dict): 추론 결과값. prob 포함.
-        result_msg (str): 처리 결과 메세지.
-        status (str): 추론 상태 ("success" | "warning" | "failed").
+        conn (Connection): SQLAlchemy async DB connection.
+        image_id (int): PK of the image record to update.
+        analysis (dict): Inference result, including prob.
+        result_msg (str): Result message.
+        status (str): Inference status ("success" | "warning" | "failed").
 
     Raises:
-        SQLAlchemyError: DB 업데이트 실패 시 그대로 re-raise.
+        SQLAlchemyError: Re-raised as is when the DB update fails.
     """
-    # status 종류: success, warning, failed
-    # success: 이미지 추론 성공
-    # warning: 이미지 추론 과정 PredictError 발생
-    # failed: 이미지 추론 과정 알수 없는 오류 발생 
+    # status values: success, warning, failed
+    # success: image inference succeeded
+    # warning: a PredictError was raised during image inference
+    # failed: an unknown error occurred during image inference
     
     if status == 'success':
         label = "FAKE" if analysis["prob"] > 0.5 else "REAL"
@@ -350,19 +350,19 @@ async def update_image_result(conn: Connection, image_id: int, analysis: dict,
         raise e
 
 async def get_image_result(conn: Connection, image_id: int):
-    """image_id로 이미지 분석 결과를 조회해 반환한다.
+    """Fetch and return the image analysis result for image_id.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        image_id (int): 조회할 이미지 레코드 PK.
+        conn (Connection): SQLAlchemy async DB connection.
+        image_id (int): PK of the image record to fetch.
 
     Returns:
-        ImageData_indi: 이미지 분석 결과 스키마 객체.
+        ImageData_indi: Image analysis result schema object.
 
     Raises:
-        HTTPException 404: 해당 image_id 레코드가 없을 때.
-        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
-        HTTPException 500: 예기치 못한 오류 발생 시.
+        HTTPException 404: When no record exists for image_id.
+        HTTPException 503: When a SQLAlchemy error occurs during the DB query.
+        HTTPException 500: When an unexpected error occurs.
     """
     try:
         query = text("""
@@ -406,21 +406,21 @@ async def get_image_result(conn: Connection, image_id: int):
                             detail="알수없는 이유로 문제가 발생하였습니다.")
 
 async def get_user_histories(conn: Connection, user_id: int):
-    """사용자의 전체 이미지 분석 히스토리를 최신순으로 조회한다.
+    """Fetch the user's full image analysis history, newest first.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        user_id (int): 조회할 사용자 PK.
+        conn (Connection): SQLAlchemy async DB connection.
+        user_id (int): PK of the user to look up.
 
     Returns:
-        list[ImageData]: 이미지 히스토리 스키마 리스트. 결과 없으면 빈 리스트.
+        list[ImageData]: List of image history schemas. Empty list if there are no results.
 
     Raises:
-        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
-        HTTPException 500: 예기치 못한 오류 발생 시.
+        HTTPException 503: When a SQLAlchemy error occurs during the DB query.
+        HTTPException 500: When an unexpected error occurs.
     """
     try:
-        # SQL에 맞춰 테이블명과 컬럼 변경
+        # Table and column names follow the SQL schema
         query = ("""
             SELECT id, image_loc, label, version_type, model_type, domain_type, created_at
             FROM image_result
@@ -452,18 +452,18 @@ async def get_user_histories(conn: Connection, user_id: int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="알수없는 이유로 문제가 발생하였습니다.")
 
 async def get_user_history(conn: Connection, image_id: int):
-    """image_id로 이미지 개별 상세 히스토리를 조회한다.
+    """Fetch the detailed history of a single image by image_id.
 
     Args:
-        conn (Connection): SQLAlchemy 비동기 DB 커넥션.
-        image_id (int): 조회할 이미지 레코드 PK.
+        conn (Connection): SQLAlchemy async DB connection.
+        image_id (int): PK of the image record to fetch.
 
     Returns:
-        ImageDetailData | None: 상세 히스토리 스키마 객체. 레코드 없으면 None.
+        ImageDetailData | None: Detailed history schema object, or None if there is no record.
 
     Raises:
-        HTTPException 503: DB 쿼리 중 SQLAlchemy 오류 발생 시.
-        HTTPException 500: 예기치 못한 오류 발생 시.
+        HTTPException 503: When a SQLAlchemy error occurs during the DB query.
+        HTTPException 500: When an unexpected error occurs.
     """
     try:
         query = """

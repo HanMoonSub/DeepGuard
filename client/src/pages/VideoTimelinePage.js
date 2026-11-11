@@ -12,11 +12,11 @@ import VideoSegmentTrack from '../components/VideoSegmentTrack';
 import useCountUp from '../utils/useCountUp';
 import './VideoTimelinePage.css';
 
-// 도넛 색 (tokens.css의 danger와 동일 값)
+// Donut color (same value as danger in tokens.css)
 const COLOR_FAKE = '#ff4d4d';
 const DONUT_R = 70;
 
-// 공통 레이아웃: Navbar(light, 다크/라이트 전환) + 본문 + Footer
+// Shared layout: Navbar(light, dark/light toggle) + content + Footer
 const TimelineLayout = ({ sessionUser, children }) => {
   const [theme, setTheme] = useTheme();
   return (
@@ -40,15 +40,15 @@ const normalizeFrame = (f, i) => {
   return { ...f, fake_score, frame_index: f.frame_index ?? i, timestamp: ts };
 };
 
-// /detail 응답 상태 코드 → 에러 화면 type
+// /detail response status code → error screen type
 const errorTypeFromStatus = (status) => {
-  if (status === 401) return 'auth';       // 로그인 필수 API
-  if (status === 400) return 'incomplete'; // 추론이 SUCCESS가 아닌 영상
-  if (status === 404) return 'notfound';   // 기록/메타 없음
-  return 'server';                         // 5xx, 네트워크 오류 등
+  if (status === 401) return 'auth';       // login-only API
+  if (status === 400) return 'incomplete'; // video whose inference is not SUCCESS
+  if (status === 404) return 'notfound';   // no history/meta
+  return 'server';                         // 5xx, network errors, etc.
 };
 
-// 에러 화면 문구/버튼 — actions: home(동영상 분석) | login | retry | back
+// Error screen text/buttons — actions: home (video analysis) | login | retry | back
 const ERROR_VIEWS = {
   nostate: {
     tone: 'primary',
@@ -96,17 +96,17 @@ const VideoTimelinePage = ({ sessionUser }) => {
   const [timelineData, setTimelineData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError]         = useState(null); // { type, detail }
-  const [retryKey, setRetryKey]   = useState(0);    // 다시 시도 시 fetch 재실행용
-  const [thumbs, setThumbs]       = useState({});   // { frame_index: dataURL } 그래프 hover 미리보기용
-  const [hoverIdx, setHoverIdx]   = useState(null); // 그래프에서 커서가 올라간 프레임 순번
-  const [duration, setDuration]   = useState(null); // 영상 길이(초) — video 메타데이터에서
-  const [isGraphOpen, setIsGraphOpen] = useState(false); // 타임라인 그래프 펼침 (기본 접힘)
+  const [retryKey, setRetryKey]   = useState(0);    // re-runs the fetch on retry
+  const [thumbs, setThumbs]       = useState({});   // { frame_index: dataURL } for the chart hover preview
+  const [hoverIdx, setHoverIdx]   = useState(null); // index of the frame under the cursor in the chart
+  const [duration, setDuration]   = useState(null); // video length (seconds) — from the video metadata
+  const [isGraphOpen, setIsGraphOpen] = useState(false); // timeline chart expanded (collapsed by default)
 
   const videoId = data?.video_id || data?.id;
   const mediaLoc = data?.video_loc || '';
   const mediaSrc = mediaLoc.startsWith('blob') ? mediaLoc : mediaLoc;
 
-  // hover 툴팁 위치 계산용: 그래프 영역과 각 구간(열) ref
+  // For positioning the hover tooltip: refs to the chart area and each segment (column)
   const chartRef = useRef(null);
   const colRefs  = useRef([]);
   const videoRef = useRef(null);
@@ -142,15 +142,15 @@ const VideoTimelinePage = ({ sessionUser }) => {
     fetchTimelineDetails();
   }, [videoId, retryKey]);
 
-  // ── fake/real 비율 (프레임 카운트 기준) ──
+  // ── fake/real ratio (by frame count) ──
   const fakeCount  = timelineData.filter(f => f.fake_score > 50).length;
   const totalCount = timelineData.length;
   const fakeRatio  = totalCount ? (fakeCount / totalCount) * 100 : 0;
-  // 도넛: 로딩이 끝나면 0%에서 차오름 (상세 화면 원형 차트와 같은 효과)
+  // Donut: fills from 0% once loading finishes (same effect as the circular chart on the detail screen)
   const shownRatio = useCountUp(isLoading ? 0 : fakeRatio);
 
-  // ── 프레임 썸네일 추출 ──
-  // 숨은 video로 각 frame_time에 seek → canvas에 그려 작은 jpg로 저장 (동일 출처라 canvas 오염 없음)
+  // ── Frame thumbnail extraction ──
+  // Seek a hidden video to each frame_time → draw it on a canvas and save a small jpg (same origin, so the canvas isn't tainted)
   useEffect(() => {
     if (!mediaSrc || !timelineData.length) return;
     let cancelled = false;
@@ -190,14 +190,14 @@ const VideoTimelinePage = ({ sessionUser }) => {
           setThumbs(prev => ({ ...prev, [frame.frame_index]: url }));
         }
       } catch (e) {
-        // 썸네일은 부가 기능 — 실패해도 시각/확률 툴팁은 그대로 표시
+        // Thumbnails are optional — on failure, the time/probability tooltip still shows
       }
     };
     run();
     return () => { cancelled = true; video.removeAttribute('src'); video.load(); };
   }, [mediaSrc, timelineData]);
 
-  // 에러 화면 (state 없음 포함) — 정상 화면 외의 유일한 분기
+  // Error screen (including no state) — the only branch other than the normal screen
   const errorType = !videoId ? 'nostate' : error?.type;
   if (errorType) {
     const view = ERROR_VIEWS[errorType];
@@ -242,19 +242,19 @@ const VideoTimelinePage = ({ sessionUser }) => {
       model_type: data.model_type || 'fast',
       version_type: data.version_type || 'v1',
       video_name: data.video_name,
-      // 히트맵 화면에서 이전/다음 구간으로 바로 이동할 수 있게 구간 목록을 함께 전달
+      // Pass the segment list along so the heatmap screen can jump straight to the previous/next segment
       frames: timelineData.map(f => ({ frame_index: f.frame_index, timestamp: f.timestamp, frame_time: f.frame_time, fake_score: f.fake_score })),
     }
   });
 
   const circumference = 2 * Math.PI * DONUT_R;
-  // 영상 전체 판정: 상세 화면과 같은 기준(label → prob), 없으면 위조 구간 비율
+  // Overall video verdict: same rule as the detail screen (label → prob), otherwise the fake segment ratio
   const prob = data.prob ?? data.score ?? data.result_prob;
   const isFakeVideo = data.label && data.label !== 'UNKNOWN'
     ? data.label.toUpperCase() === 'FAKE'
     : (prob != null && prob !== -1 ? prob > 0.5 : fakeRatio > 50);
 
-  // 영상 길이: video 메타데이터 우선, 없으면 마지막 프레임 시각 + 샘플 간격으로 추정
+  // Video length: video metadata first, otherwise estimated as the last frame time + sample interval
   const times = timelineData.map(f => f.frame_time).filter(t => t != null);
   const step = times.length > 1 ? (times[times.length - 1] - times[0]) / (times.length - 1) : 0;
   const videoSec = duration || (times.length ? times[times.length - 1] + step : 0);
@@ -265,12 +265,12 @@ const VideoTimelinePage = ({ sessionUser }) => {
       ? <>동영상 내 <b className="dg-timeline__tone--fake">{Math.max(fakeSec, 1)}초</b> 동안 위조 흔적이 보입니다</>
       : <>{totalCount}개 구간 중 <b className="dg-timeline__tone--fake">{fakeCount}개</b> 구간에서 위조 흔적이 보입니다</>);
 
-  // 가장 의심되는 장면: 딥페이크 확률이 가장 높은 프레임 2개
+  // Most suspicious scenes: the 2 frames with the highest deepfake probability
   const topFrames = [...timelineData].sort((a, b) => b.fake_score - a.fake_score).slice(0, 2);
 
   return (
     <TimelineLayout sessionUser={sessionUser}>
-      {/* 상단: 왼쪽 뒤로가기 + 제목, 오른쪽 분석 조건 태그 */}
+      {/* Header: back button + title on the left, analysis condition tags on the right */}
       <header className="dg-timeline__head dg-timeline__head--title">
         <div className="dg-timeline__head-main">
           <button type="button" className="dg-timeline__back" onClick={() => navigate(-1)}>
@@ -280,7 +280,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
         </div>
       </header>
 
-      {/* 상단: 영상 | 오른쪽 패널 (A안 위조 비율 + D안 TOP 3) */}
+      {/* Top: video | right panel (option A fake ratio + option D TOP 3) */}
       <div className="dg-timeline__grid">
         <Card className="dg-card--static dg-timeline__media-card">
           <div className="dg-timeline__media">
@@ -288,7 +288,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
               onClick={e => { const v = e.currentTarget; if (v.paused) v.play().catch(() => {}); else v.pause(); }}
               onLoadedMetadata={e => { if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration); }} />
           </div>
-          {/* 영상 아래: 재생 컨트롤 + Deepfake / Real 구간 (드래그해서 초 단위 이동) */}
+          {/* Below the video: playback controls + Deepfake / Real segments (drag to seek by the second) */}
           <VideoSegmentTrack videoRef={videoRef} duration={videoSec} frames={timelineData} />
         </Card>
 
@@ -342,7 +342,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
         </aside>
       </div>
 
-      {/* 하단: 타임라인 그래프 & 프레임 데이터 보드 */}
+      {/* Bottom: timeline chart & frame data board */}
       <Card className="dg-card--static dg-timeline__board">
         <button type="button" className="dg-timeline__board-toggle" onClick={() => setIsGraphOpen(o => !o)}
           aria-expanded={isGraphOpen} aria-controls="tl-graph">
@@ -370,7 +370,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
           </div>
         ) : (
           <div>
-            {/* 차트 (E안): 50% 판정 기준선 + 구간별 그라데이션 막대 */}
+            {/* Chart (option E): 50% decision baseline + gradient bar per segment */}
             <div ref={chartRef} className="dg-timeline__chart">
               <div className="dg-timeline__threshold" aria-hidden="true">
                 <span>판정 기준 50%</span>
@@ -402,7 +402,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                 })}
               </div>
 
-              {/* hover 툴팁: 장면 썸네일 + 시각/확률 + 히트맵 안내 */}
+              {/* Hover tooltip: scene thumbnail + time/probability + heatmap hint */}
               {hoverIdx != null && timelineData[hoverIdx] && (() => {
                 const frame = timelineData[hoverIdx];
                 const colEl = colRefs.current[hoverIdx];
@@ -414,7 +414,7 @@ const VideoTimelinePage = ({ sessionUser }) => {
                   const chartRect = chartEl.getBoundingClientRect();
                   const colRect = colEl.getBoundingClientRect();
                   const right = colRect.right - chartRect.left + 4;
-                  // 기본은 막대 오른쪽, 공간이 없으면 왼쪽
+                  // Default is to the right of the bar, or to the left if there's no room
                   left = right + TIP_W + GAP <= chartRect.width ? right : colRect.left - chartRect.left - 4 - TIP_W;
                   left = Math.max(left, GAP);
                 }

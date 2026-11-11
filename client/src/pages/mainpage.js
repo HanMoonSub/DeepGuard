@@ -5,12 +5,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
-import Eclipse from '../components/Eclipse';
-import heroTileOrig from '../assets/hero-tile-orig.png';
-import heroTileHeat from '../assets/hero-tile-heat.png';
-import heroTileBbox from '../assets/hero-tile-bbox.png';
-import heroTileBoth from '../assets/hero-tile-both.png';
-import heroVideo from '../assets/hero-video.png';
+import ScrollHero from '../components/ScrollHero';
 import xaiLow from '../assets/xai-low.png';
 import xaiHigh from '../assets/xai-high.png';
 import benchParamsAcc from '../assets/bench-params-acc.png';
@@ -43,14 +38,14 @@ const MailIcon = () => (
 
 const HF_SPACE = 'https://huggingface.co/spaces/KoreaPeter';
 
-// 보조 버튼: Hugging Face Spaces 데모 (새 탭)
+// Secondary button: Hugging Face Spaces demo (new tab)
 const HfDemo = ({ space }) => (
   <Button variant="outline" href={`${HF_SPACE}/${space}`} target="_blank" rel="noreferrer" title="Hugging Face Spaces에서 열기">
     🤗 Open in Spaces ↗
   </Button>
 );
 
-// 기능 카드 상단 컬러 헤더의 미니 일러스트 (장식용)
+// Mini illustrations for the color header at the top of the feature cards (decorative)
 const VIDEO_WAVE = [30, 45, 35, 80, 100, 90, 40, 25, 55, 85, 30, 20];
 const FeatArt = ({ kind }) => (
   <span className="dg-feat__art" aria-hidden="true">
@@ -87,7 +82,7 @@ const FeatArt = ({ kind }) => (
   </span>
 );
 
-// SOTA 비교 (deepguard/MS_EffGCViT.md 표 기준, Latency: Tesla T4 × 1 · Batch 1 · Video 20 frames)
+// SOTA comparison (from the table in deepguard/MS_EffGCViT.md, Latency: Tesla T4 × 1 · Batch 1 · Video 20 frames)
 const SOTA_MODELS = [
   { id: 'b0', name: 'Fast (B0)', params: 8.7, time: 0.051, ours: true },
   { id: 'b5', name: 'Pro (B5)', params: 50.34, time: 0.479, ours: true },
@@ -97,7 +92,7 @@ const SOTA_MODELS = [
   { id: 'effort', name: 'Effort', venue: "ICML'25", params: 303.4, time: 1.041 },
 ];
 
-// 데이터셋별 Accuracy(%) · AUC(%)
+// Accuracy (%) · AUC (%) per dataset
 const BENCH = [
   {
     key: 'celeb',
@@ -121,14 +116,14 @@ const BENCH = [
 
 const MAX_PARAMS = Math.max(...SOTA_MODELS.map((m) => m.params));
 const MAX_TIME = Math.max(...SOTA_MODELS.map((m) => m.time));
-// 성능 섹션: 그래프와 표를 같은 자리에서 전환
+// Performance section: switch between chart and table in the same spot
 const BENCH_VIEWS = [
   { key: 'chart', label: '📈 한눈에 보기' },
   { key: 'table', label: '📋 상세 비교' },
 ];
 const pct = (v, min, max) => `${Math.max(4, Math.min(100, ((v - min) / (max - min)) * 100))}%`;
 
-// 분석 화면 안내: 번호 핀과 설명 박스
+// Analysis screen guide: numbered pins and description boxes
 const GUIDE_ITEMS = [
   { n: 1, title: '예시로 체험하기', desc: '샘플 이미지를 누르면 파일 없이도 바로 판정을 체험할 수 있어요.' },
   { n: 2, title: '업로드 · 웹캠 촬영', desc: '얼굴이 담긴 이미지를 올리거나 웹캠으로 바로 찍어요.' },
@@ -139,7 +134,7 @@ const GUIDE_ITEMS = [
 const GUIDE_LEFT = [1, 2, 5];
 const GUIDE_RIGHT = [3, 4];
 const GUIDE_SAMPLES = ['동양인', '동양인', '서양인', '서양인'];
-// 핀 위치: 800 × 460 목업 좌표 (px / 8 = cqw)
+// Pin positions: 800 × 460 mockup coordinates (px / 8 = cqw)
 const GUIDE_PINS = [
   [1, 6, 30],
   [2, 6, 96],
@@ -157,7 +152,7 @@ const GuideBox = ({ n, title, desc }) => (
   </div>
 );
 
-// 분석 페이지를 단순화한 목업 (장식용 그림)
+// Simplified mockup of the analysis page (decorative illustration)
 const GuideMock = () => (
   <div className="dg-gm" role="img" aria-label="이미지 분석 화면 예시: 예시 이미지, 업로드 영역, 분석 결과, 도메인과 모델 선택 패널">
     <div className="dg-gm__bar"><i /><i /><i /></div>
@@ -205,7 +200,7 @@ const GuideMock = () => (
   </div>
 );
 
-// 영상 분석 안내: 분석 중 화면 → 결과 화면
+// Video analysis guide: analyzing screen → result screen
 const VGUIDE_ITEMS = [
   { n: 1, title: '예시로 체험하기', desc: '샘플 영상을 누르면 파일 없이도 바로 분석을 체험할 수 있어요.' },
   { n: 2, title: '영상 업로드 · 재생', desc: '영상을 올리면 가운데 재생 버튼으로 바로 내용을 확인할 수 있어요.' },
@@ -216,13 +211,13 @@ const VGUIDE_ITEMS = [
   { n: 7, title: '프레임 타임라인', desc: '프레임별 위조 확률을 막대로 보여주고, 50%를 넘으면 빨간색으로 표시해요. 막대에 올리면 해당 장면이 보여요.' },
 ];
 const VM_W = 800;
-// 타임라인 막대: 프레임별 위조 확률 (모두 50% 초과 = 14개 중 14개 위조)
+// Timeline bars: fake probability per frame (all above 50% = 14 of 14 fake)
 const VM_PROBS = [0.92, 0.71, 0.58, 0.84, 0.97, 0.63, 0.993, 0.88, 0.55, 0.76, 0.95, 0.67, 0.81, 0.6];
 const VM_BAR_X = VM_PROBS.map((_, i) => 44 + i * (672 / (VM_PROBS.length - 1)));
 const VM_BAR_H = VM_PROBS.map((p) => p * 76);
 const VM_LINE = VM_BAR_X.map((x, i) => `${x.toFixed(1)},${(98 - VM_BAR_H[i]).toFixed(1)}`).join(' ');
 
-// 고정 좌표 목업(기본 800 × 460)을 부모 너비에 맞춰 축소
+// Scale a fixed-coordinate mockup (default 800 × 460) down to the parent width
 const VideoMockFit = ({ label, children, width = VM_W, className = 'dg-vm-fit', innerClassName = 'dg-vm' }) => {
   const ref = useRef(null);
   const [scale, setScale] = useState(1);
@@ -357,12 +352,12 @@ const VGuideBox = ({ n, title, desc, wide }) => (
   </div>
 );
 
-// XAI 안내: 왼쪽 결과·설정 화면, 오른쪽 설명 (번호 동그라미와 점선으로 연결)
+// XAI guide: result/settings screen on the left, description on the right (linked by numbered circles and dashed lines)
 const XAI_CHECKS = [
   ['High-level', '조명 불일치, 얼굴 기하, 그림자'],
   ['Low-level', '피부 질감, 경계 블렌딩, 압축 흔적'],
 ];
-// top: 넓은 화면에서 점선 끝이 번호에 닿도록 맞춘 세로 위치(px)
+// top: vertical position (px) set so the dashed line ends at the number on wide screens
 const XAI_STEPS = [
   { n: 1, top: 204, title: '브랜치 선택', desc: 'Low-level과 High-level 중 어떤 시선으로 볼지 골라요.' },
   { n: 2, top: 290, title: '위조 흔적 표시', desc: 'Heatmap, BBox, Heatmap + BBox 중 보기 방식을 바꿔요.' },
@@ -407,7 +402,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
   const [benchKey, setBenchKey] = useState('celeb');
   const [benchView, setBenchView] = useState('chart');
   const bench = BENCH.find((b) => b.key === benchKey);
-  // Accuracy · AUC 막대: 탭 내 최저값보다 조금 아래를 0점으로 잡아 차이가 보이게
+  // Accuracy · AUC bars: put zero slightly below the lowest value in the tab so differences are visible
   const range = (obj) => {
     const vals = Object.values(obj);
     return [Math.min(...vals) - 0.5, Math.max(...vals)];
@@ -419,7 +414,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
 
   const handleVideoAnalysis = () => navigate('/video-analysis');
 
-  // <a href>로 렌더링된 버튼에서 새로고침 없이 이동
+  // Navigate without a reload from buttons rendered as <a href>
   const linkTo = (handler) => (e) => {
     e.preventDefault();
     handler();
@@ -429,66 +424,8 @@ const MainPage = ({ sessionUser, onLogout }) => {
     <div className="dg-landing">
       <Navbar variant="dark" solid sessionUser={sessionUser} onLogout={onLogout} links={NAV_LINKS} />
 
-      <header className="dg-hero">
-        <div className="dg-wrap dg-hero__grid">
-          <div className="dg-hero__copy">
-            {/* 텍스트 뒤 이클립스 링 (장식용) */}
-            <Eclipse />
-            <h1>딥페이크,<br /><em>눈으로 확인</em>하세요</h1>
-            <p className="dg-hero__lead">
-              이미지와 영상 속 위조 흔적을 탐지하고, 어디가 왜 가짜인지 시각적 근거까지 제공하는 딥페이크 탐지 서비스.
-            </p>
-            <div className="dg-hero__cta">
-              <Button variant="primary" href="/analysis" onClick={linkTo(handleBasicAnalysis)}>지금 분석해보기</Button>
-            </div>
-          </div>
-          {/* 히어로 비주얼: 위 = 이미지 분석 4가지 시각화, 아래 = 영상 분석(재생 화면 + 위조 비율) */}
-          <div className="dg-hv" aria-label="DeepGuard 분석 결과 예시">
-            <span className="dg-hv__chip"><i />이미지 분석</span>
-            <div className="dg-hv__tiles">
-              {[
-                { src: heroTileOrig, label: 'Original' },
-                { src: heroTileHeat, label: 'Heatmap' },
-                { src: heroTileBbox, label: 'BBox' },
-                { src: heroTileBoth, label: 'Heatmap + BBox', hl: true },
-              ].map((t) => (
-                <figure key={t.label} className={`dg-hv__tile${t.hl ? ' is-hl' : ''}`}>
-                  <img src={t.src} alt={`${t.label} 시각화 예시`} width={238} height={278} decoding="async" />
-                  <figcaption>{t.label}</figcaption>
-                </figure>
-              ))}
-            </div>
-
-            <span className="dg-hv__chip is-video"><i />영상 분석</span>
-            <div className="dg-hv__video-row">
-              <figure className="dg-hv__video">
-                <img src={heroVideo} alt="분석 대상 영상 재생 화면" width={671} height={259} decoding="async" />
-                <span className="dg-hv__play" aria-hidden="true" />
-                <div className="dg-hv__vbar" aria-hidden="true">
-                  <span>0:01 / 0:14</span>
-                  <span className="dg-hv__track"><i /></span>
-                </div>
-              </figure>
-              <div className="dg-hv__ratio">
-                <h4>FORGERY RATIO</h4>
-                <div className="dg-hv__ratio-body">
-                  <div className="dg-hv__donut"><b>100%</b></div>
-                  <div className="dg-hv__legend">
-                    <div><i className="is-fake" /><span>FAKE</span><em className="is-fake">100.0%</em></div>
-                    <div><i className="is-real" /><span>REAL</span><em className="is-real">0.0%</em></div>
-                    <small>14 / 14 FRAMES</small>
-                  </div>
-                </div>
-                <dl className="dg-hv__stats">
-                  <div><dt>FPS</dt><dd>30.0</dd></div>
-                  <div><dt>전체 프레임</dt><dd>422</dd></div>
-                  <div><dt>얼굴 탐지</dt><dd>14 / 14</dd></div>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Scroll-driven hero (AI-generated photos + zoom-in video frames) */}
+      <ScrollHero onStart={linkTo(handleBasicAnalysis)} />
 
       <section id="features" className="dg-section dg-section--alt">
         <div className="dg-wrap dg-center">
@@ -699,7 +636,7 @@ const MainPage = ({ sessionUser, onLogout }) => {
           </div>
 
           <div className="dg-xai__grid">
-            {/* 동그라미 번호 → 오른쪽 설명 점선 (넓은 화면에서만) */}
+            {/* Numbered circles → dashed lines to the description on the right (wide screens only) */}
             <svg className="dg-xai__lnk" width="660" height="540" aria-hidden="true">
               <path d="M553 217H652" />
               <path d="M553 303H652" />

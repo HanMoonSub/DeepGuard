@@ -1,4 +1,4 @@
-/* 분석 상세 페이지 전용 스타일 — 다른 페이지에 새지 않도록 .dg-detail 하위로 한정 */
+/* Styles for the analysis detail page only — scoped under .dg-detail so they don't leak into other pages */
 .dg-detail {
   isolation: isolate;
   font-family: var(--font-sans);
@@ -14,7 +14,7 @@
 .dg-detail *::after {
   box-sizing: border-box;
 }
-/* :where()로 specificity 0 → 컴포넌트/섹션 스타일이 항상 우선 */
+/* :where() gives specificity 0 → component/section styles always win */
 :where(.dg-detail) :where(h1, h2, h3, p) {
   margin: 0;
   padding: 0;
@@ -30,7 +30,7 @@
   padding: calc(var(--nav-h) + 32px) 0 72px;
 }
 
-/* 로딩 / 빈 상태 */
+/* Loading / empty state */
 .dg-detail__state {
   min-height: 50vh;
   display: flex;
@@ -54,7 +54,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* 상단 */
+/* Header */
 .dg-detail__head {
   display: flex;
   align-items: center;
@@ -88,7 +88,7 @@
   line-height: 1.25;
 }
 
-/* 2열 그리드 */
+/* Two-column grid */
 .dg-detail__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
@@ -101,7 +101,7 @@
   gap: 16px;
 }
 
-/* Card 본문 기본 색/크기 덮어쓰기 */
+/* Override the default color/size of the Card body */
 .dg-detail .dg-card {
   padding: 28px;
 }
@@ -110,7 +110,7 @@
   font-size: var(--fs-body);
 }
 
-/* 미디어 */
+/* Media */
 .dg-detail__media-card {
   display: flex;
   flex-direction: column;
@@ -120,7 +120,7 @@
   display: flex;
   flex-direction: column;
 }
-/* 이미지는 칸 크기에 맞춰 비율 유지(contain) — 칸 높이는 오른쪽 열이 정함 */
+/* Images keep their aspect ratio within the cell (contain) — the cell height is set by the right column */
 .dg-detail__media {
   position: relative;
   flex: 1;
@@ -145,7 +145,7 @@
   color: var(--color-muted);
 }
 
-/* 결과 중심 스플릿 — 오른쪽 패널 */
+/* Result-focused split — right panel */
 .dg-detail__panel {
   border: 1px solid var(--color-line);
   border-radius: 18px;
@@ -205,7 +205,7 @@
   font-weight: 800;
 }
 
-/* 부위별 위조 흔적 (DeepClip 20개 텍스트 확률, BETA) */
+/* Per-region forgery artifacts (DeepClip 20 text probabilities, BETA) */
 .dg-detail__artifact {
   padding: 20px;
   display: flex;
@@ -243,7 +243,7 @@
 .dg-detail__artifact-body {
   position: relative;
 }
-/* 비로그인 / 분석 전: 그래프를 희미하게 */
+/* Not logged in / not analyzed yet: faint chart */
 .dg-detail__artifact-body.is-locked .dg-detail__artifact-bars {
   padding: 24px 0;
   filter: blur(1.5px);
@@ -251,7 +251,7 @@
   pointer-events: none;
   user-select: none;
 }
-/* 희미한 그래프 위 안내 + 버튼 */
+/* Guidance + button over the faint chart */
 .dg-detail__artifact-overlay {
   position: absolute;
   inset: 0;
@@ -359,8 +359,8 @@
 .dg-detail__tone--fake { color: var(--color-danger); }
 .dg-detail__tone--unknown { color: var(--color-muted); }
 
-/* 최근 분석 — 가로 스크롤 썸네일 줄 */
-/* 본문 왼쪽 빈 공간의 최근 분석 카드 (배경 패널 없이 카드만) */
+/* Recent analyses — horizontally scrolling thumbnail row */
+/* Recent analysis cards in the empty space left of the content (cards only, no background panel) */
 .dg-detail .dg-wrap.dg-detail__layout {
   max-width: calc(var(--container) + 268px);
   display: grid;
@@ -528,8 +528,8 @@
   color: var(--color-muted);
 }
 
-/* 반응형 */
-/* 좁은 화면: 최근 분석을 본문 위 가로 스크롤 줄로 */
+/* Responsive */
+/* Narrow screens: recent analyses become a horizontally scrolling row above the content */
 @media (max-width: 1080px) {
   .dg-detail .dg-wrap.dg-detail__layout {
     grid-template-columns: minmax(0, 1fr);

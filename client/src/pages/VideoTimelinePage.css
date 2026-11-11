@@ -1,7 +1,7 @@
-/* 동영상 타임라인 페이지 전용 스타일 — 다른 페이지에 새지 않도록 .dg-timeline 하위로 한정 */
+/* Styles for the video timeline page only — scoped under .dg-timeline so they don't leak into other pages */
 .dg-timeline {
-  isolation: isolate; /* AmbientBackground(z-index:-1)를 콘텐츠 뒤에 깔기 위함 */
-  --tl-real: #5b95ff; /* Real 구간 색 (트랙과 동일) */
+  isolation: isolate; /* so AmbientBackground (z-index:-1) sits behind the content */
+  --tl-real: #5b95ff; /* color of Real segments (same as the track) */
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: var(--color-bg-alt);
@@ -15,7 +15,7 @@
 .dg-timeline *::after {
   box-sizing: border-box;
 }
-/* :where()로 specificity 0 → 컴포넌트/섹션 스타일이 항상 우선 */
+/* :where() gives specificity 0 → component/section styles always win */
 :where(.dg-timeline) :where(h1, h2, h3, p, dl, dd) {
   margin: 0;
   padding: 0;
@@ -31,7 +31,7 @@
   padding: calc(var(--nav-h) + 32px) 0 72px;
 }
 
-/* Card 본문 기본 색/크기 덮어쓰기 */
+/* Override the default color/size of the Card body */
 .dg-timeline .dg-card {
   padding: 28px;
 }
@@ -40,7 +40,7 @@
   font-size: var(--fs-body);
 }
 
-/* 로딩 / 빈 상태 */
+/* Loading / empty state */
 .dg-timeline__state {
   min-height: 50vh;
   display: flex;
@@ -68,7 +68,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* 에러 화면 (state 없음 / 비로그인 / 미완료 / 없음 / 빈 결과 / 서버 오류) */
+/* Error screen (no state / not logged in / incomplete / not found / empty result / server error) */
 .dg-timeline__error {
   max-width: 560px;
   margin: 48px auto 0;
@@ -133,7 +133,7 @@
   margin-top: 28px;
 }
 
-/* 상단 */
+/* Header */
 .dg-timeline__head {
   display: flex;
   justify-content: space-between;
@@ -184,7 +184,7 @@
   color: var(--color-muted);
 }
 
-/* 상단 2열: 영상 | 오른쪽 패널 */
+/* Top two columns: video | right panel */
 .dg-timeline__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
@@ -211,7 +211,7 @@
   align-items: center;
   overflow: hidden;
   border-radius: 12px;
-  background: #0b1220; /* 영상 프레임은 테마와 무관하게 어둡게 */
+  background: #0b1220; /* video frame stays dark regardless of theme */
 }
 .dg-timeline__media video {
   max-width: 100%;
@@ -225,7 +225,7 @@
   min-width: 0;
 }
 
-/* 위조 비율 — 패널에서 가장 크게 */
+/* Fake ratio — the largest element in the panel */
 .dg-timeline .dg-timeline__ratio-card {
   flex: 1;
   display: flex;
@@ -287,7 +287,7 @@
   color: var(--color-ink);
 }
 
-/* 가장 의심되는 장면 TOP 2 (6차 A안 의심 구간 스타일, 프레임 단위) */
+/* Top 2 most suspicious scenes (suspicious segment style from round 6 option A, per frame) */
 .dg-timeline__top {
   display: flex;
   flex-direction: column;
@@ -376,7 +376,7 @@
   color: var(--tl-real);
 }
 
-/* 하단 타임라인 보드 */
+/* Bottom timeline board */
 .dg-timeline__board-toggle {
   width: 100%;
   display: flex;
@@ -453,10 +453,10 @@
   gap: 6px;
 }
 
-/* 차트 (E안) — 50% 판정 기준선 + 그라데이션 막대 */
+/* Chart (option E) — 50% decision baseline + gradient bars */
 .dg-timeline__chart {
   --tl-chart-h: 220px;
-  --tl-chart-top: 26px; /* 100% 막대 위 값 라벨 자리 */
+  --tl-chart-top: 26px; /* space for the value label above a 100% bar */
   position: relative;
   height: calc(var(--tl-chart-h) + var(--tl-chart-top));
   padding-top: var(--tl-chart-top);
@@ -474,7 +474,7 @@
   position: absolute;
   right: 0;
   top: 0;
-  z-index: 2; /* 막대에 가려지지 않게 */
+  z-index: 2; /* so it isn't hidden by the bars */
   transform: translateY(-50%);
   padding: 2px 8px;
   border-radius: 99px;
@@ -490,7 +490,7 @@
   display: flex;
   gap: 8px;
   height: 100%;
-  padding: 0 112px 0 24px; /* 오른쪽은 '판정 기준 50%' 라벨 자리 — 막대와 겹치지 않게 */
+  padding: 0 112px 0 24px; /* the right side leaves room for the 'decision baseline 50%' label — so it doesn't overlap the bars */
 }
 .dg-timeline__bar-col {
   position: relative;
@@ -549,7 +549,7 @@
 .dg-timeline__swatch--normal {
   background: var(--tl-real);
 }
-/* hover 툴팁 — 막대 옆 (위치는 JS 계산) */
+/* Hover tooltip — next to the bar (position computed in JS) */
 .dg-timeline__preview {
   position: absolute;
   top: 8px;
@@ -603,7 +603,7 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 반응형 */
+/* Responsive */
 @media (max-width: 900px) {
   .dg-timeline__grid {
     grid-template-columns: 1fr;

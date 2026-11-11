@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
-// 원형 차트 채움 시간 (ms)
+// Fill duration of the donut chart (ms)
 export const COUNT_UP_MS = 1200;
 
-// 0 → target까지 easeOutCubic으로 차오르는 값. 원형 차트 호와 가운데 숫자에 같이 사용
+// Value that fills from 0 → target with easeOutCubic. Shared by the donut arc and the number in the middle
 const useCountUp = (target, duration = COUNT_UP_MS) => {
   const [value, setValue] = useState(0);
   useEffect(() => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import './NodeNetwork.css';
 
-// 노드 좌표 (viewBox 720x860 기준, 오른쪽 위주로 배치)
+// Node coordinates (based on a 720x860 viewBox, placed mostly on the right)
 const NODES = [
   [400, 180], [560, 250], [660, 160], [470, 360], [530, 440],
   [670, 480], [450, 590], [500, 660], [640, 640], [420, 300],

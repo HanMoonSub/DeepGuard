@@ -20,10 +20,10 @@ rs_ = Style.RESET_ALL
 
 def rule_based_fake_prob(result: dict) -> float:
     """
-    predict_video_artifacts 결과로 최종 fake 확률 계산 (rule-base)
-      - real(1-prob), prob(1-real), artifact 20개 = 22개 확률 중 argmax
-      - real이 가장 크면 prob 사용, 아니면 가장 큰 fake 쪽 확률(prob 또는 artifact) 사용
-    얼굴 미검출(artifacts None)이면 prob(0.5)를 그대로 사용
+    Compute the final fake probability from the predict_video_artifacts result (rule-based)
+      - argmax over 22 probabilities: real (1-prob), prob (1-real), and the 20 artifacts
+      - if real is the largest, use prob; otherwise use the largest fake-side probability (prob or an artifact)
+    If no face was detected (artifacts None), prob (0.5) is used as-is
     """
     prob = result["prob"]
     artifacts = result["artifacts"]
@@ -112,7 +112,7 @@ def main():
     loss = log_loss(all_true, all_pred)
     macro_f1 = f1_score(all_true, y_pred_bin, average="macro")
 
-    # Confusion Matrix (임계값 0.5)
+    # Confusion Matrix (threshold 0.5)
     tn, fp, fn, tp = confusion_matrix(all_true, y_pred_bin, labels=[0, 1]).ravel()
 
     # REAL(0) recall, precision, f1

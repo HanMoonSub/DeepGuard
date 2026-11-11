@@ -2,7 +2,7 @@ import React from 'react';
 import logoMark from '../assets/logo-shield.svg';
 import './Footer.css';
 
-// 섹션 링크는 다른 페이지에서도 동작하도록 /main#... 형태로 건다
+// Section links use the /main#... form so they also work from other pages
 const COLUMNS = [
   {
     title: '서비스',

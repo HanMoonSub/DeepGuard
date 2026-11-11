@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './WebcamCapture.css';
 
-// 녹화 포맷: mp4만 사용.
-// 브라우저 MediaRecorder의 webm은 헤더에 길이 정보가 없어 서버 OpenCV가 프레임 수를 읽지 못함
-// (CAP_PROP_FRAME_COUNT가 쓰레기 값, FPS 1000) → 분석 실패. mp4는 정상(Chrome/Edge/Safari 지원).
+// Recording format: mp4 only.
+// webm from the browser's MediaRecorder has no duration in its header, so the server's OpenCV cannot read the frame count
+// (CAP_PROP_FRAME_COUNT is garbage, FPS 1000) → analysis fails. mp4 works (supported by Chrome/Edge/Safari).
 const VIDEO_MIME_CANDIDATES = [
   'video/mp4;codecs=avc1',
   'video/mp4',
 ];
-const MIN_RECORD_SEC = 3;   // 서버가 1초 단위로 프레임을 뽑으므로 최소 길이 보장
-const MAX_RECORD_SEC = 30;  // 업로드/분석 시간 제한
+const MIN_RECORD_SEC = 3;   // the server samples frames once per second, so enforce a minimum length
+const MAX_RECORD_SEC = 30;  // upload/analysis time limit
 
 const pickVideoMime = () => {
   if (typeof MediaRecorder === 'undefined') return null;
@@ -29,7 +29,7 @@ const WebcamIcon = () => (
   </svg>
 );
 
-/** 업로드 영역 하단 바: 파일 선택 / 웹캠 (2등분 글자 버튼) */
+/** Bar at the bottom of the upload area: file picker / webcam (two equal text buttons) */
 export const MediaSourceBar = ({ onUpload, onWebcam, mode = 'photo', disabled = false }) => (
   <div className="dg-webcam-bar" onClick={(e) => e.stopPropagation()}>
     <button type="button" className="dg-webcam-bar__btn" onClick={onUpload} disabled={disabled}
@@ -46,8 +46,8 @@ export const MediaSourceBar = ({ onUpload, onWebcam, mode = 'photo', disabled = 
 );
 
 /**
- * 웹캠 실시간 미리보기 + 촬영(photo) / 녹화(video).
- * 결과는 File 객체로 onCapture에 넘겨 기존 업로드 흐름(handleFileSelect)을 그대로 탄다.
+ * Live webcam preview + capture (photo) / recording (video).
+ * The result is passed to onCapture as a File object and goes through the existing upload flow (handleFileSelect).
  */
 const WebcamCapture = ({ mode = 'photo', onCapture, onClose }) => {
   const videoRef = useRef(null);
@@ -137,7 +137,7 @@ const WebcamCapture = ({ mode = 'photo', onCapture, onClose }) => {
     timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
   };
 
-  // 최대 길이 도달 시 자동 종료
+  // Stop automatically when the maximum length is reached
   useEffect(() => {
     if (recording && seconds >= MAX_RECORD_SEC) stopRecording();
   }, [recording, seconds]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -68,7 +68,7 @@ class ClipXGradCAMExplainer(ClipExplainerMixin, XGradCAMExplainer):
 
 
 class ClipBranchFusionExplainer(BranchFusionExplainer):
-    """BranchFusionExplainer의 DeepClip 버전: dataset 없음, low/high에는 Clip*Explainer 클래스만 허용."""
+    """DeepClip version of BranchFusionExplainer: no dataset, and only Clip*Explainer classes are allowed for low/high."""
 
     def __init__(
         self,

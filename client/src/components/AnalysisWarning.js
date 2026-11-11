@@ -1,7 +1,7 @@
 import React from 'react';
 import Button from './Button';
 
-// 판정 불가(WARNING) 결과 화면 — 이미지/동영상 분석 공용
+// Result screen for "cannot judge" (WARNING) — shared by image/video analysis
 const TIPS = {
   image: [
     '얼굴이 정면으로, 화면에 크게 나오게 해 주세요',
@@ -21,7 +21,7 @@ const CheckIcon = () => (
   </svg>
 );
 
-// 얼굴 인식 실패: 스캔 프레임 + 무표정 얼굴
+// Face not detected: scan frame + blank face
 const FaceOffIcon = () => (
   <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M3 8V5a2 2 0 0 1 2-2h3" /><path d="M16 3h3a2 2 0 0 1 2 2v3" />
