@@ -39,6 +39,7 @@
 - [🎨 ディープフェイクAI説明可能性(XAI)](#-ディープフェイクai説明可能性xai) - Grad-CAM およびアテンションマップによるモデル判断根拠の可視化。
 - [📓 Tutorials](#-tutorials) - 推論とデュアルブランチXAI可視化のためのハンズオンノートブック
 - [📬 制作者](#-制作者) - 忠北大学校の卒業制作を手がけたチーム紹介
+- [🤝 コントリビューター](#-コントリビューター) - コードに貢献したすべての方々と、貢献方法・脆弱性の報告方法
 - [📝 参考文献](#-参考文献) - 本プロジェクトが参考にしたライブラリ、データセット、先行研究
 - [⚖️ ライセンス](#-ライセンス) - MIT ライセンス
 
@@ -280,7 +281,7 @@ pip install -r requirements.txt
 
 ## 🔮 画像と動画の予測
 
-### 🤗 Option A: HuggingFace
+### Option A: HuggingFace
 
 ```python
 from transformers import pipeline
@@ -304,7 +305,7 @@ result = clf("video.mp4", num_frames=20, agg_mode="conf")
 # [{'label': 'fake', 'score': 0.9634}, {'label': 'real', 'score': 0.0366}]
 ```
 
-### 📦 Option B: Pip
+### Option B: Pip
 
 ```bash
 pip install deepguard
@@ -520,6 +521,14 @@ Jupyterノートブックは、gitリポジトリのtutorialsフォルダ内に�
 | **ソ・ユンジェ(서윤제)** | AI Engineering | AIモデルアーキテクチャ設計、推論API設計、モデルサービング | [✉️](mailto:seoyunje2001@gmail.com) |
 
 </div>
+
+## 🤝 コントリビューター
+
+<a href="https://github.com/HanMoonSub/DeepGuard/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=HanMoonSub/DeepGuard" alt="Contributors" />
+</a>
+
+コントリビューションを歓迎します！プルリクエストを作成する前に [CONTRIBUTING.md](./CONTRIBUTING.md) をお読みください。セキュリティ脆弱性の報告方法は [SECURITY.md](./.github/SECURITY.md) をご覧ください。
 
 ## 📝 参考文献
 

@@ -39,6 +39,7 @@
 - [🎨 딥페이크 AI 설명가능성(XAI)](#-딥페이크-ai-설명가능성xai) - Grad-CAM 및 어텐션 맵을 통한 모델 판단 근거 시각화.
 - [📓 Tutorials](#-tutorials) - 추론과 듀얼 브랜치 XAI 시각화를 위한 실습 노트북
 - [📬 제작자](#-제작자) - 충북대학교 졸업 작품을 만든 팀 소개
+- [🤝 기여자](#-기여자) - 코드에 기여한 모든 분들과 기여 및 보안 취약점 신고 방법
 - [📝 참고 문헌](#-참고-문헌) - 이 프로젝트가 참고한 라이브러리, 데이터셋, 선행 연구
 - [⚖️ 라이선스](#-라이선스) - MIT 라이선스
 
@@ -280,7 +281,7 @@ pip install -r requirements.txt
 
 ## 🔮 이미지 및 비디오 예측
 
-### 🤗 Option A: HuggingFace
+### Option A: HuggingFace
 
 ```python
 from transformers import pipeline
@@ -304,7 +305,7 @@ result = clf("video.mp4", num_frames=20, agg_mode="conf")
 # [{'label': 'fake', 'score': 0.9634}, {'label': 'real', 'score': 0.0366}]
 ```
 
-### 📦 Option B: Pip
+### Option B: Pip
 
 ```bash
 pip install deepguard
@@ -520,6 +521,14 @@ result = explainer.display_heatmap_bbox_on_image(
 | **서윤제** | AI Engineering | AI 모델 구조 설계, 추론 API 설계, 모델 서빙 | [✉️](mailto:seoyunje2001@gmail.com) |
 
 </div>
+
+## 🤝 기여자
+
+<a href="https://github.com/HanMoonSub/DeepGuard/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=HanMoonSub/DeepGuard" alt="Contributors" />
+</a>
+
+기여는 언제나 환영합니다! PR을 열기 전에 [CONTRIBUTING.md](./CONTRIBUTING.md)를 읽어주세요. 보안 취약점은 [SECURITY.md](./.github/SECURITY.md)의 방법으로 신고해 주세요.
 
 ## 📝 참고 문헌
 

@@ -39,6 +39,7 @@
 - [🎨 DeepFake AI Explainability](#-deepfake-ai-explainability) - Visualizing model focus using Grad-CAM and attention maps
 - [📓 Tutorials](#-tutorials) - Hands-on Colab notebooks for inference and dual-branch XAI visualization
 - [📬 Authors](#-authors) - Team behind this senior graduation project at Chungbuk National University
+- [🤝 Contributors](#-contributors) - Everyone who has contributed code, plus how to contribute and report security issues
 - [📝 Reference](#-reference) - Libraries, datasets, and prior work this project builds on
 - [⚖️ License](#-license) - MIT license
 
@@ -283,7 +284,7 @@ We provide training scripts for both `ms_eff_vit` and `ms_eff_gcvit`. We recomme
 
 ## 🔮 Predict Image & Video
 
-### 🤗 Option A: HuggingFace
+### Option A: HuggingFace
 
 ```python
 from transformers import pipeline
@@ -307,7 +308,7 @@ result = clf("video.mp4", num_frames=20, agg_mode="conf")
 # [{'label': 'fake', 'score': 0.9634}, {'label': 'real', 'score': 0.0366}]
 ```
 
-### 📦 Option B: Pip
+### Option B: Pip
 
 ```bash
 pip install deepguard
@@ -528,6 +529,14 @@ The jupyter notebooks themselves can be found under the tutorials folder in the 
 
 </div>
 
+
+## 🤝 Contributors
+
+<a href="https://github.com/HanMoonSub/DeepGuard/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=HanMoonSub/DeepGuard" alt="Contributors" />
+</a>
+
+Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. To report a security vulnerability, see [SECURITY.md](./.github/SECURITY.md).
 
 ## 📝 Reference
 
