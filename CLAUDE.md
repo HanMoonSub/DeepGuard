@@ -47,14 +47,13 @@ of the installable package.
 ```bash
 pip install -r requirements.txt      # full dev environment (backend + ML + lint)
 ruff check .                         # lint
-ruff format --check .                # format check (CI uses --check; drop it to auto-format)
-pytest --tb=short -q                 # run tests (mirrors PR CI)
+ruff format --check .                # format check (drop --check to auto-format)
+pytest --tb=short -q                 # run tests
 pytest path/to/test_file.py::test_name   # run a single test
 ```
 
-CI (`.github/workflows/pr-ci.yml`) runs `ruff check`, `ruff format --check`, then `pytest` on every
-PR into `main`/`develop`, on Python 3.11. There is no `ruff` config section in `pyproject.toml`, so
-default ruff rules apply.
+There is no PR CI workflow for lint/tests, so run these locally before opening a PR. There is no
+`ruff` config section in `pyproject.toml`, so default ruff rules apply.
 
 ### Training
 
