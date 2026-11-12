@@ -7,7 +7,7 @@ aiofiles>=25.1.0
 python-dotenv>=1.2.3
 
 # --- [Database & ORM] ---
-sqlalchemy>=2.0.54
+sqlalchemy>=2.0.57
 aiomysql>=0.3.2
 redis>=8.1.0
 
