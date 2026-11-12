@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 # ─────────────────────────────────────────────
 [project]
 name = "deepguard"           # pip install deepguard 할 때 이 이름
-version = "2.0.0"            
+version = "2.0.1"            
 description = "Multi-Scale Efficient Global Context Vision Transformer for Robust Deepfake Detection"
 readme = "README.md"         # description shown on the PyPI page (markdown)
 requires-python = ">=3.10"   # torch/torchvision/torchmetrics require Python >= 3.10, so this follows that lower bound
