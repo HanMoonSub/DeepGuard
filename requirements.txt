@@ -44,4 +44,4 @@ omegaconf>=2.4.0
 celery>=5.6.3
 
 # --- [Linting & Formatting] ---
-ruff>=0.16.9
+ruff>=0.17.4
