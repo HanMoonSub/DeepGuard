@@ -5,9 +5,13 @@ import pandas as pd
 from tqdm import tqdm
 from colorama import Fore, Style
 from sklearn.metrics import (
-    roc_auc_score, accuracy_score, 
-    recall_score, precision_score, f1_score, 
-    log_loss, confusion_matrix
+    roc_auc_score,
+    accuracy_score,
+    recall_score,
+    precision_score,
+    f1_score,
+    log_loss,
+    confusion_matrix,
 )
 from .video_predictor import ClipVideoPredictor, VideoPredictor
 
@@ -18,11 +22,13 @@ y_ = Fore.YELLOW
 s_ = Style.BRIGHT
 rs_ = Style.RESET_ALL
 
-def rule_based_fake_prob(result: dict) -> float:
+
+def rule_based_fake_prob(result: dict, top_k: int = 3) -> float:
     """
     Compute the final fake probability from the predict_video_artifacts result (rule-based)
-      - argmax over 22 probabilities: real (1-prob), prob (1-real), and the 20 artifacts
-      - if real is the largest, use prob; otherwise use the largest fake-side probability (prob or an artifact)
+      - S_art: mean of the top-k artifact logits (out of 20), mapped back with sigmoid
+      - final = max(prob, S_art): artifacts can only raise the fake probability, never lower it
+    top_k=1 makes S_art the max artifact probability; larger top_k needs more artifacts to agree.
     If no face was detected (artifacts None), prob (0.5) is used as-is
     """
     prob = result["prob"]
@@ -30,83 +36,195 @@ def rule_based_fake_prob(result: dict) -> float:
     if artifacts is None:
         return prob
 
-    artifact_probs = [p for types in artifacts.values() for p in types.values()]
-    fake_max = max([prob] + artifact_probs)
-    return prob if 1 - prob >= fake_max else fake_max
+    artifact_probs = np.array(
+        [p for types in artifacts.values() for p in types.values()], dtype=np.float64
+    )
+    artifact_probs = np.clip(artifact_probs, 1e-7, 1 - 1e-7)
+    logits = np.log(artifact_probs / (1 - artifact_probs))
+    s_art = 1 / (1 + np.exp(-np.sort(logits)[-top_k:].mean()))
+    return max(prob, float(s_art))
+
 
 def main():
     parser = argparse.ArgumentParser(description="Predict DeepFake Video")
     # --- Data & Path Settings ---
-    parser.add_argument("--root-dir", required=True, help="Root directory containing the dataset files")
-    parser.add_argument("--label-col", default='label', type=str, help="Column name for target labels")
-    parser.add_argument("--source-col", default='source', type=str, help="Column name for video source/folder")
-    parser.add_argument("--video-col", default='vid', type=str, help="Column name for video filenames")
-    parser.add_argument("--dataset", default='celeb_df_v2', type=str, help="Target dataset for evaluation (e.g., celeb_df_v2, ff++, kodf)")
+    parser.add_argument(
+        "--root-dir", required=True, help="Root directory containing the dataset files"
+    )
+    parser.add_argument(
+        "--label-col", default="label", type=str, help="Column name for target labels"
+    )
+    parser.add_argument(
+        "--source-col",
+        default="source",
+        type=str,
+        help="Column name for video source/folder",
+    )
+    parser.add_argument(
+        "--video-col", default="vid", type=str, help="Column name for video filenames"
+    )
+    parser.add_argument(
+        "--dataset",
+        default="celeb_df_v2",
+        type=str,
+        help="Target dataset for evaluation (e.g., celeb_df_v2, ff++, kodf)",
+    )
 
     # --- Model & Detection Hyperparameters ---
-    parser.add_argument("--margin-ratio", default=0.2, type=float, help="Margin ratio around the detected face crop")
-    parser.add_argument("--conf-thres", default=0.5, type=float, help="Confidence threshold for face detection")
-    parser.add_argument("--min-face-ratio", default=0.01, type=float, help="Minimum face-to-frame size ratio to process")
-    parser.add_argument("--model-name", default='ms_eff_vit_b0', type=str, help="Name of the model architecture (ms_eff_vit_*, ms_eff_gcvit_*, deepclip_b0, deepclip_b5)")
-    parser.add_argument("--model-dataset", default='celeb_df_v2', type=str, help="Dataset used for model pre-training (ignored for deepclip models)")
+    parser.add_argument(
+        "--margin-ratio",
+        default=0.2,
+        type=float,
+        help="Margin ratio around the detected face crop",
+    )
+    parser.add_argument(
+        "--conf-thres",
+        default=0.5,
+        type=float,
+        help="Confidence threshold for face detection",
+    )
+    parser.add_argument(
+        "--min-face-ratio",
+        default=0.01,
+        type=float,
+        help="Minimum face-to-frame size ratio to process",
+    )
+    parser.add_argument(
+        "--model-name",
+        default="ms_eff_vit_b0",
+        type=str,
+        help="Name of the model architecture (ms_eff_vit_*, ms_eff_gcvit_*, deepclip_b0, deepclip_b5)",
+    )
+    parser.add_argument(
+        "--model-dataset",
+        default="celeb_df_v2",
+        type=str,
+        help="Dataset used for model pre-training (ignored for deepclip models)",
+    )
 
     # --- Inference Strategy ---
-    parser.add_argument("--num-frames", default=20, type=int, help="Number of frames to sample per video")
-    parser.add_argument("--agg-mode", default='conf', type=str, help="Aggregation method for frame-level predictions")
-    parser.add_argument("--tta-hflip", default=0.0, type=float, help="Probability of horizontal flip for Test-Time Augmentation (TTA)")
+    parser.add_argument(
+        "--num-frames",
+        default=20,
+        type=int,
+        help="Number of frames to sample per video",
+    )
+    parser.add_argument(
+        "--agg-mode",
+        default="conf",
+        type=str,
+        help="Aggregation method for frame-level predictions",
+    )
+    parser.add_argument(
+        "--tta-hflip",
+        default=0.0,
+        type=float,
+        help="Probability of horizontal flip for Test-Time Augmentation (TTA)",
+    )
+    parser.add_argument(
+        "--top-k",
+        default=3,
+        type=int,
+        help="Number of top artifact logits averaged into S_art (deepclip only, 1-20)",
+    )
 
     args = parser.parse_args()
-    
-    
-    
-    print(f"\n🚀 {s_}{c_}[1/4] 데이터셋 준비 중...{rs_} (Target: {y_}{args.dataset}{rs_})")
-    
+    if not 1 <= args.top_k <= 20:
+        parser.error("--top-k must be between 1 and 20")
+
+    print(
+        f"\n🚀 {s_}{c_}[1/4] 데이터셋 준비 중...{rs_} (Target: {y_}{args.dataset}{rs_})"
+    )
+
     if args.dataset == "celeb_df_v2":
-        meta_df = pd.read_csv(os.path.join(args.root_dir, "Celeb_DF(v2)", "test_metadata.csv"))
+        meta_df = pd.read_csv(
+            os.path.join(args.root_dir, "Celeb_DF(v2)", "test_metadata.csv")
+        )
         meta_df[args.label_col] = meta_df[args.label_col].map({"REAL": 0, "FAKE": 1})
-        meta_df['video_path'] = meta_df.apply(lambda x: os.path.join(args.root_dir, "Celeb_DF(v2)", f"{x[args.source_col]}", f"{x[args.video_col]}.mp4"), axis=1)
-    
+        meta_df["video_path"] = meta_df.apply(
+            lambda x: os.path.join(
+                args.root_dir,
+                "Celeb_DF(v2)",
+                f"{x[args.source_col]}",
+                f"{x[args.video_col]}.mp4",
+            ),
+            axis=1,
+        )
+
     if args.dataset == "ff++":
         meta_df = pd.read_csv(os.path.join(args.root_dir, "FF++", "test_metadata.csv"))
         meta_df[args.label_col] = meta_df[args.label_col].map({"REAL": 0, "FAKE": 1})
         mask = meta_df[args.source_col] != "original"
         meta_df.loc[mask, args.video_col] = meta_df.loc[mask, args.video_col].str[2:]
-        meta_df['video_path'] = meta_df.apply(lambda x: os.path.join(args.root_dir, "FF++",  f"{x[args.source_col]}", f"{x[args.video_col]}.mp4"), axis=1)   
-    
+        meta_df["video_path"] = meta_df.apply(
+            lambda x: os.path.join(
+                args.root_dir,
+                "FF++",
+                f"{x[args.source_col]}",
+                f"{x[args.video_col]}.mp4",
+            ),
+            axis=1,
+        )
+
     if args.dataset == "kodf":
         meta_df = pd.read_csv(os.path.join(args.root_dir, "kodf", "test_metadata.csv"))
         meta_df[args.label_col] = meta_df[args.label_col].map({"REAL": 0, "FAKE": 1})
-        meta_df['pid'] = meta_df[args.video_col].apply(lambda x: x.split("_")[0])
-        meta_df['video_path'] = meta_df.apply(lambda x: os.path.join(args.root_dir, "kodf",  x[args.source_col], x["pid"], f"{x[args.video_col]}.mp4"), axis=1)   
-    
-    
+        meta_df["pid"] = meta_df[args.video_col].apply(lambda x: x.split("_")[0])
+        meta_df["video_path"] = meta_df.apply(
+            lambda x: os.path.join(
+                args.root_dir,
+                "kodf",
+                x[args.source_col],
+                x["pid"],
+                f"{x[args.video_col]}.mp4",
+            ),
+            axis=1,
+        )
+
     print(f"\n🤖 {s_}{c_}[2/4] 모델 로딩 중...{rs_} ({g_}{args.model_name}{rs_})")
     is_clip = args.model_name.startswith("deepclip")
     if is_clip:
-        video_predictor = ClipVideoPredictor(args.margin_ratio, args.conf_thres, args.min_face_ratio, args.model_name)
+        video_predictor = ClipVideoPredictor(
+            args.margin_ratio, args.conf_thres, args.min_face_ratio, args.model_name
+        )
     else:
-        video_predictor = VideoPredictor(args.margin_ratio, args.conf_thres, args.min_face_ratio,
-                       args.model_name, args.model_dataset)
+        video_predictor = VideoPredictor(
+            args.margin_ratio,
+            args.conf_thres,
+            args.min_face_ratio,
+            args.model_name,
+            args.model_dataset,
+        )
     model_desc = args.model_name if is_clip else args.model_dataset
-    
-    print(f"\n🔍 {s_}{c_}[3/4] 비디오 분석 시작{rs_} (프레임: {y_}{args.num_frames}{rs_}, 집계: {y_}{args.agg_mode}{rs_}, TTA: {y_}{args.tta_hflip}{rs_})")
+
+    print(
+        f"\n🔍 {s_}{c_}[3/4] 비디오 분석 시작{rs_} (프레임: {y_}{args.num_frames}{rs_}, 집계: {y_}{args.agg_mode}{rs_}, TTA: {y_}{args.tta_hflip}{rs_})"
+    )
     all_pred = []
     all_true = meta_df[args.label_col]
-    
-    for video_path in tqdm(meta_df['video_path'], total=len(meta_df), desc=f"Test Evaluation (Data: {args.dataset} | Model: {model_desc})"):
+
+    for video_path in tqdm(
+        meta_df["video_path"],
+        total=len(meta_df),
+        desc=f"Test Evaluation (Data: {args.dataset} | Model: {model_desc})",
+    ):
         if is_clip:
-            result = video_predictor.predict_video_artifacts(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
-            pred = rule_based_fake_prob(result)
+            result = video_predictor.predict_video_artifacts(
+                video_path, args.num_frames, args.agg_mode, args.tta_hflip
+            )
+            pred = rule_based_fake_prob(result, args.top_k)
         else:
-            pred = video_predictor.predict_video(video_path, args.num_frames, args.agg_mode, args.tta_hflip)
+            pred = video_predictor.predict_video(
+                video_path, args.num_frames, args.agg_mode, args.tta_hflip
+            )
         all_pred.append(pred)
-        
+
     all_pred = np.array(all_pred)
     all_true = np.array(all_true)
-    
+
     print(f"\n📊 {s_}{c_}[4/4] 최종 메트릭 계산 중...{rs_}")
     y_pred_bin = (all_pred >= 0.5).astype(int)
-    
+
     auc = roc_auc_score(all_true, all_pred)
     acc = accuracy_score(all_true, y_pred_bin)
     loss = log_loss(all_true, all_pred)
@@ -119,17 +237,19 @@ def main():
     real_recall = recall_score(all_true, y_pred_bin, pos_label=0)
     real_precision = precision_score(all_true, y_pred_bin, pos_label=0)
     real_f1 = f1_score(all_true, y_pred_bin, pos_label=0)
-    
+
     # FAKE(1) recall, precision, f1
     fake_recall = recall_score(all_true, y_pred_bin, pos_label=1)
     fake_precision = precision_score(all_true, y_pred_bin, pos_label=1)
     fake_f1 = f1_score(all_true, y_pred_bin, pos_label=1)
-    
+
     print(f"{s_}{y_}" + "=" * 65 + f"{rs_}")
     print(f"🏆 {s_}최종 평가 결과 (Final Metrics){rs_}")
     print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
 
-    print(f"   Overall  ▶  {s_}AUC:{rs_} {g_}{auc:.4f}{rs_}  |  {s_}ACC:{rs_} {g_}{acc * 100:.2f}%{rs_}  |  {s_}Log LOSS:{rs_} {g_}{loss:.4f}{rs_}  |  {s_}Macro F1:{rs_} {g_}{macro_f1:.4f}{rs_}")
+    print(
+        f"   Overall  ▶  {s_}AUC:{rs_} {g_}{auc:.4f}{rs_}  |  {s_}ACC:{rs_} {g_}{acc * 100:.2f}%{rs_}  |  {s_}Log LOSS:{rs_} {g_}{loss:.4f}{rs_}  |  {s_}Macro F1:{rs_} {g_}{macro_f1:.4f}{rs_}"
+    )
     print(f"{s_}{y_}" + "-" * 65 + f"{rs_}")
 
     print(f"   CONFUSION MATRIX  │  PRED REAL  │  PRED FAKE")
@@ -140,11 +260,16 @@ def main():
 
     print(f"   CATEGORY  │  PRECISION  │   RECALL     │     F1    ")
     print(f"   ----------│-------------│-------------│-----------")
-    print(f"   {s_}REAL (0){rs_}  │   {real_precision:.4f}     │   {real_recall:.4f}     │   {real_f1:.4f}")
-    print(f"   {s_}FAKE (1){rs_}  │   {fake_precision:.4f}     │   {fake_recall:.4f}     │   {fake_f1:.4f}")
+    print(
+        f"   {s_}REAL (0){rs_}  │   {real_precision:.4f}     │   {real_recall:.4f}     │   {real_f1:.4f}"
+    )
+    print(
+        f"   {s_}FAKE (1){rs_}  │   {fake_precision:.4f}     │   {fake_recall:.4f}     │   {fake_f1:.4f}"
+    )
 
     print(f"{s_}{y_}" + "=" * 65 + f"{rs_}")
     print(f"✨ {s_}{g_}모든 분석이 완료되었습니다!{rs_}\n")
-    
+
+
 if __name__ == "__main__":
     main()
