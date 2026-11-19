@@ -13,14 +13,49 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from inference.utils import PredictorError
 
-# Auxiliary table / FK column per media type (used only in query strings, never user input)
-_TABLES = {
-    "image": ("image_artifact_result", "image_id"),
-    "video": ("video_artifact_result", "video_id"),
+# Static SQL per media type. Identifiers (table / FK column) can't be bound as parameters,
+# so every query is written out in full here instead of being built with f-strings at runtime;
+# only values go through :name bind parameters.
+_QUERIES = {
+    "image": {
+        "select": text("""
+            SELECT image_id AS media_id, model_name, artifact_probs, created_at
+            FROM image_artifact_result
+            WHERE image_id = :media_id
+        """),
+        "upsert": text("""
+            INSERT INTO image_artifact_result (image_id, model_name, artifact_probs)
+            VALUES (:media_id, :model_name, :artifact_probs)
+            ON DUPLICATE KEY UPDATE model_name = VALUES(model_name), artifact_probs = VALUES(artifact_probs)
+        """),
+        "delete": text("DELETE FROM image_artifact_result WHERE image_id = :media_id"),
+    },
+    "video": {
+        "select": text("""
+            SELECT video_id AS media_id, model_name, artifact_probs, created_at
+            FROM video_artifact_result
+            WHERE video_id = :media_id
+        """),
+        "upsert": text("""
+            INSERT INTO video_artifact_result (video_id, model_name, artifact_probs)
+            VALUES (:media_id, :model_name, :artifact_probs)
+            ON DUPLICATE KEY UPDATE model_name = VALUES(model_name), artifact_probs = VALUES(artifact_probs)
+        """),
+        "delete": text("DELETE FROM video_artifact_result WHERE video_id = :media_id"),
+    },
 }
 
 
-async def get_artifact(conn: Connection, media: Literal["image", "video"], media_id: int) -> ArtifactResultData | None:
+def _query(media: str, kind: str):
+    """Return the prebuilt statement for media, rejecting anything outside the whitelist."""
+    if media not in _QUERIES:
+        raise ValueError(f"Unsupported media type: {media!r}")
+    return _QUERIES[media][kind]
+
+
+async def get_artifact(
+    conn: Connection, media: Literal["image", "video"], media_id: int
+) -> ArtifactResultData | None:
     """Fetch the stored DeepClip 20 text probabilities.
 
     Args:
@@ -34,27 +69,34 @@ async def get_artifact(conn: Connection, media: Literal["image", "video"], media
     Raises:
         HTTPException 503: When a SQLAlchemy error occurs during the DB query.
     """
-    table, fk = _TABLES[media]
+    query = _query(media, "select")
     try:
-        query = text(f"SELECT {fk}, model_name, artifact_probs, created_at FROM {table} WHERE {fk} = :media_id")
         row = (await conn.execute(query, {"media_id": media_id})).fetchone()
         if row is None:
             return None
 
         probs = row.artifact_probs
         return ArtifactResultData(
-            media_id=getattr(row, fk),
+            media_id=row.media_id,
             model_name=row.model_name,
             artifact_probs=json.loads(probs) if isinstance(probs, str) else probs,
             created_at=row.created_at,
         )
     except SQLAlchemyError as e:
         print(f"[Artifact Query Error] {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="데이터베이스 조회 중 문제가 발생했습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="데이터베이스 조회 중 문제가 발생했습니다.",
+        )
 
 
-async def save_artifact(conn: Connection, media: Literal["image", "video"], media_id: int,
-                        model_name: str, artifact_probs: list[float]) -> None:
+async def save_artifact(
+    conn: Connection,
+    media: Literal["image", "video"],
+    media_id: int,
+    model_name: str,
+    artifact_probs: list[float],
+) -> None:
     """Save the DeepClip 20 text probabilities, overwriting any existing result.
 
     Args:
@@ -64,38 +106,46 @@ async def save_artifact(conn: Connection, media: Literal["image", "video"], medi
         model_name (str): Name of the DeepClip model used (deepclip_b0 / deepclip_b5).
         artifact_probs (list[float]): 20 probabilities in PAIR_ORDER order (idx = 5*region + type).
     """
-    table, fk = _TABLES[media]
+    query = _query(media, "upsert")
     try:
-        query = text(f"""
-            INSERT INTO {table} ({fk}, model_name, artifact_probs)
-            VALUES (:media_id, :model_name, :artifact_probs)
-            ON DUPLICATE KEY UPDATE model_name = VALUES(model_name), artifact_probs = VALUES(artifact_probs)
-        """)
-        await conn.execute(query, {"media_id": media_id, "model_name": model_name,
-                                   "artifact_probs": json.dumps(artifact_probs)})
+        await conn.execute(
+            query,
+            {
+                "media_id": media_id,
+                "model_name": model_name,
+                "artifact_probs": json.dumps(artifact_probs),
+            },
+        )
         await conn.commit()
     except SQLAlchemyError:
         await conn.rollback()
         raise
 
 
-async def delete_artifact(conn: Connection, media: Literal["image", "video"], media_id: int) -> None:
+async def delete_artifact(
+    conn: Connection, media: Literal["image", "video"], media_id: int
+) -> None:
     """Delete the stored DeepClip 20 text probabilities. Does nothing if there are none.
 
     Raises:
         HTTPException 503: When a SQLAlchemy error occurs during the DB query.
     """
-    table, fk = _TABLES[media]
+    query = _query(media, "delete")
     try:
-        await conn.execute(text(f"DELETE FROM {table} WHERE {fk} = :media_id"), {"media_id": media_id})
+        await conn.execute(query, {"media_id": media_id})
         await conn.commit()
     except SQLAlchemyError as e:
         print(f"[Artifact Delete Error] {e}")
         await conn.rollback()
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="요청하신 서비스가 잠시 내부적으로 문제가 발생하였습니다.",
+        )
 
 
-def _run_artifact_task(media: Literal["image", "video"], media_id: int, media_loc: str, model_type: str) -> dict:
+def _run_artifact_task(
+    media: Literal["image", "video"], media_id: int, media_loc: str, model_type: str
+) -> dict:
     """Run DeepClip to infer the 20 text probabilities and save them to the DB (shared logic for the Celery tasks).
 
     Returns:
@@ -118,7 +168,11 @@ def _run_artifact_task(media: Literal["image", "video"], media_id: int, media_lo
         return {"status": "WARNING", "message": e.message, "artifact_probs": None}
     except Exception as e:
         print(str(e))
-        return {"status": "FAILED", "message": "부위별 위조 흔적 분석 중 오류가 발생했습니다.", "artifact_probs": None}
+        return {
+            "status": "FAILED",
+            "message": "부위별 위조 흔적 분석 중 오류가 발생했습니다.",
+            "artifact_probs": None,
+        }
 
     async def _save():
         async with celery_db_conn() as conn:
@@ -130,11 +184,19 @@ def _run_artifact_task(media: Literal["image", "video"], media_id: int, media_lo
         loop.run_until_complete(_save())
     except Exception as e:
         print(f"[Artifact Save Error] {e}")
-        return {"status": "FAILED", "message": "부위별 위조 흔적 분석 결과를 저장하는 중 오류가 발생했습니다.", "artifact_probs": None}
+        return {
+            "status": "FAILED",
+            "message": "부위별 위조 흔적 분석 결과를 저장하는 중 오류가 발생했습니다.",
+            "artifact_probs": None,
+        }
     finally:
         loop.close()
 
-    return {"status": "SUCCESS", "message": "부위별 위조 흔적 분석에 성공하였습니다", "artifact_probs": artifact_probs}
+    return {
+        "status": "SUCCESS",
+        "message": "부위별 위조 흔적 분석에 성공하였습니다",
+        "artifact_probs": artifact_probs,
+    }
 
 
 @celery_app.task(name="process_artifact_image_task")
