@@ -73,7 +73,7 @@ async def login_user(request: Request,
         "status": "success"
     }
 
-@router.get("/logout", status_code=status.HTTP_200_OK, response_class=JSONResponse, summary="로그아웃")
+@router.post("/logout", status_code=status.HTTP_200_OK, response_class=JSONResponse, summary="로그아웃")
 async def logout_user(request: Request):
     request.state.session.clear()
     return {
