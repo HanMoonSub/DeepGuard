@@ -9,6 +9,7 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = '/api';
 axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+axios.defaults.headers.common['X-CSRF-Guard'] = '1';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

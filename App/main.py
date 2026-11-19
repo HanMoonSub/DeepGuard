@@ -26,6 +26,10 @@ app = FastAPI(lifespan=common.lifespan)
 # Register static files (images, videos)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# CSRF defense: reject state-changing requests without the custom header
+# (registered before CORS so CORS stays outside it and still handles preflight)
+app.add_middleware(middleware.CSRFHeaderMiddleware)
+
 # CORS Setup for cross-origin requests
 # FrontEnd: React, BackEnd: FastAPI
 origins_str = os.getenv("CORS_ALLOWED_ORIGINS")
