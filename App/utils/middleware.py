@@ -52,7 +52,7 @@ class RedisSessionMiddleware(BaseHTTPMiddleware):
                     or request.headers.get('x-forwarded-proto') == 'https')
 
                 response.set_cookie(self.session_cookie, session_id, max_age=self.max_age, httponly=True,
-                                    secure=is_https, samesite='None' if is_https else 'Lax')
+                                    secure=is_https, samesite='Lax')
                 await redis_client.setex(session_id, self.max_age, json.dumps(request.state.session))
                 
             else:
