@@ -50,6 +50,7 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
   const [history, setHistory] = useState([]);
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [selectedSample, setSelectedSample] = useState(null);
 
   const [modelType, setModelType] = useState('fast');
@@ -193,6 +194,30 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
     setStatusMessage('');
     setIsCameraOpen(false);
     setSelectedSample(null); // clear the selection when coming in from a path other than a sample
+  };
+
+  // Drag-and-drop upload — not accepted during webcam capture/analysis
+  const canDrop = !isCameraOpen && !isAnalyzing;
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    if (!canDrop) return;
+    e.dataTransfer.dropEffect = 'copy';
+    if (!isDragOver) setIsDragOver(true);
+  };
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) setIsDragOver(false);
+  };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (!canDrop) return;
+    const dropped = e.dataTransfer.files?.[0];
+    if (!dropped) return;
+    if (!dropped.type.startsWith('video/')) {
+      alert("동영상 파일만 올릴 수 있어요.");
+      return;
+    }
+    handleFileSelect(dropped);
   };
 
   // Convert the sample video to a File, feed it into the existing upload flow, and set the domain automatically
@@ -428,8 +453,11 @@ const VideoAnalysisPage = ({ sessionUser, onLogout, setSessionUser }) => {
 
           <div className="dg-analysis__panes">
             <div
-              className={`dg-analysis__pane dg-analysis__drop${previewUrl ? ' has-preview' : ''}${isCameraOpen ? ' is-camera' : ''}`}
+              className={`dg-analysis__pane dg-analysis__drop${previewUrl ? ' has-preview' : ''}${isCameraOpen ? ' is-camera' : ''}${isDragOver ? ' is-active' : ''}`}
               onClick={() => { if (!previewUrl && !isCameraOpen) document.getElementById('vIn').click(); }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
               {isCameraOpen ? (
                 <WebcamCapture mode="video" onCapture={handleFileSelect} onClose={() => setIsCameraOpen(false)} />
