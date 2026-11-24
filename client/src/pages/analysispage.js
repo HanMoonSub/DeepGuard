@@ -13,7 +13,6 @@ import AnalysisWarning from '../components/AnalysisWarning';
 // Sample images (the actual files must be placed under public/samples/images/)
 const SAMPLE_IMAGES = [
   { name: 'asian_fake_1.JPG',   src: '/samples/images/asian_fake_1.JPG',     domain: 'asian',   label: '동양인 Fake' },
-  { name: 'asian_fake_2.JPG',   src: '/samples/images/asian_fake_2.JPG',     domain: 'asian',   label: '동양인 Fake' },
   { name: 'western_fake_1.JPG', src: '/samples/images/western_fake_1.JPG', domain: 'western', label: '서양인 Fake' },
   { name: 'western_fake_2.JPG', src: '/samples/images/western_fake_2.JPG', domain: 'western', label: '서양인 Fake' },
 ];
