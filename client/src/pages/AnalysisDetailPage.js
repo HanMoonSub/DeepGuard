@@ -72,8 +72,8 @@ const VERDICT_COPY = {
   },
   real: {
     badge: '실제 얼굴로 보여요',
-    image: '뚜렷한 위조 흔적이 발견되지 않았어요. 히트맵에서 모델이 본 부위를 확인할 수 있어요.',
-    video: '뚜렷한 위조 흔적이 발견되지 않았어요. 타임라인에서 구간별 결과를 확인할 수 있어요.',
+    image: '뚜렷한 위조 흔적이 발견되지 않았어요.',
+    video: '영상에서 뚜렷한 위조 흔적이 발견되지 않았어요.',
   },
   unknown: {
     badge: '판정할 수 없어요',
@@ -277,7 +277,7 @@ const AnalysisDetailPage = ({ sessionUser }) => {
                 <ProbGauge prob={prob} tone={verdictTone} />
                 <span className={`dg-detail__badge dg-detail__badge--${verdictTone}`}>{VERDICT_COPY[verdictTone].badge}</span>
                 <p className="dg-detail__desc">{VERDICT_COPY[verdictTone][isVideo ? 'video' : 'image']}</p>
-                {mediaLoc && (
+                {mediaLoc && verdictTone !== 'real' && (
                   <Button variant="primary" className="dg-btn--block dg-detail__xai-btn"
                     onClick={isVideo ? handleVideoHeatmap : handleImageHeatmap}>
                     {isVideo ? '타임라인으로 근거 보기' : '히트맵으로 근거 보기'}

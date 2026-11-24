@@ -1,4 +1,5 @@
-from fastapi import Request, FastAPI
+from fastapi import Request, FastAPI, status
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import redis.asyncio as aioredis
 import uuid
@@ -51,7 +52,7 @@ class RedisSessionMiddleware(BaseHTTPMiddleware):
                     or request.headers.get('x-forwarded-proto') == 'https')
 
                 response.set_cookie(self.session_cookie, session_id, max_age=self.max_age, httponly=True,
-                                    secure=is_https, samesite='None' if is_https else 'Lax')
+                                    secure=is_https, samesite='Lax')
                 await redis_client.setex(session_id, self.max_age, json.dumps(request.state.session))
                 
             else:
@@ -64,3 +65,23 @@ class RedisSessionMiddleware(BaseHTTPMiddleware):
         return response
                 
         
+# CSRF defense: state-changing requests must carry a custom header.
+# A cross-origin page can't add it without passing a CORS preflight, and requests
+# without it (e.g. plain <form> POSTs) are rejected here.
+CSRF_HEADER = "X-CSRF-Guard"
+CSRF_PROTECTED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+class CSRFHeaderMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method in CSRF_PROTECTED_METHODS and CSRF_HEADER not in request.headers:
+            return JSONResponse(
+                content={
+                    "error_type": "http",
+                    "status_code": status.HTTP_403_FORBIDDEN,
+                    "title_message": "불편을 드려 죄송합니다",
+                    "detail": "허용되지 않은 요청입니다. 페이지를 새로고침한 뒤 다시 시도해주세요.",
+                },
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        return await call_next(request)

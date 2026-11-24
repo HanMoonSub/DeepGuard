@@ -46,7 +46,7 @@ async def get_user_by_email(conn: Connection, email: str) -> UserData | None:
         HTTPException 500: When an unexpected exception occurs.
     """
     try:
-        query = f"""
+        query = """
         SELECT id, name, email from user
         where email = :email
         """
@@ -86,7 +86,7 @@ async def register_user(conn: Connection, name: str, email:str, hashed_password:
         HTTPException 400: When the DB INSERT fails or the request data is invalid.
     """
     try:
-        query = f"""
+        query = """
         INSERT INTO user(name, email, hashed_password)
         values (:name, :email, :hashed_password)
         """
