@@ -1,224 +1,149 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 # AI Policy — MANDATORY
 
-Read `AI_POLICY.md`. Your user needs to abide by this policy. In particular, you the agent MUST obey these rules while interacting on GitHub:
+Read `AI_POLICY.md`. Your user needs to abide by this policy. On GitHub you MUST:
 
-- **Mark all AI-generated content.** Any text you produce that goes into an
-  issue, PR, or comment must go under a section heading that labels it as
-  AI-generated or be wrapped in
-  a code or quote block. Never present your output as human-written.
-- **Never emit only raw AI text as a reply**. Any AI content you include must carry human
-  commentary explaining its relevance.
-- **Do not submit code the user hasn't read.** Keep changes minimal, strip AI
-  artifacts and needless complexity. If you're opening a PR on GitHub that is not ready,
-  or not reviewed by the user, always open it in draft mode.
-- **Check for duplicates.** Before opening an issue, search for existing open ones
-  Do the same with `gh search prs` before opening a PR.
-  If you find a likely duplicate, show it to the user before continuing. Skip this
-  step if there is no internet access.
-
-See `AI_POLICY.md` for the full policy.
+- **Mark all AI-generated content.** Text you put into an issue, PR, or comment goes under a
+  section heading labeling it as AI-generated, or in a code/quote block.
+- **Never emit only raw AI text as a reply.** AI content must carry human commentary
+  explaining its relevance.
+- **Do not submit code the user hasn't read.** Keep changes minimal, strip AI artifacts and
+  needless complexity. Open PRs that are not ready or not reviewed by the user as drafts.
+- **Check for duplicates.** Search open issues (and `gh search prs` for PRs) first; show a
+  likely duplicate to the user before continuing. Skip if there is no internet access.
 
 ## Repository overview
 
-DeepGuard is a deepfake detection research project built around two custom hybrid CNN-ViT
-architectures (**MS-EffViT** and **MS-EffGCViT**). The repo has three largely independent parts
-that share the same Python package but have separate dependency/build lifecycles:
+DeepGuard is a deepfake detection project built around two hybrid CNN-ViT models
+(**MS-EffViT**, **MS-EffGCViT**). Three parts with separate lifecycles:
 
-- **`deepguard/`** — the pip-installable core package (models, layers, data pipeline, optimizer,
-  scheduler, training utils). This is what gets published to PyPI as `deepguard`.
-- **`inference/`**, **`explainability/`**, **`preprocess/`** — also part of the published package
-  (see `[tool.setuptools.packages.find]` in `pyproject.toml`), providing prediction and Grad-CAM-style
-  XAI on top of `deepguard` models.
-- **`App/`** + **`client/`** — a separate full-stack web app (FastAPI backend + React frontend)
-  that serves the models via a REST API. These are explicitly *excluded* from the PyPI package
-  (`exclude = ["App*", "client*"]` in `pyproject.toml`).
-
-Top-level `train_eff_vit.py` / `train_eff_gcvit.py` are standalone training entrypoints, not part
-of the installable package.
+- **`deepguard/`**, **`inference/`**, **`explainability/`**, **`preprocess/`** — the PyPI package.
+- **`App/`** (FastAPI) + **`client/`** (React) — web app, excluded from the PyPI package.
+- `train_eff_vit.py` / `train_eff_gcvit.py` — standalone training entrypoints, not packaged.
 
 ## Commands
 
-### Python package (deepguard / inference / explainability / preprocess)
-
 ```bash
 pip install -r requirements.txt      # full dev environment (backend + ML + lint)
-ruff check .                         # lint
-ruff format --check .                # format check (drop --check to auto-format)
-pytest --tb=short -q                 # run tests
-pytest path/to/test_file.py::test_name   # run a single test
+ruff check .                         # lint (default rules, no ruff config)
+ruff format --check .
+pytest --tb=short -q
 ```
 
-There is no PR CI workflow for lint/tests, so run these locally before opening a PR. There is no
-`ruff` config section in `pyproject.toml`, so default ruff rules apply.
+There is no PR CI workflow for lint/tests, so run these locally before opening a PR.
 
-### Training
+### Training / inference
 
 ```bash
 python -m train_eff_vit --root-dir DATA_ROOT --model-ver ms_eff_vit_b5 --dataset ff++ --seed 2025 --wandb-api-key <key>
 python -m train_eff_gcvit --root-dir DATA_ROOT --model-ver ms_eff_gcvit_b0 --dataset celeb_df_v2 --seed 2025 --wandb-api-key <key>
-```
-
-`--model-ver` ∈ `{ms_eff_vit_b0, ms_eff_vit_b5, ms_eff_gcvit_b0, ms_eff_gcvit_b5}`,
-`--dataset` ∈ `{ff++, celeb_df_v2, kodf}`. Per-model/per-dataset hyperparameters live in
-`deepguard/config/<model_ver>/<dataset>.yaml` (OmegaConf) and training is tracked via
-Weights & Biases (`wandb`).
-
-### Inference / evaluation
-
-```bash
 python -m inference.predict_video --root-dir DATA_ROOT --model-name ms_eff_gcvit_b0 --model-dataset kodf --num-frames 20 --agg-mode conf
 ```
 
-### Backend (App/, FastAPI)
+Per-model/per-dataset hyperparameters live in `deepguard/config/<model_ver>/<dataset>.yaml`
+(OmegaConf); training is tracked with Weights & Biases.
 
-Run from inside `App/` (routes import siblings like `from routes import ...`, `from services import ...`
-directly, not as a package):
+### Backend (App/)
+
+Run from inside `App/` — routes import siblings directly (`from routes import ...`,
+`from services import ...`), not as a package:
 
 ```bash
 cd App
-uvicorn main:app --reload            # dev server, expects Uvicorn's default port 8000
-celery -A celery_app worker --loglevel=info   # background worker for async inference/explain tasks
+uvicorn main:app --reload                     # port 8000
+celery -A celery_app worker --loglevel=info   # async inference/explain tasks
 ```
 
-Requires a `.env` in `App/` (see `App/.env` keys: `DB_*` for MySQL, `UPLOAD_DIR`/`EXPLAIN_UPLOAD_DIR`,
-`HF_TOKEN`, `REDIS_HOST`/`REDIS_PORT`, `CORS_ALLOWED_ORIGINS`) and a running MySQL + Redis instance.
+Requires `App/.env` (`DB_*` for MySQL, `UPLOAD_DIR`/`EXPLAIN_UPLOAD_DIR`, `HF_TOKEN`,
+`REDIS_HOST`/`REDIS_PORT`, `CORS_ALLOWED_ORIGINS`) plus running MySQL and Redis.
 DB schema/seed SQL lives in `App/sql/`.
 
-### Frontend (client/, React via Create React App)
+### Frontend (client/)
 
 ```bash
 cd client
 npm install
-npm start      # dev server on :3000, proxies /api and /static/{uploads,explain} to http://127.0.0.1:8000 (see src/setupProxy.js)
+npm start      # :3000, proxies /api and /static/{uploads,explain} to 127.0.0.1:8000
 npm test
 npm run build
 ```
 
 ## Architecture
 
-### Model design (`deepguard/`)
+### Models (`deepguard/`)
 
-Both `MultiScaleEffViT` (`deepguard/models/ms_eff_vit.py`) and `MultiScaleEffGCViT`
-(`deepguard/models/ms_eff_gcvit.py`) follow the same dual-branch pattern, registered with
-`timm` via `register_model`/`build_model_with_cfg` so they're usable through
-`timm.create_model(...)` as well as direct import:
+Both models are registered with `timm` and share a dual-branch design:
 
-1. **`FeatExtractor`** (`deepguard/layers/featextractor.py`) wraps a `timm` EfficientNet backbone
-   in `features_only=True` mode and taps two intermediate feature maps: a **low-level / high-resolution**
-   one (`l_block_idx` ∈ {0,1,2}) for local forgery artifacts (texture, blending, compression traces),
-   and a **high-level / low-resolution** one (`h_block_idx` ∈ {4,6}) for global semantic structure
-   (lighting, geometry, shadows).
-2. Each tapped feature map feeds its own small transformer branch — plain window attention for
-   MS-EffViT, or GCViT-style local+global window attention (`deepguard/layers/window.py`,
-   `global_query.py`, `attention.py`) for MS-EffGCViT — configured independently via `l_*`/`h_*`
-   prefixed constructor args (dims, depths, window sizes, heads, mlp ratio, dropout).
-3. Outputs from both branches are combined into a single binary logit (`num_classes=1`,
-   real=0/fake=1).
+1. **`FeatExtractor`** (`deepguard/layers/featextractor.py`) taps two EfficientNet feature maps:
+   a **low-level / high-resolution** one (`l_block_idx` ∈ {0,1,2}) for local forgery artifacts
+   (texture, blending, compression), and a **high-level / low-resolution** one
+   (`h_block_idx` ∈ {4,6}) for global semantics (lighting, geometry, shadows).
+2. Each map feeds its own transformer branch — window attention for MS-EffViT, GCViT-style
+   local+global window attention for MS-EffGCViT — configured via `l_*`/`h_*` args.
+3. Both branches combine into one binary logit (`num_classes=1`, real=0/fake=1).
 
-Pretrained weights are fetched per `(model_name, dataset)` pair from GitHub Releases URLs declared
-in each model file's `weight_registry` dict (three dataset variants: `celeb_df_v2`, `ff++`, `kodf`).
-Mirror weights are also published to Hugging Face Hub (`KoreaPeter/ms-eff-gcvit-deepfake`).
+Pretrained weights are fetched per `(model_name, dataset)` from GitHub Releases URLs in each
+model file's `weight_registry`; mirrors are on Hugging Face Hub (`KoreaPeter/ms-eff-gcvit-deepfake`).
 
-This low/high branch split is the central concept of the whole codebase — it also drives the XAI
-design (below), the data augmentation choices, and the CLI flags across training/inference.
+This low/high branch split is the central concept — it drives the XAI design, augmentation
+choices, and CLI flags across training/inference.
 
 ### Explainability (`explainability/`)
 
-CAM-based explainers are assigned per branch based on empirical performance, not interchangeable:
-- **low-level branch**: `HiResCAM`, `GradCAMElementWise`, `LayerCAM` (favor precise local activation)
-- **high-level branch**: `EigenGradCAM`, `GradCAM++`, `XGradCAM` (favor cleaner class-discriminative
-  global maps)
+CAM methods are assigned per branch based on empirical performance, not interchangeable:
+- **low-level branch**: `HiResCAM`, `GradCAMElementWise`, `LayerCAM`
+- **high-level branch**: `EigenGradCAM`, `GradCAM++`, `XGradCAM`
 
-Only these six methods are supported; don't add others back without a reason.
+Only these six are supported; don't add others back without a reason.
 
-- `explainability/explainer/base_explainer.py` — `BaseExplainer`: model loading, face detect/crop,
-  transforms, and target-layer resolution. `branch_level` (`"low"`/`"high"`/`"both"`, default
-  `"high"`) picks which branch the hooks attach to. The target layer is fixed per branch (no
-  stage/block args): GCViT → `stages[-1].blocks[-1].norm2`, ViT → `blocks[-1].norm1`,
-  `eff_b0`/`eff_b5` (CNN baseline) → last backbone feature map. Subclass hooks: `_load_model`,
-  `_get_transformer_type`, `_branch_root`. `dataset` is optional (unused by DeepClip).
-- `explainability/explainer/cam_explainer.py` — abstract `CAMExplainer` (the
-  `display_heatmap_*` / `display_bbox_*` / `display_heatmap_bbox_*` methods, each with an
-  `_on_image(img_path)` and `_from_array(face)` variant) plus the six concrete explainers, grouped
-  into low/high-branch sections.
-- `explainability/explainer/clip_explainer.py` — `ClipExplainerMixin` + `Clip<Method>Explainer` for
-  each of the six, for DeepClip (`deepclip_b0`/`deepclip_b5`; no dataset; branches live under
-  `model.image_encoder`). Same mixin pattern as `ClipImagePredictor` in `inference/`. deepclip is an
-  optional extra: `explainability/utils/deepclip.py` does the guarded import and raises
-  `ImportError("DeepClip models need the deepclip package: pip install deepguard[deepclip]")` at
-  construction time, so `import explainability` works without it. Clip explainers target only the
-  fake/real output (`BinaryClassifierOutputTarget`); there are no per-artifact CAM targets.
-`explainability/metrics/` (`road.py`, `perturbation_confidence.py`, `cam_mult_image.py`) implement
-CAM-quality metrics used by `explainability/cam_evaluator.py`.
+- `BaseExplainer` (`explainer/base_explainer.py`): `branch_level` (`"low"`/`"high"`/`"both"`,
+  default `"high"`) picks the branch. Target layers are fixed per branch: GCViT →
+  `stages[-1].blocks[-1].norm2`, ViT → `blocks[-1].norm1`, `eff_b0`/`eff_b5` → last backbone
+  feature map. `dataset` is optional (unused by DeepClip).
+- `explainer/clip_explainer.py`: `Clip<Method>Explainer` for DeepClip (`deepclip_b0`/`deepclip_b5`,
+  branches under `model.image_encoder`). deepclip is an optional extra — the guarded import in
+  `explainability/utils/deepclip.py` raises at construction time, so `import explainability`
+  works without it. Clip explainers target only the fake/real output; no per-artifact targets.
 
 ### Preprocessing (`preprocess/`)
 
-Two-stage pipeline shared conceptually across all three datasets (`celeb_df_v2/`, `ff++/`, `kodf/`
-each have their own `detect_original_face.py`, `crop_face.py`, `split_data.py`, `utils.py`, since
-each raw dataset has different file layouts/metadata):
+Each dataset (`celeb_df_v2/`, `ff++/`, `kodf/`) has its own scripts because raw layouts differ.
 
-1. **Face detection on real videos only** (`preprocess/face_detector.py`, using `yolov8n-face.pt`
-   downloaded on first use from the `v0.1.0` GitHub Release into the torch hub cache) — fake videos in these benchmarks reuse the same face bounding boxes as their
-   source real video, cutting detection workload ~80%. Frames are dynamically rescaled based on
-   resolution before detection for consistent inference speed.
-2. **Face cropping + landmark extraction** (`preprocess/landmark_detector.py` + per-dataset
-   `crop_face.py`) reuses those boxes for both real and fake videos, adds a jittered margin, and
-   detects 5 facial landmarks (saved as `.npy`) to support landmark-based augmentation
-   (`deepguard/data/dataset_cutout.py`).
+1. **Face detection on real videos only** (`yolov8n-face.pt`, downloaded from the `v0.1.0`
+   GitHub Release) — fake videos reuse their source real video's boxes (~80% less work).
+2. **Face cropping + 5-point landmarks** (`.npy`) for both real and fake videos, used by
+   landmark-based augmentation (`deepguard/data/dataset_cutout.py`).
 
-Output layout is `DATA_ROOT/{crops,landmarks}/{video_id}/*.{png,npy}` plus a
-`train_frame_metadata.csv` — this is the layout every training/inference entrypoint's
-`--root-dir` expects.
+Output layout `DATA_ROOT/{crops,landmarks}/{video_id}/*.{png,npy}` plus
+`train_frame_metadata.csv` is what every `--root-dir` expects.
 
 ### Data pipeline (`deepguard/data/`)
 
-`dataset.py` is the base `Dataset`; `dataset_cutmix.py`, `dataset_cutout.py`, `dataset_mixup.py`
-are augmentation-specific subclasses selected at training time via config
-(`mixup_alpha`/`mixup_prob`, `cutout_prob` in the YAML configs). `handle_imbalance.py` addresses
-the real/fake class imbalance inherent to these benchmarks (e.g. Celeb-DF-v2 is ~86% fake).
-`split_data.py` produces train/val splits; `transforms.py` holds Albumentations pipelines.
+Augmentation subclasses (`dataset_cutmix.py`, `dataset_cutout.py`, `dataset_mixup.py`) are
+selected via YAML config (`mixup_alpha`/`mixup_prob`, `cutout_prob`). `handle_imbalance.py`
+handles class imbalance (e.g. Celeb-DF-v2 is ~86% fake).
 
 ### Web app (`App/` + `client/`)
 
-FastAPI backend follows router → service → db layering:
-- `App/routes/*.py` — thin route handlers (`artifact`, `auth`, `home`, `image`, `video`, `inference`, `explain`),
-  mounted under `/api` via `App/routes/__init__.py`'s `api_router`.
-- `App/services/*.py` — business logic, DB access, and file I/O per domain; several functions
-  (e.g. in `image_svc.py`, `video_svc.py`, `explain_svc.py`) are Celery tasks for async
-  inference/explain/cleanup work, dispatched through `App/celery_app.py` (Redis-backed broker
-  and result backend).
-- `App/db/database.py` — two SQLAlchemy async engines: one pooled (`engine`, used by request-scoped
-  `context_get_conn` dependency) and one unpooled (`celery_engine`/`celery_db_conn`, used inside
-  Celery tasks since they run outside the FastAPI request lifecycle).
-- `App/schemas/*.py` — Pydantic request/response models per domain.
-- Verdicts (`/inference`) use only v1 (MS-EffGCViT, `inference_svc.MODEL_CONFIG['v1']`). DeepClip is
-  used only for the on-demand "20 artifact texts" feature (4 regions × 5 types, `PAIR_ORDER` order):
-  `routes/artifact.py` + `services/artifact_svc.py` (Celery tasks, `DEEPCLIP_MODEL` fast→`deepclip_b0`,
-  pro→`deepclip_b5`), stored in `image_artifact_result` / `video_artifact_result` (`App/sql/06_*`,
-  `07_*`; video stores the mean over frames). Only offered for logged-in users' FAKE results; the
-  detail page shows it via `client/src/components/ArtifactTextPanel.js` (BETA).
-- Session auth is cookie-based via Redis (`App/utils/middleware.py`'s `RedisSessionMiddleware`,
-  checked in routes via `services.session_svc`), not JWT.
-- Uploaded/generated images, videos, and CAM overlays are served from `/static` (mounted to the
-  `static/` dir) — locations configured via `UPLOAD_DIR`/`EXPLAIN_UPLOAD_DIR` env vars.
+- Layering: `routes/` (thin, mounted under `/api`) → `services/` (logic, DB, file I/O; some are
+  Celery tasks) → `db/`. `schemas/` holds Pydantic models.
+- `App/db/database.py` has two async engines: pooled `engine` for requests, unpooled
+  `celery_engine`/`celery_db_conn` for Celery tasks (outside the request lifecycle).
+- Verdicts (`/inference`) use only v1 (MS-EffGCViT, `inference_svc.MODEL_CONFIG['v1']`).
+  DeepClip is used only for the on-demand "20 artifact texts" feature (4 regions × 5 types,
+  `PAIR_ORDER`): `routes/artifact.py` + `services/artifact_svc.py` (fast→`deepclip_b0`,
+  pro→`deepclip_b5`), stored in `image_artifact_result` / `video_artifact_result` (video stores
+  the mean over frames). Offered only for logged-in users' FAKE results, shown via
+  `client/src/components/ArtifactTextPanel.js` (BETA).
+- Session auth is cookie-based via Redis (`RedisSessionMiddleware`), not JWT.
+- Uploads, videos, and CAM overlays are served from `/static`.
 
-React frontend (Create React App, no router state library beyond `react-router-dom`) lives under
-`client/src/pages/` — one file per page (`mainpage`, `loginpage`, `signuppage`, `analysispage`,
-`AnalysisDetailPage`, `VideoAnalysisPage`, `VideoTimelinePage`, `HeatmapPage`, `ImageHeatmapPage`).
-`client/src/setupProxy.js` proxies `/api` and `/static/{uploads,explain}` to the FastAPI dev server
-at `127.0.0.1:8000` — the backend must be running for `npm start` to work end-to-end.
+## Conventions
 
-## Conventions worth knowing
-
-- Write comments and docstrings in English. User-facing strings (UI text, API error messages,
+- Comments and docstrings in English. User-facing strings (UI text, API error messages,
   Pydantic `Field` descriptions, FastAPI `summary=`) and data values (e.g. `"서양인"`/`"동양인"`,
   KoDF CSV column names) stay in Korean.
-- Model constructor args consistently use `l_`/`h_` prefixes to mean low-level-branch vs
-  high-level-branch — keep this naming when adding new dual-branch parameters.
-- `dataset` values are always one of the literal strings `celeb_df_v2`, `ff++`, `kodf`; `model_name`
-  values are always one of `ms_eff_vit_b0`, `ms_eff_vit_b5`, `ms_eff_gcvit_b0`, `ms_eff_gcvit_b5`
-  — these show up as string args across training, inference, and explainability APIs.
+- Keep `l_`/`h_` prefixes (low/high-level branch) when adding dual-branch parameters.
+- `dataset` ∈ `celeb_df_v2`, `ff++`, `kodf`; `model_name` ∈ `ms_eff_vit_b0`, `ms_eff_vit_b5`,
+  `ms_eff_gcvit_b0`, `ms_eff_gcvit_b5`.
