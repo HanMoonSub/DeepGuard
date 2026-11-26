@@ -37,7 +37,7 @@ deepclip>=1.0.0
 colorama>=0.4.6
 
 # --- [Training (train_eff_vit.py / train_eff_gcvit.py)] ---
-wandb>=0.31.0
+wandb>=0.31.2
 omegaconf>=2.4.0
 
 # --- [Distributed Task Queue] ---
